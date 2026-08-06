@@ -1,0 +1,14 @@
+{
+  "name": "McSlice Rush",
+  "short_name": "McSlice Rush",
+  "description": "Slice the doughnuts, earn points, spin the Prize Wheel!",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#00674a",
+  "theme_color": "#00583b",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

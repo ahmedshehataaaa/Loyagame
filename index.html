@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#DA291C">
+  <title>McSlice Rush</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="src/styles/tokens.css">
+  <link rel="stylesheet" href="src/styles/base.css">
+  <link rel="stylesheet" href="src/styles/components.css">
+  <link rel="stylesheet" href="src/styles/screens.css">
+
+  <!-- Hero art the first screen needs. -->
+  <link rel="preload" as="image" href="assets/brand-logo.png">
+  <link rel="preload" as="image" href="assets/mascot.png">
+</head>
+<body>
+  <div id="app">
+    <!-- The canvas engine binds #game once at load, so the stage lives in
+         the shell for the whole session. /play reveals it; every other
+         route leaves it hidden behind the routed content. -->
+    <div id="stage" class="game-stage"><canvas id="game"></canvas></div>
+
+    <main id="route"></main>
+  </div>
+
+  <noscript>
+    <p style="padding:24px;text-align:center">McSlice Rush needs JavaScript enabled to play.</p>
+  </noscript>
+
+  <!-- Engine: classic IIFE scripts exposing globals, loaded before the app. -->
+  <script src="engine/config.js"></script>
+  <script src="engine/platform.js"></script>
+  <script src="engine/audio.js"></script>
+  <script src="engine/game.js"></script>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

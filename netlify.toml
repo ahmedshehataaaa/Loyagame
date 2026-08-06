@@ -1,0 +1,45 @@
+# Netlify config for Slicy-P (P Nashville).
+# Static game + serverless API. The functions in netlify/functions/
+# are the loyalty backend (Supabase Postgres behind them) — pure ESM
+# with zero npm dependencies, so there is still no build step.
+# Required env vars on the site: SUPABASE_URL, SUPABASE_SERVICE_KEY,
+# ADMIN_KEY, FOODICS_WEBHOOK_SECRET.
+
+[build]
+  publish = "."
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
+
+# Long-cache the JS/CSS (they're versioned by edits), but always
+# revalidate the HTML so players get the latest screens.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# Basic hardening headers.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# The client calls /api/* (Vercel's convention). Map it onto Netlify's
+# function path so one client build works on both hosts.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

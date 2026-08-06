@@ -1,0 +1,142 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;overflow-x:hidden;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}}::-webkit-scrollbar{display:none;}*{-webkit-tap-highlight-color:transparent;}.arcade-shadow{box-shadow:0px 4px 0px 0px #281715;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"inverse-on-surface":"#ffedea","outline-variant":"#e6bdb7","tertiary-fixed":"#e7e2d8","primary-container":"#da291c","on-primary-fixed-variant":"#930001","secondary-container":"#ffc72c","on-tertiary-container":"#fdf7ed","surface-variant":"#fbdbd6","primary-fixed-dim":"#ffb4a8","background":"#fff8f6","inverse-primary":"#ffb4a8","surface-container":"#ffe9e6","error":"#ba1a1a","on-tertiary":"#ffffff","on-secondary-fixed-variant":"#5a4300","on-error":"#ffffff","inverse-surface":"#3f2c29","on-error-container":"#93000a","primary":"#b50303","surface-container-high":"#ffe2dd","surface-container-low":"#fff0ee","on-tertiary-fixed-variant":"#494740","on-primary-fixed":"#410000","on-surface":"#281715","on-secondary":"#ffffff","secondary":"#775a00","on-secondary-container":"#6f5400","on-surface-variant":"#5c403b","surface":"#fff8f6","surface-container-lowest":"#ffffff","secondary-fixed":"#ffdf99","outline":"#916f6a","on-secondary-fixed":"#251a00","on-primary":"#ffffff","surface-tint":"#be0f09","tertiary-container":"#757169","primary-fixed":"#ffdad4","error-container":"#ffdad6","surface-container-highest":"#fbdbd6","tertiary":"#5c5951","on-primary-container":"#fff5f3","secondary-fixed-dim":"#f6bf22","surface-bright":"#fff8f6","tertiary-fixed-dim":"#cbc6bd","on-tertiary-fixed":"#1d1b16","on-background":"#281715"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"xl":"32px","safe-area-inset":"20px","lg":"24px","xs":"4px","unit":"4px","md":"16px","sm":"8px"},"fontFamily":{"headline-lg":["Sora"],"label-bold":["Sora"],"display-xl-mobile":["Sora"],"display-xl":["Sora"],"headline-md":["Sora"],"body-lg":["Sora"]},"fontSize":{"headline-lg":["32px",{"lineHeight":"36px","fontWeight":"800"}],"label-bold":["14px",{"lineHeight":"16px","fontWeight":"800"}],"display-xl-mobile":["36px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"800"}],"display-xl":["48px",{"lineHeight":"52px","letterSpacing":"-0.02em","fontWeight":"800"}],"headline-md":["24px",{"lineHeight":"28px","fontWeight":"700"}],"body-lg":["18px",{"lineHeight":"24px","fontWeight":"600"}]}}}}</script></head><body class="bg-primary text-on-primary font-body-lg"><header class="fixed top-0 inset-x-0 z-50 pt-safe bg-primary h-20 flex items-center px-md border-b-4 border-on-surface"><button class="w-12 h-12 flex items-center justify-center bg-secondary border-2 border-on-surface rounded-xl arcade-shadow active:translate-y-1 active:shadow-none transition-all" onclick="history.back()"><span class="material-symbols-outlined font-bold text-on-surface">arrow_back</span></button><div class="flex-1 flex justify-center"><h1 class="text-headline-md font-headline-md uppercase text-on-primary drop-shadow-[0_2px_0_rgba(0,0,0,1)]">Game Session</h1></div><div class="w-12"></div></header><main class="flex flex-col relative w-full pt-20 bg-primary min-h-screen"><div class="flex flex-col w-full px-safe-area-inset pb-xl relative overflow-hidden">
+<!-- Confetti Background Layer -->
+<div class="absolute inset-0 pointer-events-none z-0" id="confetti-container"></div>
+<!-- Celebratory Header Section -->
+<div class="flex flex-col items-center justify-center pt-md pb-lg z-10">
+<div class="relative group">
+<div class="absolute inset-0 bg-secondary blur-2xl opacity-40 animate-pulse"></div>
+<h2 class="text-display-xl-mobile font-display-xl-mobile text-on-primary uppercase italic tracking-tighter drop-shadow-[0_6px_0_#281715] rotate-[-2deg] scale-110">
+        You Won!
+      </h2>
+</div>
+</div>
+<!-- Main Interaction Area: Split Prize Mechanics -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg z-10">
+<!-- Left: The Prize Wheel Container -->
+<div class="flex flex-col items-center p-md bg-surface-container rounded-[32px] border-b-[8px] border-on-surface arcade-shadow relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
+<p class="text-label-bold font-label-bold text-on-surface-variant uppercase mb-md">Spin the Wheel</p>
+<div class="relative w-64 h-64 flex items-center justify-center">
+<!-- The Wheel -->
+<div class="w-full h-full rounded-full border-4 border-on-surface bg-on-surface overflow-hidden transition-transform duration-[3000ms] cubic-bezier(0.15, 0, 0.15, 1) relative shadow-[0_12px_0_0_#281715]" id="prize-wheel">
+<!-- Wheel Segments -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-full h-full absolute rotate-0 bg-primary border-r-2 border-on-surface"></div>
+<div class="w-full h-full absolute rotate-45 bg-secondary border-r-2 border-on-surface"></div>
+<div class="w-full h-full absolute rotate-90 bg-primary border-r-2 border-on-surface"></div>
+<div class="w-full h-full absolute rotate-[135deg] bg-secondary border-r-2 border-on-surface"></div>
+<div class="w-full h-full absolute rotate-[180deg] bg-primary border-r-2 border-on-surface"></div>
+<div class="w-full h-full absolute rotate-[225deg] bg-secondary border-r-2 border-on-surface"></div>
+<div class="w-full h-full absolute rotate-[270deg] bg-primary border-r-2 border-on-surface"></div>
+<div class="w-full h-full absolute rotate-[315deg] bg-secondary border-r-2 border-on-surface"></div>
+</div>
+<!-- Prize Icons on Wheel -->
+<div class="absolute inset-0 p-4">
+<img alt="Burger" class="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-12 rotate-0 object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLtTyAD32N8_05eS-0ii9Vn1LeKHmyekNcnfVWm43gAUV9Fwb4Ya-lz1TCQ6IAEg5DVW1h3UEGzoKp9Um4DCYoaIpT5eaHeqsd6XxapJ9ZmLXGxQ7DFgU0IAqnxlT-4_2FvT7YwYCcbp1TIEx7eoD0MDyAn1Vm_kq2BWk4-AnI7okTHr9LHnsc3Z-_MFoXZ3yqNFEHq8aboLnXNcKaxzodMmL1nyJeujjG1cWvs_j9h6aDvdmoK-Z_8957LF"/>
+<img alt="Fries" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rotate-90 object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLtTyAD32N8_05eS-0ii9Vn1LeKHmyekNcnfVWm43gAUV9Fwb4Ya-lz1TCQ6IAEg5DVW1h3UEGzoKp9Um4DCYoaIpT5eaHeqsd6XxapJ9ZmLXGxQ7DFgU0IAqnxlT-4_2FvT7YwYCcbp1TIEx7eoD0MDyAn1Vm_kq2BWk4-AnI7okTHr9LHnsc3Z-_MFoXZ3yqNFEHq8aboLnXNcKaxzodMmL1nyJeujjG1cWvs_j9h6aDvdmoK-Z_8957LF"/>
+<img alt="Nuggets" class="absolute bottom-4 left-1/2 -translate-x-1/2 w-12 h-12 rotate-180 object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLtTyAD32N8_05eS-0ii9Vn1LeKHmyekNcnfVWm43gAUV9Fwb4Ya-lz1TCQ6IAEg5DVW1h3UEGzoKp9Um4DCYoaIpT5eaHeqsd6XxapJ9ZmLXGxQ7DFgU0IAqnxlT-4_2FvT7YwYCcbp1TIEx7eoD0MDyAn1Vm_kq2BWk4-AnI7okTHr9LHnsc3Z-_MFoXZ3yqNFEHq8aboLnXNcKaxzodMmL1nyJeujjG1cWvs_j9h6aDvdmoK-Z_8957LF"/>
+<img alt="Apple Pie" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 -rotate-90 object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLtTyAD32N8_05eS-0ii9Vn1LeKHmyekNcnfVWm43gAUV9Fwb4Ya-lz1TCQ6IAEg5DVW1h3UEGzoKp9Um4DCYoaIpT5eaHeqsd6XxapJ9ZmLXGxQ7DFgU0IAqnxlT-4_2FvT7YwYCcbp1TIEx7eoD0MDyAn1Vm_kq2BWk4-AnI7okTHr9LHnsc3Z-_MFoXZ3yqNFEHq8aboLnXNcKaxzodMmL1nyJeujjG1cWvs_j9h6aDvdmoK-Z_8957LF"/>
+</div>
+</div>
+<!-- Pointer -->
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+<div class="w-8 h-10 bg-on-surface clip-path-triangle transform rotate-180 shadow-lg">
+<div class="w-full h-full bg-white scale-75 clip-path-triangle"></div>
+</div>
+</div>
+<!-- Center Cap -->
+<div class="absolute w-12 h-12 bg-white border-4 border-on-surface rounded-full z-20 flex items-center justify-center arcade-shadow">
+<div class="w-4 h-4 bg-primary rounded-full"></div>
+</div>
+</div>
+<button class="mt-lg px-xl py-md bg-primary text-on-primary font-headline-md rounded-2xl border-b-4 border-on-surface arcade-shadow active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider" onclick="spinWheel()">
+        Spin!
+      </button>
+</div>
+<!-- Right: Peel to Reveal Container -->
+<div class="flex flex-col items-center p-md bg-surface-container rounded-[32px] border-b-[8px] border-on-surface arcade-shadow relative overflow-hidden">
+<p class="text-label-bold font-label-bold text-on-surface-variant uppercase mb-md">Lucky Peel</p>
+<div class="relative w-full max-w-[280px] aspect-[3/4] bg-secondary-container rounded-2xl border-4 border-on-surface overflow-hidden group">
+<!-- Revealed Layer -->
+<div class="absolute inset-0 flex flex-col items-center justify-center p-md text-center">
+<div class="w-32 h-32 mb-sm drop-shadow-xl animate-bounce">
+<img alt="Golden Nuggets" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLtTyAD32N8_05eS-0ii9Vn1LeKHmyekNcnfVWm43gAUV9Fwb4Ya-lz1TCQ6IAEg5DVW1h3UEGzoKp9Um4DCYoaIpT5eaHeqsd6XxapJ9ZmLXGxQ7DFgU0IAqnxlT-4_2FvT7YwYCcbp1TIEx7eoD0MDyAn1Vm_kq2BWk4-AnI7okTHr9LHnsc3Z-_MFoXZ3yqNFEHq8aboLnXNcKaxzodMmL1nyJeujjG1cWvs_j9h6aDvdmoK-Z_8957LF"/>
+</div>
+<h3 class="text-headline-md font-headline-md text-on-secondary-container leading-none">FREE<br/>NUGGETS</h3>
+<p class="text-label-bold font-label-bold text-on-secondary-container/70 mt-sm">MCDELIVERY ONLY</p>
+</div>
+<!-- Peeling Sticker Layer -->
+<div class="absolute inset-0 bg-primary flex flex-col items-center justify-center cursor-pointer transition-transform duration-700 ease-in-out origin-top-right" id="peel-layer">
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, #fff 2px, transparent 2px); background-size: 20px 20px;"></div>
+<span class="material-symbols-outlined text-display-xl text-on-primary mb-md">touch_app</span>
+<p class="text-headline-md font-headline-md text-on-primary uppercase italic">Peel Here</p>
+<!-- Peeling Corner Effect -->
+<div class="absolute bottom-0 left-0 w-16 h-16 bg-surface-variant rounded-tr-3xl border-t-4 border-r-4 border-on-surface shadow-[-4px_4px_0_0_#281715]"></div>
+</div>
+</div>
+<p class="mt-md text-label-bold font-label-bold text-on-surface-variant">Tap to reveal your prize!</p>
+</div>
+</div>
+<!-- Bottom CTA -->
+<div class="flex flex-col items-center mt-xl z-10 px-md">
+<button class="w-full max-w-sm py-lg bg-secondary text-on-surface font-headline-md rounded-3xl border-b-[6px] border-on-surface arcade-shadow active:translate-y-1 active:shadow-none transition-all uppercase flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined font-bold">confirmation_number</span>
+      Claim My Rewards
+    </button>
+<p class="text-label-bold font-label-bold text-on-primary/60 mt-md uppercase tracking-widest">Expires in 24 Hours</p>
+</div>
+<style>
+    .clip-path-triangle {
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    }
+    .peel-off {
+      transform: translate(-120%, 120%) rotate(-45deg);
+    }
+  </style>
+<script>
+    function spinWheel() {
+      const wheel = document.getElementById('prize-wheel');
+      const randomRotation = Math.floor(Math.random() * 360) + 1440; // At least 4 full spins
+      wheel.style.transform = `rotate(${randomRotation}deg)`;
+      
+      // Basic haptic feedback feel
+      setTimeout(() => {
+        createConfettiBurst();
+      }, 3000);
+    }
+
+    const peelLayer = document.getElementById('peel-layer');
+    peelLayer.addEventListener('click', () => {
+      peelLayer.classList.add('peel-off');
+      createConfettiBurst();
+    });
+
+    function createConfettiBurst() {
+      const container = document.getElementById('confetti-container');
+      const colors = ['#b50303', '#775a00', '#ffc72c', '#ffffff'];
+      
+      for (let i = 0; i < 40; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'absolute w-3 h-3 rounded-sm z-0';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = '-10px';
+        
+        const animation = confetti.animate([
+          { transform: 'translateY(0) rotate(0)', opacity: 1 },
+          { transform: `translateY(100vh) translateX(${Math.random() * 100 - 50}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+        ], {
+          duration: 2000 + Math.random() * 2000,
+          easing: 'cubic-bezier(0, .9, .57, 1)'
+        });
+        
+        container.appendChild(confetti);
+        animation.onfinish = () => confetti.remove();
+      }
+    }
+
+    // Initial festive burst
+    setTimeout(createConfettiBurst, 500);
+  </script>
+</div></main></body></html>

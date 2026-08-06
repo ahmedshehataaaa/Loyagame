@@ -1,0 +1,100 @@
+/* ============================================================
+   Base layer — reset, app shell, typography defaults.
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  height: 100%;
+  background: var(--c-primary-deep);
+  color: var(--c-white);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+body { overflow: hidden; }              /* the route pane scrolls, not the page */
+
+img { max-width: 100%; display: block; }
+button, input, select { font: inherit; color: inherit; }
+h1, h2, h3, p, ul { margin: 0; }
+ul { list-style: none; padding: 0; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ---- app shell: phone-shaped, centred on desktop ---------- */
+#app {
+  position: relative;
+  width: 100%;
+  max-width: var(--app-max);
+  height: 100dvh;
+  margin: 0 auto;
+  background: var(--c-primary);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 40px rgba(0, 0, 0, .5);
+}
+
+/* Each route renders into this; it owns the scrolling. */
+#route {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.screen {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-md) var(--sp-md) var(--sp-xl);
+  padding-top: calc(var(--sp-md) + env(safe-area-inset-top, 0px));
+}
+
+/* Radial "sunburst" ground used by the hero screens. */
+.bg-burst {
+  background:
+    radial-gradient(circle at 50% 28%, #F0432F 0%, var(--c-primary) 48%, var(--c-primary-dark) 100%);
+}
+
+/* ---- type helpers ----------------------------------------- */
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  line-height: 1.02;
+  text-transform: uppercase;
+  letter-spacing: .01em;
+  text-shadow: 0 4px 0 var(--c-ink);
+}
+.t-headline {
+  font-family: var(--font-display);
+  font-size: var(--fs-headline);
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-shadow: 0 3px 0 var(--c-ink);
+}
+.t-kicker {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-black);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .8;
+}
+.t-center { text-align: center; }
+.t-muted  { color: rgba(255, 255, 255, .8); font-weight: var(--fw-body); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Visible focus for keyboard users on every interactive element. */
+:where(button, a, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--c-white);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}

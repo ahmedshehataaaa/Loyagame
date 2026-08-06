@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @layer base {
+            html, body { width: 100vw; margin: 0; padding: 0; overflow-x: hidden; }
+            body { overscroll-behavior: none; }
+            .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+            .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+        }
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        
+        /* AAA Game Style Utilities */
+        .game-border { border: 4px solid #27251F; }
+        .arcade-shadow { box-shadow: 0px 6px 0px 0px #27251F; }
+        .arcade-shadow-active { box-shadow: 0px 0px 0px 0px #27251F; transform: translateY(6px); }
+        .glossy-top { position: relative; overflow: hidden; }
+        .glossy-top::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 33%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .bevel-red { background-color: #DA291C; border-bottom: 4px solid #930001; }
+        .bevel-yellow { background-color: #FFC72C; border-bottom: 4px solid #775a00; }
+        
+        @keyframes outer-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 199, 44, 0.6), 0px 6px 0px 0px #27251F; }
+            50% { box-shadow: 0 0 30px rgba(255, 199, 44, 0.9), 0px 6px 0px 0px #27251F; }
+        }
+        .animate-outer-glow { animation: outer-glow 2s ease-in-out infinite; }
+    </style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#DA291C",
+                        "secondary": "#FFC72C",
+                        "on-surface": "#27251F",
+                        "surface-container": "#FFE9E6",
+                        "surface-container-highest": "#FBDBD6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "safe-area-inset": "20px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "unit": "4px",
+                        "md": "16px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Sora"],
+                        "label-bold": ["Sora"],
+                        "display-xl-mobile": ["Sora"],
+                        "display-xl": ["Sora"],
+                        "headline-md": ["Sora"],
+                        "body-lg": ["Sora"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "36px", "fontWeight": "800" }],
+                        "label-bold": ["14px", { "lineHeight": "16px", "fontWeight": "800" }],
+                        "display-xl-mobile": ["36px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "display-xl": ["48px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "24px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-primary text-white font-body-lg overflow-x-hidden min-h-screen">
+<header class="fixed top-0 inset-x-0 z-50 pt-safe bg-primary h-24 flex items-center justify-between px-md border-b-4 border-on-surface">
+<div class="flex-1">
+<img alt="McDonald's Logo" class="h-10 w-auto object-contain drop-shadow-[0_2px_0_rgba(0,0,0,1)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQu-ScKE9HJEsLFwAH3fvPM_IxfqJQzFWY1y0Av5QyWrqJlk5cYoWOwVBWNMgoo6-rFHMfEsDP3yDG5FLaopDZ0iej0Nl9ewmB86rguhBwGg3dn8ScYkfjESKot0rSJBdNub4w_ohp2p6b9rDFwddqUckllS6LpEcVTbyhexP6j1arOnsOss7A5Miri98WosQfbCKkkhzqZy4mpUHTCpNIAmb_RK5ACtFqz_yQQh1icMdeZ_-cXuU9Xp3iexsB4qMJMaw"/>
+</div>
+<div class="flex items-center justify-center">
+</div>
+<div class="flex-1 flex justify-end">
+<div class="p-1 bg-secondary border-2 border-on-surface rounded-full arcade-shadow">
+<img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGPub6RJRUbBGrpPiwNdJ0YT7oUmD9MbizvOF-j6SLHJ5IiYpmXECcrW2Ry-PxJGXcxclsRS0R7Er0bmOoy7wMfWCOLFNSQKpM5VyZsX6GQCSmbVryymD9l_O__sDhfQ-irOnlJLzEqgdxpF4DUnUpBK_1KsS0XLEHK-G6U9Tp8ZBZcbH_OYwJ3FKftptXZ7291DQ2AS_s4kq27PDqgcQr6Zt3waSx-UVFXVb9yBhBN3E2GHwzBdi6VA"/>
+</div>
+</div>
+</header>
+<main class="flex flex-col relative w-full pt-28 pb-32 px-md space-y-lg">
+<!-- Tournament Countdown Header -->
+<div class="relative w-full glossy-top bevel-yellow game-border arcade-shadow rounded-xl p-md flex flex-col items-center justify-center overflow-hidden">
+<div class="absolute inset-0 opacity-10 pointer-events-none">
+<svg class="w-full h-full animate-[spin_20s_linear_infinite]" viewbox="0 0 100 100">
+<g class="text-on-surface" fill="currentColor">
+<path d="M50 50L0 0H20L50 50Z"></path>
+<path d="M50 50L40 0H60L50 50Z"></path>
+<path d="M50 50L80 0H100L50 50Z"></path>
+<path d="M50 50L100 30V50L50 50Z"></path>
+<path d="M50 50L100 70V90L50 50Z"></path>
+<path d="M50 50L80 100H60L50 50Z"></path>
+<path d="M50 50L40 100H20L50 50Z"></path>
+<path d="M50 50L0 80V60L50 50Z"></path>
+</g>
+</svg>
+</div>
+<div class="relative z-10 flex flex-col items-center">
+<span class="font-label-bold text-label-bold text-on-surface/80 uppercase tracking-widest mb-xs">Season Ends In</span>
+<div class="flex items-center space-x-sm">
+<span class="material-symbols-outlined text-primary font-bold text-headline-md">schedule</span>
+<span class="font-display-xl-mobile text-display-xl-mobile text-on-surface drop-shadow-sm" id="countdown">10:33:05</span>
+</div>
+<button class="mt-sm px-xl py-2 glossy-top bevel-red game-border rounded-full transform active:scale-95 transition-all">
+<span class="font-label-bold text-label-bold text-white uppercase drop-shadow-[0_1px_0_rgba(0,0,0,0.5)]">MONTH-END RESET</span>
+</button>
+</div>
+</div>
+<!-- Leaderboard List -->
+<div class="flex flex-col space-y-md">
+<!-- Rank 1 -->
+<div class="bg-secondary game-border rounded-xl arcade-shadow p-md flex items-center justify-between glossy-top">
+<div class="flex items-center space-x-md">
+<div class="w-12 h-12 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface text-5xl" style="font-variation-settings: 'FILL' 1, 'wght' 700;">emoji_events</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center space-x-xs">
+<span class="font-headline-md text-on-surface">McSliceKing</span>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<span class="font-label-bold text-[10px] text-on-surface/60 uppercase">Ultimate Master</span>
+</div>
+</div>
+<div class="text-right">
+<div class="font-headline-md text-on-surface">942,000</div>
+<div class="font-label-bold text-xs text-on-surface/60">PTS</div>
+</div>
+</div>
+<!-- Rank 2 -->
+<div class="bg-white game-border rounded-xl arcade-shadow p-md flex items-center justify-between">
+<div class="flex items-center space-x-md">
+<div class="w-12 h-12 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-400 text-5xl" style="font-variation-settings: 'FILL' 1, 'wght' 700;">military_tech</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-on-surface">FryFanatic_88</span>
+<span class="text-[10px] font-label-bold text-on-surface/60 uppercase">Diamond Rank</span>
+</div>
+</div>
+<span class="font-headline-md text-on-surface">885,200</span>
+</div>
+<!-- Rank 3 -->
+<div class="bg-white game-border rounded-xl arcade-shadow p-md flex items-center justify-between">
+<div class="flex items-center space-x-md">
+<div class="w-12 h-12 flex items-center justify-center">
+<span class="material-symbols-outlined text-orange-600 text-5xl" style="font-variation-settings: 'FILL' 1, 'wght' 700;">military_tech</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-on-surface">BigMacStacker</span>
+<span class="text-[10px] font-label-bold text-on-surface/60 uppercase">Platinum Rank</span>
+</div>
+</div>
+<span class="font-headline-md text-on-surface">792,500</span>
+</div>
+<!-- YOU (Player) -->
+<div class="bg-secondary glossy-top game-border rounded-xl arcade-shadow animate-outer-glow p-md flex items-center justify-between relative">
+<div class="absolute -left-3 top-1/2 -translate-y-1/2 bg-on-surface text-white font-bold px-2 py-1 rounded game-border rotate-[-15deg] z-20 shadow-lg">
+                    YOU
+                </div>
+<div class="flex items-center space-x-md pl-4">
+<span class="font-headline-md text-on-surface italic w-8 text-center">42</span>
+<div class="flex flex-col">
+<div class="flex items-center space-x-xs">
+<span class="font-headline-md text-on-surface">PLAYER_1337</span>
+<div class="bg-primary/20 px-1 rounded text-[10px] font-bold text-primary">LIVE</div>
+</div>
+<span class="text-[10px] font-label-bold text-on-surface/60 uppercase">Gold Rank</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-headline-md text-on-surface">124,050</span>
+<span class="text-[10px] font-label-bold text-primary uppercase leading-none">+250 TODAY</span>
+</div>
+</div>
+<!-- Other Ranks -->
+<div class="flex flex-col space-y-md">
+<div class="bg-white game-border rounded-xl arcade-shadow p-md flex items-center justify-between opacity-90">
+<div class="flex items-center space-x-md">
+<span class="font-headline-md text-on-surface/40 w-12 text-center">4</span>
+<span class="font-body-lg text-on-surface">SaltySlicer</span>
+</div>
+<span class="font-headline-md text-on-surface/40">710,900</span>
+</div>
+<div class="bg-white game-border rounded-xl arcade-shadow p-md flex items-center justify-between opacity-80">
+<div class="flex items-center space-x-md">
+<span class="font-headline-md text-on-surface/40 w-12 text-center">5</span>
+<span class="font-body-lg text-on-surface">NuggetNinja</span>
+</div>
+<span class="font-headline-md text-on-surface/40">698,000</span>
+</div>
+<div class="bg-white game-border rounded-xl arcade-shadow p-md flex items-center justify-between opacity-70">
+<div class="flex items-center space-x-md">
+<span class="font-headline-md text-on-surface/40 w-12 text-center">6</span>
+<span class="font-body-lg text-on-surface">QuarterPounder</span>
+</div>
+<span class="font-headline-md text-on-surface/40">550,400</span>
+</div>
+</div>
+</div>
+<!-- Reward Teaser Card (Premium Ribbon Banner) -->
+<div class="relative group mt-8">
+<div class="absolute -inset-1 bg-gradient-to-r from-secondary to-yellow-200 rounded-2xl blur opacity-25"></div>
+<div class="relative bg-on-surface game-border rounded-xl arcade-shadow overflow-hidden flex items-center">
+<!-- Ribbon Visual -->
+<div class="w-16 h-full bg-primary flex items-center justify-center py-4 border-r-4 border-white/20">
+<div class="w-10 h-10 bg-secondary rounded-full border-2 border-on-surface flex items-center justify-center animate-pulse">
+<span class="material-symbols-outlined text-on-surface text-2xl font-bold">confirmation_number</span>
+</div>
+</div>
+<div class="flex-1 p-md flex items-center justify-between">
+<div>
+<p class="font-label-bold text-secondary text-xs uppercase tracking-widest mb-1">Top 25 Reward</p>
+<p class="font-headline-md text-white leading-tight">Free Large Fries Coupon</p>
+</div>
+<span class="material-symbols-outlined text-secondary text-4xl">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Share Button -->
+<button class="w-full glossy-top bevel-yellow game-border arcade-shadow rounded-xl py-md flex items-center justify-center space-x-sm active:arcade-shadow-active active:translate-y-[6px] transition-all">
+<span class="material-symbols-outlined text-on-surface font-bold">share</span>
+<span class="font-headline-md text-on-surface uppercase tracking-tight">Brag To Friends</span>
+</button>
+</main>
+<!-- Navigation -->
+<nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-secondary border-t-4 border-on-surface">
+<div class="flex justify-around items-center h-20 px-sm">
+<a class="flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 border-on-surface text-on-surface arcade-shadow active:arcade-shadow-active" href="#">
+<span class="material-symbols-outlined font-bold">home</span>
+</a>
+<a class="flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 border-on-surface text-on-surface arcade-shadow active:arcade-shadow-active" href="#">
+<span class="material-symbols-outlined font-bold">redeem</span>
+</a>
+<a aria-current="page" class="flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 border-on-surface bg-on-surface text-secondary arcade-shadow-active scale-95" href="#">
+<span class="material-symbols-outlined font-bold">leaderboard</span>
+</a>
+</div>
+</nav>
+<script>
+        function updateCountdown() {
+            const now = new Date();
+            const reset = new Date();
+            reset.setHours(23, 59, 59, 999);
+            
+            const diff = reset - now;
+            const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+            const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+            const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+            
+            const el = document.getElementById('countdown');
+            if(el) el.innerText = `${h}:${m}:${s}`;
+        }
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+    </script>
+</body></html>

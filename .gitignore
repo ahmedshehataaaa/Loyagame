@@ -1,0 +1,12 @@
+.vercel
+.vercel.krispy-kreme-link.bak/
+.netlify/
+node_modules/
+.DS_Store
+.playwright-mcp/
+test-results/
+playwright-report/
+*.log
+.env
+.env.*
+!.env.example
