@@ -59,6 +59,11 @@ window.UI = {
   refreshHome() {
     GameEvents.emit('refresh');
   },
+  /* Called by the engine only when a displayed value changed, replacing the
+     100ms poll the HUD used to run. */
+  hud(state) {
+    GameEvents.emit('hud', state);
+  },
   showChooser(score, result) {
     GameEvents.emit('ended', { score, ...result, won: true });
   },

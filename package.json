@@ -2,7 +2,7 @@
   "name": "mcslice-rush",
   "version": "0.1.0",
   "private": true,
-  "description": "Slice Rush — McDonald's campaign build (McSlice Rush). One reusable HTML5 slicing engine, reskinned per restaurant by configuration.",
+  "description": "Slice Rush \u2014 McDonald's campaign build (McSlice Rush). One reusable HTML5 slicing engine, reskinned per restaurant by configuration.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -18,11 +18,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run validate:campaigns && npm run test"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run validate:campaigns && npm run test",
+    "build": "node scripts/build.mjs",
+    "perf": "node scripts/perf-baseline.mjs",
+    "preview": "python -c \"import os,http.server,socketserver;os.chdir('dist');socketserver.TCPServer.allow_reuse_address=True;socketserver.TCPServer(('',8767),http.server.SimpleHTTPRequestHandler).serve_forever()\""
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.5",
+    "esbuild": "^0.28.1",
     "eslint": "^9.17.0",
     "globals": "^15.14.0",
     "prettier": "^3.4.2",

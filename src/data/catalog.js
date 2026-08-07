@@ -121,7 +121,6 @@ export const ASSET_GROUPS = [
     items: [
       { file: 'assets/brand-logo.png', name: 'Arches mark' },
       { file: 'assets/game-logo.png', name: 'McSlice Rush logo' },
-      { file: 'assets/mascot.png', name: 'Mascot' },
       { file: 'assets/avatar.png', name: 'Player avatar' },
     ],
   },

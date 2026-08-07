@@ -182,22 +182,22 @@ export function PlayPage(root) {
     return () => {};
   }
 
-  /* Poll the engine for HUD values. The engine keeps score in a
-     closure, so it is mirrored onto the canvas dataset each frame;
-     a 100ms poll is far cheaper than re-rendering every frame. */
-  const poll = setInterval(() => {
+  /* ---- HUD updates -----------------------------------------
+     Event-driven: the engine calls UI.hud() only when a displayed value
+     actually changed. This replaced a 100ms setInterval that re-read seven
+     `data-*` attributes and rewrote text nodes ten times a second whether or
+     not anything had moved. */
+  function paintHud(d) {
     if (paused || ended) return;
-    const d = canvas.dataset;
-    if (d.score !== undefined) {
-      scoreEl.textContent = num(d.score);
-      timeEl.textContent = d.time ?? '';
-      const lives = Math.max(0, Number(d.lives ?? 0));
-      livesEl.textContent = lives > 0 ? HEART.repeat(lives) : '💀';
-      livesEl.setAttribute('aria-label', `${lives} lives remaining`);
-      // The clock is the win condition, so flag the tense final stretch.
-      timeEl.classList.toggle('is-urgent', Number(d.time ?? ROUND_TIME) <= 10);
-    }
-  }, 100);
+    scoreEl.textContent = num(d.score);
+    timeEl.textContent = String(d.time);
+    const lives = Math.max(0, Number(d.lives ?? 0));
+    livesEl.textContent = lives > 0 ? HEART.repeat(lives) : '💀';
+    livesEl.setAttribute('aria-label', `${lives} lives remaining`);
+    // The clock is the win condition, so flag the tense final stretch.
+    timeEl.classList.toggle('is-urgent', d.time <= 10);
+  }
+  offs.push(GameEvents.on('hud', paintHud));
 
   /* ---- Pause / resume -------------------------------------- */
   let pauseOverlay = null;
@@ -305,7 +305,6 @@ export function PlayPage(root) {
 
   /* ---- Teardown -------------------------------------------- */
   return () => {
-    clearInterval(poll);
     // Drop the round session so a stale token can never be submitted later.
     endRound();
     offs.forEach((off) => {

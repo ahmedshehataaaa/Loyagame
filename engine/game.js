@@ -750,15 +750,56 @@ const Game = (() => {
 
      This function now only publishes state. Values land on the canvas dataset
      so the engine still imports no UI module. */
+  /* Publishes only when a displayed value actually CHANGES, and notifies the
+     DOM HUD directly instead of leaving it to poll.
+
+     The HUD used to be driven by a 100ms setInterval reading these attributes,
+     which meant two costs on every single frame: the engine wrote seven
+     `data-*` attributes (each a string conversion plus a DOM attribute write)
+     whether or not anything had moved, and the DOM layer re-read and re-wrote
+     text nodes 10x a second regardless. Score changes on a slice; the clock
+     changes once a second. Diffing first turns a per-frame cost into an
+     on-change one. */
+  let lastPublished = null;
+
   function publishState() {
+    const next = {
+      score,
+      time: Math.max(0, Math.ceil(timeLeft)),
+      lives: Math.max(0, lives),
+      combo,
+      slices: totalSlices,
+      frenzy: Math.max(0, Math.ceil(frenzyTimer)),
+      freeze: Math.max(0, Math.ceil(freezeTimer)),
+    };
+
+    if (
+      lastPublished &&
+      lastPublished.score === next.score &&
+      lastPublished.time === next.time &&
+      lastPublished.lives === next.lives &&
+      lastPublished.combo === next.combo &&
+      lastPublished.slices === next.slices &&
+      lastPublished.frenzy === next.frenzy &&
+      lastPublished.freeze === next.freeze
+    ) {
+      return;
+    }
+    lastPublished = next;
+
+    /* The dataset is still written: it is the engine's public read surface and
+       the e2e suite asserts on it. It is just no longer written every frame. */
     const ds = canvas.dataset;
-    ds.score = String(score);
-    ds.time = String(Math.max(0, Math.ceil(timeLeft)));
-    ds.lives = String(Math.max(0, lives));
-    ds.combo = String(combo);
-    ds.slices = String(totalSlices);
-    ds.frenzy = String(Math.max(0, Math.ceil(frenzyTimer)));
-    ds.freeze = String(Math.max(0, Math.ceil(freezeTimer)));
+    ds.score = String(next.score);
+    ds.time = String(next.time);
+    ds.lives = String(next.lives);
+    ds.combo = String(next.combo);
+    ds.slices = String(next.slices);
+    ds.frenzy = String(next.frenzy);
+    ds.freeze = String(next.freeze);
+
+    // Push rather than let the UI poll. UI is satisfied by the engine bridge.
+    UI.hud?.(next);
   }
 
   function render() {
@@ -818,6 +859,7 @@ const Game = (() => {
     frenzyTimer = 0;
     freezeTimer = 0;
     timeLeft = CONFIG.ROUND_TIME;
+    lastPublished = null; // force a publish on the first frame of the round
     scene = SCENE.PLAYING;
     resize();
     UI.show('hud');

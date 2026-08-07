@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Anton&family=Sora:wght@400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Sora:wght@600;800&display=swap"
       rel="stylesheet"
     />
 
@@ -112,5 +112,20 @@
     <script src="engine/game.js"></script>
 
     <script type="module" src="src/main.js"></script>
+
+    <script>
+      /* The service worker was never registered — so the PWA manifest promised
+         installability and offline play that did not exist. Registered after
+         `load` so it never competes with first paint for bandwidth. */
+      if ('serviceWorker' in navigator) {
+        addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').catch((err) => {
+            // Offline support is a bonus, not a requirement: a failed
+            // registration must never surface to the player.
+            console.warn('service worker registration failed', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

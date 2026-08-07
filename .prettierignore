@@ -2,6 +2,7 @@ _legacy-ui-backup/
 stitch-export/
 .vercel.krispy-kreme-link.bak/
 node_modules/
+dist/
 test-results/
 playwright-report/
 .playwright-mcp/

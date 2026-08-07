@@ -4,6 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
    Python server used by hand (`npm run dev`). Playwright starts it itself so
    `npm run test:e2e` needs no prior setup. */
 const PORT = 8766; // deliberately not 8765, so a hand-started dev server can coexist
+const PREVIEW_PORT = 8767; // serves the built dist/ for production-build.spec.js
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -77,11 +78,24 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: `python server.py`,
-    env: { PORT: String(PORT) },
-    url: `http://127.0.0.1:${PORT}/index.html`,
-    reuseExistingServer: !process.env.CI,
-    stdout: 'ignore',
-  },
+  /* Two servers: the source tree on PORT for most specs, and the built dist/ on
+     PREVIEW_PORT for production-build.spec.js. The preview server is allowed to
+     fail when dist/ has not been built — those specs skip themselves with a
+     clear reason rather than failing confusingly. */
+  webServer: [
+    {
+      command: `python server.py`,
+      env: { PORT: String(PORT) },
+      url: `http://127.0.0.1:${PORT}/index.html`,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'ignore',
+    },
+    {
+      command: `python -m http.server ${PREVIEW_PORT} --directory dist`,
+      url: `http://127.0.0.1:${PREVIEW_PORT}/index.html`,
+      reuseExistingServer: true,
+      stdout: 'ignore',
+      ignoreExitCode: true,
+    },
+  ],
 });

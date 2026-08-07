@@ -36,7 +36,9 @@
 
   --fw-body: 600;
   --fw-bold: 800;
-  --fw-black: 900;
+  /* Sora ships up to 800; asking for 900 made the browser synthesise a
+     faux-bold, which renders inconsistently across platforms. */
+  --fw-black: 800;
 
   /* ---- spacing (4px base) -------------------------------- */
   --sp-xs: 4px;

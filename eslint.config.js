@@ -11,6 +11,8 @@ export default [
       'stitch-export/**', // generated design exports
       '.vercel.krispy-kreme-link.bak/**',
       'node_modules/**',
+      // Build output: minified, generated, and not ours to style.
+      'dist/**',
       'test-results/**',
       'playwright-report/**',
       '.playwright-mcp/**',
@@ -88,9 +90,14 @@ export default [
   },
 
   {
-    // Build/CI scripts. These are CLIs, so stdout IS their interface.
+    /* Build/CI scripts. These are CLIs, so stdout IS their interface. Browser
+       globals are allowed too: perf-baseline.mjs drives Playwright and its
+       page.evaluate() callbacks are authored inline here but RUN in the page. */
     files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
-    languageOptions: { sourceType: 'module', globals: globals.node },
-    rules: { 'no-console': 'off' },
+    languageOptions: {
+      sourceType: 'module',
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: { 'no-console': 'off', 'no-implicit-coercion': 'off' },
   },
 ];
