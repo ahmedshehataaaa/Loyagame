@@ -19,6 +19,7 @@ import { solveLaunch, launchSpeedForApex, hangTime, horizontalVelocity } from '.
 import { segmentHitsCircle, distanceToSegment, corridorGap } from './collision.js';
 import { planWave, difficultyAt } from './wave-planner.js';
 import { resolveOutcome, applyHazardHit, isWin, isPlausibleRun, OUTCOME } from './round-rules.js';
+import { capPush, burstSize, shakeAmount, shouldTick, FX_DEFAULTS } from './fx-budget.js';
 
 export const Mechanics = {
   systemRng,
@@ -41,6 +42,11 @@ export const Mechanics = {
   isWin,
   isPlausibleRun,
   OUTCOME,
+  capPush,
+  burstSize,
+  shakeAmount,
+  shouldTick,
+  FX_DEFAULTS,
 };
 
 window.Mechanics = Mechanics;

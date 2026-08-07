@@ -43,7 +43,19 @@ const Platform = (() => {
     return { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight };
   }
 
-  return { allowed: isMobileOrTablet, realDevice, viewport };
+  /* Reduced motion, read live rather than cached: a player can change the OS
+     setting mid-session, and the engine should honour it on the next frame
+     without a reload. `src/main.js` mirrors the same signal into Store for the
+     DOM layer, so both sides agree. */
+  function reducedMotion() {
+    try {
+      return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch {
+      return false;
+    }
+  }
+
+  return { allowed: isMobileOrTablet, realDevice, viewport, reducedMotion };
 })();
 
 // Expose for ES module consumers (top-level const does not attach to window).

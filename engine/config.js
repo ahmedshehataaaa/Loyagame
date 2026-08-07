@@ -109,6 +109,24 @@ const CONFIG = {
     bombClearanceFrac: 0.18,
   },
 
+  // ---- Effects budget (ADR 0011) --------------------------------------
+  // Hard ceilings on effect volume. The engine previously let particles,
+  // popups and sliced halves accumulate without limit for a whole round, so a
+  // frenzy wave at high difficulty cost frame time exactly when the game was
+  // busiest AND buried the items the player was aiming at. See
+  // src/game/fx-budget.js for the eviction policy.
+  FX: {
+    maxParticles: 220,
+    maxPopups: 12,
+    maxHalves: 24,
+    bladePoints: 16,
+    maxShake: 14, // was a raw 26 on every bomb — hard to re-aim through
+    heroShake: 5,
+    reducedParticleScale: 0.15,
+    reducedShakeScale: 0,
+    tickFromSec: 5, // countdown urgency starts here
+  },
+
   // ---- Power-ups (special sliceable items) ---------------------------
   POWERUP: {
     goldenChance: 0.05, // chance a normal spawn is a GOLDEN item (big points + bonus)

@@ -82,6 +82,13 @@ const Sound = (() => {
       noise(0.5, 0.8, 600);
       tone(120, 0.5, 'sawtooth', 0.5, 40);
     },
+    /* Countdown tick for the closing seconds. Pitch rises as the clock runs
+       down so urgency is audible without a glance at the HUD — the player's
+       eyes are on the items, not the timer. */
+    tick(secondsLeft = 5) {
+      const urgency = Math.max(0, Math.min(5, 6 - secondsLeft));
+      tone(700 + urgency * 90, 0.07, 'square', 0.16 + urgency * 0.02);
+    },
     // Soft tick for menu buttons.
     click() {
       tone(660, 0.07, 'square', 0.18);

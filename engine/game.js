@@ -197,21 +197,25 @@ const Game = (() => {
     if (f.isBomb) {
       // BOOM — lose a life, shake, flash, scatter dark debris.
       lives--;
-      shake = 26;
-      flash = 0.6;
+      addShake(CONFIG.FX.maxShake);
+      flash = fxReduced() ? 0.25 : 0.6;
       combo = 0;
       Sound.bomb();
       buzz([40, 30, 60]);
-      for (let i = 0; i < 26; i++) {
-        const a = Math.random() * Math.PI * 2,
-          sp = lerp(120, 620, Math.random());
-        particles.push(spark(f.x, f.y, Math.cos(a) * sp, Math.sin(a) * sp, '#2b2b2b'));
-      }
-      for (let i = 0; i < 14; i++) {
-        const a = Math.random() * Math.PI * 2,
-          sp = lerp(200, 700, Math.random());
-        particles.push(spark(f.x, f.y, Math.cos(a) * sp, Math.sin(a) * sp, '#ff7b1a'));
-      }
+      // Char first, then embers: two passes read as one impact, not two.
+      emitBurst(f.x, f.y, 26, () => '#2b2b2b', 120, 620);
+      emitBurst(f.x, f.y, 14, () => '#ff7b1a', 200, 700);
+      // Name the mistake. A bomb hit is the only moment the player MUST
+      // understand, and a life vanishing from the HUD is easy to miss.
+      emitPopup({
+        x: f.x,
+        y: f.y - 30,
+        text: lives > 0 ? 'BURNT! -1' : 'BURNT OUT!',
+        color: '#ff7b1a',
+        life: 1.0,
+        vy: -70,
+        size: 32,
+      });
       if (lives <= 0) endGame();
       return;
     }
@@ -222,7 +226,7 @@ const Game = (() => {
       if (f.special === 'frenzy') {
         frenzyTimer = pu.frenzyDuration;
         spawnTimer = 0.1;
-        popups.push({
+        emitPopup({
           x: f.x,
           y: f.y,
           text: '⚡ FRENZY!',
@@ -233,7 +237,7 @@ const Game = (() => {
         });
       } else {
         freezeTimer = pu.freezeDuration;
-        popups.push({
+        emitPopup({
           x: f.x,
           y: f.y,
           text: '❄️ FREEZE!',
@@ -278,7 +282,7 @@ const Game = (() => {
                 : 'DOUBLE!';
       const col =
         combo >= 8 ? '#ff2e4d' : combo >= 5 ? '#ffd23e' : combo >= 4 ? '#26d07e' : '#fff3a0';
-      popups.push({
+      emitPopup({
         x: f.x,
         y: f.y - 44,
         text: name,
@@ -290,7 +294,7 @@ const Game = (() => {
     }
 
     // Score burst — the hero Big Mac reads biggest + brightest.
-    popups.push({
+    emitPopup({
       x: f.x,
       y: f.y,
       text: (f.golden ? '⭐ +' : '+') + gained,
@@ -302,7 +306,8 @@ const Game = (() => {
 
     // Real McDonald's product name floats up under the points.
     if (f.def.label)
-      popups.push({
+      emitPopup({
+        optional: true,
         x: f.x,
         y: f.y + 22,
         text: hero ? `✨ ${f.def.label} ✨` : f.def.label,
@@ -313,20 +318,13 @@ const Game = (() => {
       });
 
     // Big Mac hero moment — a warm golden burst of sparkles.
-    if (hero)
-      for (let i = 0; i < 18; i++) {
-        const a = Math.random() * Math.PI * 2,
-          sp = lerp(140, 560, Math.random());
-        particles.push(
-          spark(f.x, f.y, Math.cos(a) * sp, Math.sin(a) * sp, i % 2 ? '#fff3d0' : '#ffe08a'),
-        );
-      }
-    if (f.golden)
-      for (let i = 0; i < 14; i++) {
-        const a = Math.random() * Math.PI * 2,
-          sp = lerp(120, 520, Math.random());
-        particles.push(spark(f.x, f.y, Math.cos(a) * sp, Math.sin(a) * sp, '#ffd84d'));
-      }
+    // The hero item gets a warm burst and a whisper of shake — the one place
+    // shake is used for celebration rather than damage.
+    if (hero) {
+      emitBurst(f.x, f.y, 18, (i) => (i % 2 ? '#fff3d0' : '#ffe08a'), 140, 560);
+      addShake(CONFIG.FX.heroShake);
+    }
+    if (f.golden) emitBurst(f.x, f.y, 14, () => '#ffd84d', 120, 520);
 
     spawnHalves(f, dirAng);
     splatter(f);
@@ -337,26 +335,70 @@ const Game = (() => {
     const nx = Math.cos(dirAng + Math.PI / 2),
       ny = Math.sin(dirAng + Math.PI / 2);
     [1, -1].forEach((side) => {
-      halves.push({
-        img: bakeHalf(f.def, f.r, dirAng, side),
-        x: f.x,
-        y: f.y,
-        vx: f.vx * 0.4 + nx * side * 260,
-        vy: f.vy * 0.4 + ny * side * 260 - 60,
-        rot: f.rot,
-        rotVel: side * lerp(3, 6, Math.random()),
-        life: 1.6,
-        size: f.r * 2.2,
-      });
+      Mechanics.capPush(
+        halves,
+        {
+          img: bakeHalf(f.def, f.r, dirAng, side),
+          x: f.x,
+          y: f.y,
+          vx: f.vx * 0.4 + nx * side * 260,
+          vy: f.vy * 0.4 + ny * side * 260 - 60,
+          rot: f.rot,
+          rotVel: side * lerp(3, 6, Math.random()),
+          life: 1.6,
+          size: f.r * 2.2,
+        },
+        CONFIG.FX.maxHalves,
+      );
     });
   }
 
   function splatter(f) {
-    for (let i = 0; i < 16; i++) {
-      const a = Math.random() * Math.PI * 2,
-        sp = lerp(80, 460, Math.random());
-      particles.push(spark(f.x, f.y, Math.cos(a) * sp, Math.sin(a) * sp, f.def.juice));
+    emitBurst(f.x, f.y, 16, () => f.def.juice, 80, 460);
+  }
+
+  /* ---- Effect emission, budgeted ---------------------------------------
+     Every effect now goes through these. The lists used to be pushed to
+     directly and grew unbounded for the whole round (audit finding P7); these
+     enforce CONFIG.FX ceilings and honour reduced motion in one place, so a
+     new effect cannot accidentally opt out of either. */
+  const fxReduced = () => Platform.reducedMotion();
+
+  function emitParticle(pt) {
+    Mechanics.capPush(particles, pt, CONFIG.FX.maxParticles);
+  }
+
+  /** Emit a radial burst, scaled to the remaining budget. */
+  function emitBurst(x, y, count, colorFor, speedMin, speedMax) {
+    const n = Mechanics.burstSize(count, {
+      inUse: particles.length,
+      max: CONFIG.FX.maxParticles,
+      reduced: fxReduced(),
+      reducedScale: CONFIG.FX.reducedParticleScale,
+    });
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = lerp(speedMin, speedMax, Math.random());
+      emitParticle(spark(x, y, Math.cos(a) * sp, Math.sin(a) * sp, colorFor(i)));
     }
+  }
+
+  function emitPopup(u) {
+    // Popups are text over the play field, so they are the effect most able to
+    // hide an item. Kept on a tighter leash than particles.
+    if (fxReduced() && u.optional) return;
+    Mechanics.capPush(popups, u, CONFIG.FX.maxPopups);
+  }
+
+  function addShake(amount) {
+    shake = Math.max(
+      shake,
+      Mechanics.shakeAmount(amount, {
+        max: CONFIG.FX.maxShake,
+        reduced: fxReduced(),
+        reducedScale: CONFIG.FX.reducedShakeScale,
+      }),
+    );
   }
 
   function spark(x, y, vx, vy, color) {
@@ -380,8 +422,7 @@ const Game = (() => {
 
   // ---- Pointer / blade --------------------------------------------------
   function pushBlade(x, y) {
-    blade.push({ x, y, t: performance.now() });
-    if (blade.length > 14) blade.shift();
+    Mechanics.capPush(blade, { x, y, t: performance.now() }, CONFIG.FX.bladePoints);
   }
 
   function handleMove(clientX, clientY) {
@@ -454,7 +495,16 @@ const Game = (() => {
   function update(dt) {
     if (scene === SCENE.PLAYING) {
       // Round timer — when it hits zero, the round ends.
+      const prevTimeLeft = timeLeft;
       timeLeft -= dt;
+
+      /* Countdown urgency. Fires exactly once per whole second in the closing
+         stretch, derived from the second boundary being crossed rather than
+         from a per-frame check — the latter would tick 60 times a second at
+         60fps and once a second at 1fps. */
+      if (Mechanics.shouldTick(prevTimeLeft, timeLeft, CONFIG.FX.tickFromSec)) {
+        Sound.tick(Math.ceil(timeLeft));
+      }
       if (timeLeft <= 0) {
         timeLeft = 0;
         endGame();
@@ -677,7 +727,9 @@ const Game = (() => {
       const a = blade[i - 1],
         b = blade[i];
       const t = i / blade.length;
-      ctx.strokeStyle = `rgba(120,230,255,${t * 0.8})`;
+      // Golden core, not cyan: the trail is the most-seen element in the game
+      // and was the one piece of UI still wearing the old build's palette.
+      ctx.strokeStyle = `rgba(255,199,44,${t * 0.9})`;
       ctx.lineWidth = 1 + t * 5;
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
