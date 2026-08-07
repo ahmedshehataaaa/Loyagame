@@ -16,11 +16,12 @@ import { rewardPanel } from '../components/reward-panel.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, num } from '../core/i18n.js';
-
-const ROUND_TIME = window.CONFIG?.ROUND_TIME ?? 30;
-const START_LIVES = window.CONFIG?.START_LIVES ?? 2;
+import { roundSeconds, startLives } from '../core/rules.js';
 
 export function ResultPage(root) {
+  // Read at render time so a campaign manifest reaches this screen too.
+  const ROUND_TIME = roundSeconds();
+  const START_LIVES = startLives();
   const run = Store.progress().lastRun;
 
   // Reached directly (refresh / deep link) with no completed round.

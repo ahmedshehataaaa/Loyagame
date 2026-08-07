@@ -1,0 +1,76 @@
+{
+  "_comment": "A second campaign that exists to PROVE the reskin path: nothing about it shares code with mcdonalds.json, only the manifest shape. Sprites intentionally reuse the McDonald's assets in this repo — the point is the config boundary, not new art. Validated in CI by scripts/validate-campaigns.mjs and exercised by tests/e2e/campaign.spec.js.",
+
+  "schemaVersion": 1,
+
+  "brand": {
+    "id": "demo-diner",
+    "name": "Demo Diner",
+    "gameName": "Diner Dash Slice",
+    "tagline": "Slice Fast, Eat Free",
+    "slogan": "always fresh",
+    "logo": "assets/brand-logo.png",
+    "knife": "🔪",
+    "colors": {
+      "primary": "#00653A",
+      "primary2": "#004A2A",
+      "accent": "#F0B323",
+      "accent2": "#B8860B",
+      "ink": "#12211A",
+      "surface": "#FFF6E8"
+    },
+    "locales": ["en"],
+    "features": { "wheel": false, "leaderboard": true, "soundDefault": false }
+  },
+
+  "rules": { "roundSeconds": 45, "lives": 3 },
+
+  "items": [
+    {
+      "id": "burger",
+      "label": "House Burger",
+      "img": "assets/items/bigmac.png",
+      "points": 400,
+      "radius": 54,
+      "juice": "#c98b3a",
+      "hero": true
+    },
+    {
+      "id": "shake",
+      "label": "Thick Shake",
+      "img": "assets/items/mcflurry.png",
+      "points": 350,
+      "radius": 48,
+      "juice": "#efe6d6"
+    },
+    {
+      "id": "chips",
+      "label": "Skin-On Chips",
+      "img": "assets/items/fries.png",
+      "points": 200,
+      "radius": 50,
+      "juice": "#e8b23c"
+    }
+  ],
+
+  "hazard": {
+    "id": "scorched",
+    "label": "Scorched batch — avoid!",
+    "img": "assets/items/burnt.png",
+    "radius": 48,
+    "juice": "#20140c"
+  },
+
+  "rewards": {
+    "pointsThreshold": 1500,
+    "prizes": [
+      { "key": "chips", "label": "Free Chips", "weight": 60 },
+      { "key": "shake", "label": "Free Thick Shake", "weight": 30 },
+      { "key": "burger", "label": "Free House Burger", "weight": 10 }
+    ]
+  },
+
+  "campaign": { "startsAt": null, "endsAt": null },
+
+  "legal": { "operator": "ClaimLabs", "note": "Demo manifest. Not a live campaign." }
+}

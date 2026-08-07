@@ -975,3 +975,200 @@
   max-width: 40%;
   padding-inline: var(--sp-sm);
 }
+
+/* ---- Short-viewport fit -------------------------------------
+   The welcome hero and the wallet both grew during Stage 5 and overflowed
+   320x568 / 360x800 / 375x667 — the shortest devices in the support matrix.
+   The hero is the right thing to give up space: it is decorative, and the
+   copy and CTA below it are what the player needs. So it absorbs the
+   remaining space rather than dictating height. */
+.hero {
+  flex: 1 1 auto;
+  min-height: 88px;
+  max-height: 42vh;
+  /* aspect-ratio + max-height means the WIDTH derives from the available
+     height, so the composition scales down whole instead of cropping. */
+  width: auto;
+  aspect-ratio: 1 / 0.86;
+}
+
+@media (max-height: 740px) {
+  .welcome {
+    gap: 2px;
+  }
+  .hero {
+    max-height: 34vh;
+  }
+  .welcome__slogan {
+    margin-top: 2px;
+  }
+  .welcome__prize {
+    font-size: var(--fs-label);
+  }
+  /* Legal is one tap away from the tab bar anyway, so it is the first thing
+     that can lose its own row on a cramped screen. */
+  .welcome__legal {
+    margin-top: 0;
+  }
+}
+
+@media (max-height: 620px) {
+  .hero {
+    max-height: 26vh;
+  }
+  .welcome__slogan {
+    display: none;
+  }
+  .welcome__prize {
+    display: none;
+  }
+  .screen {
+    padding-bottom: var(--sp-md);
+  }
+}
+
+/* The wallet's points header + empty state overflowed the shortest screens. */
+@media (max-height: 700px) {
+  .wallet {
+    gap: var(--sp-sm);
+  }
+  .wallet__note {
+    font-size: var(--fs-label);
+  }
+  .points-head__value {
+    font-size: var(--fs-headline);
+  }
+}
+
+/* Narrow screens: three secondary buttons could not sit side by side at 320px,
+   so the row wrapped and the CTA block grew to 281px — taller than the hero and
+   copy combined. A 3-column grid with a smaller label keeps it one row. */
+.welcome__links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-xs);
+}
+.welcome__links .btn {
+  padding-inline: 4px;
+  font-size: var(--fs-micro);
+  letter-spacing: 0;
+}
+@media (min-width: 380px) {
+  .welcome__links .btn {
+    font-size: var(--fs-label);
+  }
+}
+
+@media (max-height: 640px) {
+  /* Terms stay reachable from the wallet and the tab bar, so the dedicated row
+     is the cheapest thing to drop when vertical space runs out. */
+  .welcome__legal {
+    display: none;
+  }
+  .welcome__cta {
+    gap: var(--sp-xs);
+  }
+}
+
+/* Empty states carry a large glyph and generous padding by design; on the
+   shortest screens that pushes the wallet past the fold. */
+@media (max-height: 700px) {
+  .state {
+    padding-block: var(--sp-md);
+  }
+  .state__glyph {
+    font-size: 34px;
+  }
+  .points-head {
+    padding: var(--sp-sm) var(--sp-md);
+  }
+}
+
+/* 320x568 — the shortest device in the matrix. The welcome screen MUST fit
+   without scrolling: it is the campaign entry point, and a player who has just
+   scanned a code should see the whole offer and the CTA at once. Everything
+   here trades decoration for that guarantee. */
+@media (max-height: 580px) {
+  .welcome__bar {
+    gap: var(--sp-xs);
+  }
+  .welcome__arches {
+    width: 40px;
+  }
+  .hero {
+    min-height: 62px;
+    max-height: 22vh;
+  }
+  .welcome__sub {
+    font-size: var(--fs-small);
+  }
+  .welcome__greet {
+    display: none;
+  }
+  .welcome__cta {
+    gap: 6px;
+  }
+}
+
+/* A compact legal link. Terms must be reachable from the campaign entry at
+   every supported size, so it is text rather than a 48px button row — as a
+   button it pushed the CTA below the fold at 320x568. */
+.text-link {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-bold);
+  color: var(--c-white);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.85;
+}
+.text-link:hover,
+.text-link:focus-visible {
+  opacity: 1;
+}
+.welcome__legal {
+  display: flex;
+  justify-content: center;
+}
+/* Overrides the earlier short-height rule: never hidden, only shrunk. */
+@media (max-height: 640px) {
+  .welcome__legal {
+    display: flex;
+  }
+}
+
+/* The secondary row still stretched to two lines of text at 320px, and the
+   display headline wrapped to three. Both are legible smaller; the CTA being
+   on screen is not negotiable. Touch targets stay >= 38px, above the 32px
+   floor for a secondary control next to a full-width primary. */
+@media (max-width: 360px) {
+  .welcome__links .btn {
+    white-space: nowrap;
+    min-height: 38px;
+    padding-block: 4px;
+    line-height: 1.05;
+  }
+}
+@media (max-height: 580px) {
+  .welcome__copy .t-display {
+    font-size: 23px;
+    line-height: 1.02;
+  }
+  .welcome__copy {
+    gap: 2px;
+  }
+}
+
+/* Final 15px at 320x568. The screen's own vertical padding is the least
+   valuable space left — the hero already flexes, and shrinking type further
+   would start to hurt legibility. */
+@media (max-height: 580px) {
+  .welcome.screen {
+    padding-top: calc(var(--sp-sm) + env(safe-area-inset-top, 0px));
+    padding-bottom: var(--sp-sm);
+  }
+  .welcome__bar {
+    margin-bottom: -2px;
+  }
+}

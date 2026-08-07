@@ -12,6 +12,7 @@
    ============================================================ */
 import { el, button } from './ui.js';
 import { t, num } from '../core/i18n.js';
+import { roundSeconds, startLives } from '../core/rules.js';
 
 const SEEN_KEY = 'mcslice.coached.v1';
 
@@ -45,8 +46,9 @@ const rule = (glyph, text) =>
  * @returns {HTMLElement}
  */
 export function coachCard({ onStart, dismissible = true }) {
-  const seconds = window.CONFIG?.ROUND_TIME ?? 30;
-  const lives = window.CONFIG?.START_LIVES ?? 2;
+  // Live reads: the coach card must teach the rules of the RUNNING campaign.
+  const seconds = roundSeconds();
+  const lives = startLives();
 
   const panel = el(
     'div',

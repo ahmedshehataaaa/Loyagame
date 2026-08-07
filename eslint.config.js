@@ -86,4 +86,11 @@ export default [
     files: ['tests/**/*.js', '*.config.js', '*.config.mjs'],
     languageOptions: { sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
   },
+
+  {
+    // Build/CI scripts. These are CLIs, so stdout IS their interface.
+    files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
+    languageOptions: { sourceType: 'module', globals: globals.node },
+    rules: { 'no-console': 'off' },
+  },
 ];

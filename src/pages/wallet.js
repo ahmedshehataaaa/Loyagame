@@ -17,6 +17,7 @@ import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, num } from '../core/i18n.js';
 import { REWARD_STATUS } from '../services/reward-state.js';
+import { pointsThreshold } from '../core/rules.js';
 
 /** One issued prize. */
 function prizeCard(prize, { redeemed = false, expires = null } = {}) {
@@ -65,7 +66,7 @@ export function WalletPage(root) {
 
   // Points header — the gate on every future prize, so it belongs here.
   const pts = Store.progress().rewardPoints;
-  const need = window.CONFIG?.WHEEL?.pointsThreshold ?? 4000;
+  const need = pointsThreshold();
   body.append(
     el(
       'section',

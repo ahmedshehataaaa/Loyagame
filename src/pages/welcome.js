@@ -18,8 +18,7 @@ import { coachCard, markCoachSeen } from '../components/coach.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, toggleLang } from '../core/i18n.js';
-
-const ROUND_TIME = window.CONFIG?.ROUND_TIME ?? 30;
+import { roundSeconds } from '../core/rules.js';
 
 /* The airborne items, as [sprite, class] pairs. Positioned in CSS so the
    composition survives a locale/direction flip without JS. */
@@ -53,6 +52,7 @@ function heroArt() {
 }
 
 export function WelcomePage(root) {
+  const ROUND_TIME = roundSeconds();
   const signedIn = Store.isSignedIn();
   const { soundEnabled } = Store.settings();
 
@@ -143,13 +143,17 @@ export function WelcomePage(root) {
           onClick: () => navigate('/leaderboard'),
         }),
       ),
+      /* A text link, not a button. Terms is a legal reference rather than a
+         call to action, and as a full button row it cost 48px — enough to push
+         the CTA below the fold at 320x568. It must stay reachable at EVERY
+         size, so shrinking it was the right trade; hiding it was not. */
       el(
         'div',
         { class: 'welcome__legal' },
-        button(t('common.terms'), {
-          variant: 'ghost',
-          size: 'sm',
-          onClick: () => navigate('/terms'),
+        el('a', {
+          class: 'text-link',
+          href: '#/terms',
+          text: t('common.terms'),
         }),
       ),
     ),

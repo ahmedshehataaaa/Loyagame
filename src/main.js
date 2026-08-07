@@ -7,6 +7,7 @@
    mechanics namespace before that for the same reason.
    ============================================================ */
 import './game/index.js';
+import { loadCampaign } from './campaign/loader.js';
 import { initI18n, t, onLangChange } from './core/i18n.js';
 import './adapters/engine-bridge.js';
 import { Router, navigate } from './core/router.js';
@@ -23,6 +24,25 @@ import { TermsPage } from './pages/terms.js';
 import { AssetLibraryPage } from './pages/assets.js';
 
 initI18n();
+
+/* ---- Campaign manifest -------------------------------------------------
+   One engine, per-restaurant data (ADR 0012). `?campaign=<id>` selects a
+   manifest from campaigns/; with no parameter the built-in McDonald's config in
+   engine/config.js stands, so a demo build and an offline first load both keep
+   working.
+
+   Deliberately fire-and-forget: the engine already has a complete, valid
+   config, so blocking first paint on a network fetch would trade a guaranteed
+   delay for an optional cosmetic gain. The manifest overlays brand and content
+   when it lands; a rejected one is logged and ignored (fail-closed). */
+try {
+  const requested = new URLSearchParams(location.search).get('campaign');
+  if (requested && /^[a-z0-9][a-z0-9-]{1,39}$/.test(requested)) {
+    loadCampaign(`campaigns/${requested}.json`);
+  }
+} catch {
+  /* no URL access — built-in config stands */
+}
 
 // Honour the OS reduced-motion preference in persisted settings too.
 try {

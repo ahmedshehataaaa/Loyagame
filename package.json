@@ -14,10 +14,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -p jsconfig.json",
+    "validate:campaigns": "node scripts/validate-campaigns.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run validate:campaigns && npm run test"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",

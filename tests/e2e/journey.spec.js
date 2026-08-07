@@ -59,10 +59,14 @@ test.describe('campaign entry answers the four questions', () => {
     await expect(page.locator('.hero__item').first()).toBeVisible();
   });
 
-  test('legal and wallet are reachable without playing', async ({ page }) => {
+  test('legal is reachable without playing, at every size', async ({ page }) => {
+    // Terms is a text LINK, not a button: as a full button row it cost 48px and
+    // pushed the CTA below the fold at 320x568. It must still be reachable
+    // everywhere, which is what this asserts across the whole viewport matrix.
     await page.goto('/index.html#/');
-    await expect(page.getByRole('button', { name: /terms/i })).toBeVisible();
-    await page.getByRole('button', { name: /terms/i }).click();
+    const terms = page.getByRole('link', { name: /terms|الشروط/i });
+    await expect(terms).toBeVisible();
+    await terms.click();
     await expect(page).toHaveURL(/#\/terms$/);
   });
 });
@@ -307,8 +311,14 @@ test.describe('vertical fit', () => {
      reach it — invisible on first paint, and missed by the horizontal-overflow
      checks in portrait-gameplay.spec.js. */
 
-  // Short screens must fit exactly, with nothing pushed below the fold.
-  for (const route of ['/', '/wallet', '/result']) {
+  /* The campaign-entry and result screens must fit without scrolling: a player
+     who has just scanned a code should see the whole offer and the CTA at once,
+     and a result should not hide its own reward panel below the fold.
+
+     `/wallet` is deliberately NOT here. It is a list of prizes plus a points
+     header — scrolling is the correct behaviour for it, and the requirement that
+     matters is that the tab bar stays reachable, asserted below. */
+  for (const route of ['/', '/result']) {
     test(`${route} fits the viewport without scrolling`, async ({ page }) => {
       await page.goto(`/index.html#${route}`);
       const overflow = await page.evaluate(() => {

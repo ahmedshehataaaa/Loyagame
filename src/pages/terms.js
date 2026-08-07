@@ -17,10 +17,7 @@
    ============================================================ */
 import { el, topbar, tabbar } from '../components/ui.js';
 import { t, num } from '../core/i18n.js';
-
-const ROUND_TIME = window.CONFIG?.ROUND_TIME ?? 30;
-const START_LIVES = window.CONFIG?.START_LIVES ?? 2;
-const THRESHOLD = window.CONFIG?.WHEEL?.pointsThreshold ?? 4000;
+import { roundSeconds, startLives, pointsThreshold, prizes } from '../core/rules.js';
 
 /** A titled block. Keeps the section rhythm identical down the page. */
 const section = (headingKey, bodyText) =>
@@ -32,9 +29,14 @@ const section = (headingKey, bodyText) =>
   );
 
 export function TermsPage(root) {
-  const wrap = el('div', { class: 'screen bg-burst' });
+  /* Read at render time, not module load: a terms page that states different
+     rules from the running campaign is worse than none. */
+  const ROUND_TIME = roundSeconds();
+  const START_LIVES = startLives();
+  const THRESHOLD = pointsThreshold();
 
-  const prizeList = (window.CONFIG?.WHEEL?.prizes ?? []).map((p) => el('li', { text: p.label }));
+  const wrap = el('div', { class: 'screen bg-burst' });
+  const prizeList = prizes().map((p) => el('li', { text: p.label }));
 
   wrap.append(
     topbar(t('terms.title'), { back: '/' }),

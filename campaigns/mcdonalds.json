@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+
+  "brand": {
+    "id": "mcdonalds",
+    "name": "McDonald's",
+    "gameName": "McSlice Rush",
+    "tagline": "Slice the Menu, Win Real Rewards",
+    "slogan": "i'm lovin' it",
+    "logo": "assets/brand-logo.png",
+    "knife": "🔪",
+    "colors": {
+      "primary": "#DA291C",
+      "primary2": "#A81A10",
+      "accent": "#FFC72C",
+      "accent2": "#C8930A",
+      "ink": "#27251F",
+      "surface": "#FFF8F6"
+    },
+    "locales": ["en", "ar"],
+    "features": { "wheel": true, "leaderboard": true, "soundDefault": true }
+  },
+
+  "rules": { "roundSeconds": 30, "lives": 2 },
+
+  "items": [
+    {
+      "id": "bigmac",
+      "label": "Big Mac®",
+      "img": "assets/items/bigmac.png",
+      "points": 500,
+      "radius": 56,
+      "juice": "#d8892f",
+      "hero": true
+    },
+    {
+      "id": "mcflurry",
+      "label": "McFlurry®",
+      "img": "assets/items/mcflurry.png",
+      "points": 600,
+      "radius": 50,
+      "juice": "#e8e2d4"
+    },
+    {
+      "id": "filetofish",
+      "label": "Filet-O-Fish®",
+      "img": "assets/items/filetofish.png",
+      "points": 400,
+      "radius": 52,
+      "juice": "#f3e2b8"
+    },
+    {
+      "id": "applepie",
+      "label": "Apple Pie",
+      "img": "assets/items/applepie.png",
+      "points": 300,
+      "radius": 48,
+      "juice": "#e0b060"
+    },
+    {
+      "id": "fries",
+      "label": "World Famous Fries®",
+      "img": "assets/items/fries.png",
+      "points": 250,
+      "radius": 52,
+      "juice": "#f0b33a"
+    },
+    {
+      "id": "hashbrown",
+      "label": "Hash Brown",
+      "img": "assets/items/hashbrown.png",
+      "points": 200,
+      "radius": 48,
+      "juice": "#d9a13f"
+    },
+    {
+      "id": "nuggets",
+      "label": "Chicken McNuggets®",
+      "img": "assets/items/nuggets.png",
+      "points": 150,
+      "radius": 44,
+      "juice": "#d99a3f"
+    }
+  ],
+
+  "hazard": {
+    "id": "burnt",
+    "label": "Burnt Fries — avoid!",
+    "img": "assets/items/burnt.png",
+    "radius": 50,
+    "juice": "#2b1a10"
+  },
+
+  "rewards": {
+    "pointsThreshold": 4000,
+    "prizes": [
+      { "key": "off5", "label": "5% off your order", "weight": 28 },
+      { "key": "fries", "label": "Free Fries", "weight": 20 },
+      { "key": "off10", "label": "10% off your order", "weight": 18 },
+      { "key": "hashbrown", "label": "Free Hash Brown", "weight": 12 },
+      { "key": "nuggets", "label": "Free 6pc Nuggets", "weight": 9 },
+      { "key": "off15", "label": "15% off your order", "weight": 6 },
+      { "key": "mcflurry", "label": "Free McFlurry®", "weight": 4 },
+      { "key": "off20", "label": "20% off your order", "weight": 2 },
+      { "key": "bigmac", "label": "Free Big Mac®", "weight": 0.8 },
+      { "key": "off25", "label": "25% off your order", "weight": 0.2 }
+    ]
+  },
+
+  "campaign": { "startsAt": null, "endsAt": null },
+
+  "legal": {
+    "operator": "ClaimLabs",
+    "note": "Prize odds are weighted and set per campaign. See docs/security/reward-wheel-compliance.md — the random-draw model has an OPEN compliance flag and needs written legal sign-off before launch with real prize value."
+  }
+}

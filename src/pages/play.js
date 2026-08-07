@@ -11,16 +11,18 @@ import { navigate } from '../core/router.js';
 import { startRound, endRound } from '../services/loyalty.js';
 import { coachCard, hasSeenCoach } from '../components/coach.js';
 import { t, num } from '../core/i18n.js';
+import { roundSeconds, startLives } from '../core/rules.js';
 
 /* Round shape comes from the engine config, never from a literal here — these
    were hardcoded to '60' and three hearts, the pre-ADR-0001 values, and stayed
    visibly wrong for the first frames of every round after the round became 30s
-   with 2 lives. */
-const ROUND_TIME = window.CONFIG?.ROUND_TIME ?? 30;
-const START_LIVES = window.CONFIG?.START_LIVES ?? 2;
+   with 2 lives. Read via src/core/rules.js at RENDER time, not module load, so a
+   campaign manifest applied after boot actually reaches the HUD. */
 const HEART = '❤';
 
 export function PlayPage(root) {
+  const ROUND_TIME = roundSeconds();
+  const START_LIVES = startLives();
   // Route guard: playing without a profile would produce an unattributable score.
   if (!Store.isSignedIn()) {
     navigate('/sign-in', { replace: true });
