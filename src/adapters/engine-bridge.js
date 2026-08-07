@@ -10,6 +10,21 @@
    ============================================================ */
 import { Store } from '../core/store.js';
 import { OUTCOME } from '../game/round-rules.js';
+import { submitRound } from '../services/loyalty.js';
+
+/* Last-resort reward outcome for an unexpected throw. Deliberately identical
+   in shape to a RewardOutcome so no caller needs a null check, and
+   deliberately award-free. */
+const FAILED_REWARD = Object.freeze({
+  status: 'error',
+  awarded: false,
+  prize: null,
+  retryable: true,
+  title: 'Something went wrong',
+  message: "We couldn't confirm a prize for this round. No prize has been issued.",
+  orderPoints: null,
+  pointsThreshold: null,
+});
 
 const handlers = new Map(); // event -> Set<fn>
 
@@ -63,19 +78,19 @@ window.UI = {
 
 /* ---- `LoyaltyData` interface expected by engine/game.js ------
 
-   ⚠️ CLIENT-SIDE PLACEHOLDER — NOT THE PRODUCTION REWARD PATH.
+   A thin adapter over src/services/loyalty.js, which is now the only code
+   that talks to the reward backend. This used to resolve the win locally as
+   `score >= 15000` and made no network call at all — audit finding S1, the
+   highest-severity issue in
+   docs/audit/2026-08-07-production-readiness-audit.md.
 
-   This resolves the round OUTCOME locally so the prototype is playable
-   offline. It must never be the thing that decides a REWARD. The real
-   backend (api/start-run + api/submit-run -> the row-locked `resolve_run`
-   RPC) exists and is correct, but nothing in src/ currently calls it — the
-   client that did was retired with _legacy-ui-backup/data.js. Porting it is
-   Stage 4 of docs/audit/2026-08-07-production-readiness-audit.md, and it is
-   the single highest-severity open finding (S1) in that audit.
-
-   Until then, `won` here means only "survived the round", which is a claim
-   the server must re-derive. No prize, code or point balance may be shown to
-   a player on the strength of this object alone. */
+   Two distinct outcomes come back, and conflating them was precisely the old
+   bug:
+     • `won`    — did the player SURVIVE the round (ADR 0004)? Decides which
+                  screen shows next. Derived from real round state.
+     • `reward` — what, if anything, the SERVER issued. Always a RewardOutcome;
+                  `reward.prize` is non-null only when the server explicitly
+                  awarded a named prize. */
 window.LoyaltyData = {
   async submitRun(score, durationMs, meta = {}) {
     const best = Store.progress().bestScore;
@@ -83,18 +98,28 @@ window.LoyaltyData = {
     // lives/time reading for older call sites.
     const survived =
       typeof meta.survived === 'boolean' ? meta.survived : meta.outcome === OUTCOME.SURVIVED;
+    const outcome = meta.outcome ?? (survived ? OUTCOME.SURVIVED : OUTCOME.ELIMINATED);
+
+    // A reward-service failure must never break the round-end flow: the player
+    // always reaches a result screen, just never a fabricated prize.
+    let reward;
+    try {
+      reward = await submitRound({ score, durationMs, outcome });
+    } catch (err) {
+      console.error('reward submission failed', err);
+      reward = FAILED_REWARD;
+    }
+
     return {
       won: survived,
-      outcome: meta.outcome ?? (survived ? OUTCOME.SURVIVED : OUTCOME.ELIMINATED),
+      outcome,
       survived,
       livesRemaining: meta.livesRemaining ?? 0,
       itemsSliced: meta.itemsSliced ?? 0,
       bestCombo: meta.bestCombo ?? 0,
       newHigh: score > best,
       durationMs,
-      // Rewards are server-issued. Nothing here may stand in for one.
-      reward: null,
-      rewardPending: survived,
+      reward,
     };
   },
   getPlaysLeft() {

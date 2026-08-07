@@ -1,6 +1,12 @@
 /* You Won! — Stitch "McSlice Rush - You Won!".
-   Every figure comes from the recorded run, never the mockup. */
+   Every figure comes from the recorded run, never the mockup.
+
+   "You Won!" here means the player SURVIVED the round (ADR 0004). Whether they
+   also receive a PRIZE is a separate, server-decided question, rendered by
+   rewardPanel from whatever the server actually returned. Surviving does not
+   entitle the screen to show a prize. */
 import { el, button, tabbar, fmt, emptyState } from '../components/ui.js';
+import { rewardPanel } from '../components/reward-panel.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 
@@ -81,20 +87,30 @@ export function VictoryPage(root) {
             el('b', { text: fmt(run.itemsSliced) }),
             el('small', { text: 'ITEMS SLICED' }),
           ),
+          // "POINTS EARNED" was removed: gameplay does not earn points. It
+          // showed `floor(score / 10)`, minted in the browser (see
+          // Store.recordRun). Best combo is a real gameplay stat.
           el(
             'div',
             { class: 'victory__cell' },
-            el('b', { text: `+${fmt(run.earned)}` }),
-            el('small', { text: 'POINTS EARNED' }),
+            el('b', { text: `${fmt(run.itemsSliced)}` }),
+            el('small', { text: 'SLICES' }),
           ),
           el(
             'div',
             { class: 'victory__cell' },
             el('b', { text: fmt(Store.progress().rewardPoints) }),
-            el('small', { text: 'TOTAL POINTS' }),
+            el('small', { text: 'ORDER POINTS' }),
           ),
         ),
       ),
+
+      /* Whatever the server decided — a prize, a denial, or a failure. Renders
+         nothing at all if no round was submitted this session, rather than
+         implying a pending reward that was never requested. */
+      rewardPanel(Store.lastReward(), {
+        onWallet: () => navigate('/rewards'),
+      }),
 
       el(
         'div',

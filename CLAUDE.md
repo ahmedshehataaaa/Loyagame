@@ -76,10 +76,29 @@ python3 server.py                 # http://localhost:8765
 #   ?anyday — bypass any day-of-week gating inherited from prior builds
 ```
 
-There is currently **no** `npm install`, `npm test`, `npm run build`, or
-lint/typecheck command — no `package.json` exists. Setting this up (or
-deciding not to, given the no-bundler constraint) is a reasonable first
-implementation task; see `claimlabs-testing`.
+A toolchain exists as of 2026-08-07 (`package.json`, no bundler — the app still
+ships as raw files):
+
+```bash
+npm install
+npm run verify      # format:check + lint + typecheck + unit tests
+npm test            # Vitest — pure gameplay/reward logic in src/game, src/services
+npm run test:e2e    # Playwright — 6 mobile viewports, starts server.py itself
+npm run lint        # ESLint 9 (flat config; engine/ src/ api/ sw.js each typed differently)
+npm run typecheck   # tsc --checkJs, ambient engine globals in types/globals.d.ts
+```
+
+There is still **no build step** and no production bundle — `npm run build` does
+not exist by design (ADR 0005/0006 keep the no-bundler runtime).
+
+Two harness facts worth knowing before writing tests:
+
+- Headless Chromium here throttles `requestAnimationFrame` to roughly 1.3fps, so
+  a spec must never wait on wall-clock round progress. Round length and win/loss
+  rules are covered deterministically in `tests/unit/`.
+- The reward e2e specs stub the backend with `page.route`. There is no reachable
+  Supabase instance, so server-side guarantees are **not** covered by tests —
+  see ADR 0009 "Outstanding".
 
 ## Architecture boundaries
 
@@ -95,6 +114,15 @@ implementation task; see `claimlabs-testing`.
   `credit_order_points` in `supabase/schema.sql` are the authority. Client
   code (`engine/game.js`, `src/`) may only _display_ what the server
   returns, never compute a win/prize itself.
+  As of ADR 0009 this is actually wired (it was not before — the backend was
+  orphaned and the browser decided wins). **`src/services/loyalty.js` is the
+  only code that may call the reward API**, and `src/services/reward-state.js`
+  is the only code that may decide whether a prize is displayable. Do not add a
+  second API caller, and do not let a screen construct a prize — the invariant
+  lives in one pure function precisely so it can be proved exhaustively in
+  tests. Order points are written only by `loyalty.js`, only from a real
+  response: a round result travelling through the engine's UI bridge is
+  page-scriptable and must never be trusted with a balance.
 - **One engine, per-client config.** Brand/menu/hazard content lives in
   `engine/config.js`'s exported constants. Do not fork gameplay logic per
   restaurant — see `claimlabs-configurable-reskins`.

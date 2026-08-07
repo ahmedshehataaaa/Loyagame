@@ -148,19 +148,42 @@ test.describe('slice input', () => {
           }),
         );
 
-      // Let a wave get airborne under a throttled rAF loop.
-      await sleep(6000);
-
-      for (const frac of [0.32, 0.4, 0.48, 0.56, 0.64]) {
-        const y = rect.top + rect.height * frac;
-        fire('mousedown', rect.left + 6, y, canvas);
-        for (let i = 1; i <= 24; i++) {
-          fire('mousemove', rect.left + 6 + (rect.width - 12) * (i / 24), y, window);
-          await sleep(10);
+      /* Wait for items to actually be ON SCREEN rather than guessing a delay.
+         rAF is throttled to roughly 1.3fps here and gets slower still when the
+         whole suite runs in parallel, so a fixed sleep is inherently flaky —
+         it was. Poll the rendered canvas for non-background pixels instead,
+         which is the real precondition: something must be airborne to slice. */
+      const cv = /** @type {HTMLCanvasElement} */ (canvas);
+      const ctx = cv.getContext('2d');
+      async function itemsVisible() {
+        const { width: w, height: h } = cv;
+        if (!w || !h) return false;
+        const data = ctx.getImageData(0, 0, w, h).data;
+        let painted = 0;
+        // Alpha channel: the canvas is transparent where nothing is drawn.
+        for (let i = 3; i < data.length; i += 4 * 37) {
+          if (data[i] > 24 && ++painted > 30) return true;
         }
-        fire('mouseup', rect.left + rect.width - 6, y, window);
-        await sleep(500);
-        if (Number(canvas.dataset.score) > 0) break;
+        return false;
+      }
+
+      const deadline = Date.now() + 30000;
+      while (Date.now() < deadline && !(await itemsVisible())) await sleep(250);
+
+      // Sweep repeatedly across the field until something connects. Items keep
+      // moving between sweeps, so more passes materially raise the hit chance.
+      while (Date.now() < deadline && Number(canvas.dataset.score) === 0) {
+        for (const frac of [0.3, 0.38, 0.46, 0.54, 0.62, 0.7]) {
+          const y = rect.top + rect.height * frac;
+          fire('mousedown', rect.left + 6, y, canvas);
+          for (let i = 1; i <= 28; i++) {
+            fire('mousemove', rect.left + 6 + (rect.width - 12) * (i / 28), y, window);
+            await sleep(8);
+          }
+          fire('mouseup', rect.left + rect.width - 6, y, window);
+          if (Number(canvas.dataset.score) > 0) break;
+          await sleep(150);
+        }
       }
       return Number(canvas.dataset.score);
     });

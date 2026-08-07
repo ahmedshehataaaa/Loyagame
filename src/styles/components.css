@@ -554,3 +554,97 @@
   gap: var(--sp-sm);
   margin-top: var(--sp-lg);
 }
+
+/* ---- Reward panel -------------------------------------------
+   Renders a server-issued reward decision. The status modifier only
+   changes colour/emphasis — it never changes what text is shown, so a
+   styling mistake can't turn a denial into an award. */
+.reward-panel {
+  margin-top: var(--sp-md);
+  padding: var(--sp-md);
+  text-align: center;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  border: var(--border-ink);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip-ink);
+}
+.reward-panel__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-headline);
+  text-transform: uppercase;
+  line-height: 1.05;
+  margin-top: var(--sp-xs);
+}
+.reward-panel__prize {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 6.5vw, 30px);
+  text-transform: uppercase;
+  color: var(--c-primary);
+  margin-top: var(--sp-xs);
+}
+.reward-panel__msg {
+  font-size: var(--fs-body);
+  margin-top: var(--sp-xs);
+}
+.reward-panel__hint {
+  font-size: var(--fs-small);
+  color: var(--c-ink-soft);
+  margin-top: var(--sp-sm);
+}
+.reward-panel__points {
+  display: grid;
+  gap: 2px;
+  margin-top: var(--sp-md);
+  padding-top: var(--sp-sm);
+  border-top: 2px dashed var(--c-outline, var(--c-ink-soft));
+}
+.reward-panel__points b {
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+}
+.reward-panel__points small {
+  font-size: var(--fs-small);
+  color: var(--c-ink-soft);
+}
+.reward-panel__actions {
+  margin-top: var(--sp-sm);
+}
+
+/* An award is the only celebratory state. */
+.reward-panel--awarded {
+  background: linear-gradient(180deg, var(--c-secondary-hi), var(--c-secondary));
+}
+/* Faults and denials read as neutral information, not as failure states to
+   be alarmed by — the player has done nothing wrong. */
+.reward-panel--pending,
+.reward-panel--error,
+.reward-panel--session_expired,
+.reward-panel--rate_limited,
+.reward-panel--flagged {
+  background: var(--c-surface-alt);
+}
+
+/* ---- In-round stake label -----------------------------------
+   Tells the player BEFORE they play whether the round can pay out. */
+.game-stake {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--sp-md) + env(safe-area-inset-bottom, 0px));
+  max-width: min(92%, 420px);
+  text-align: center;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-bold);
+  padding: var(--sp-xs) var(--sp-sm);
+  border-radius: var(--r-full);
+  pointer-events: none;
+}
+.game-stake.is-live {
+  background: var(--c-secondary);
+  color: var(--c-ink);
+}
+.game-stake.is-warn {
+  background: rgba(39, 37, 31, 0.72);
+  color: var(--c-white);
+}

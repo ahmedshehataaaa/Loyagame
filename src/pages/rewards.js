@@ -40,7 +40,11 @@ export function RewardsPage(root) {
               paint();
             } else if (res.error === 'insufficient_points') toast('Not enough points yet.', 'bad');
             else if (res.error === 'already_redeemed') toast('Already redeemed.', 'bad');
-            else toast('That reward is unavailable.', 'bad');
+            else if (res.error === 'server_required') {
+              // Expected until the catalogue is wired to redeem_wheel_win()
+              // server-side. Say so plainly rather than implying a fault.
+              toast('Redeeming at the counter only — not available in-app yet.', 'bad');
+            } else toast('That reward is unavailable.', 'bad');
           },
         }),
         button('Cancel', { variant: 'ghost', onClick: () => overlay.remove() }),

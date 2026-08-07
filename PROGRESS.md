@@ -1,6 +1,65 @@
 # PROGRESS.md — McSlice Rush (McDonald's)
 
-## Current checkpoint — 2026-08-07 (production-readiness pass, stages 0-3)
+## Current checkpoint — 2026-08-07 (Stage 4: server-authoritative rewards)
+
+**Audit finding S1 is fixed.** The client now talks to the reward backend that
+had been orphaned; nothing about a reward is decided in the browser. Full
+rationale and the exhaustive list of what is still open: **ADR 0009**.
+
+### What changed
+
+- **`src/services/`** — `api.js` (transport, typed error taxonomy, errors
+  returned not thrown), `reward-state.js` (**pure**: the invariant that a prize
+  requires an explicit server award), `loyalty.js` (round sessions, identity, the
+  only code that calls the API).
+- **`src/components/reward-panel.js`** — the only component that may show a
+  prize, and it can only show `outcome.prize`. No product-naming fallback copy.
+- **Round sessions**: `/play` calls `start-run` on mount and on every restart
+  (each round needs its own token); `submit-run` presents it; a `consumed` flag
+  set synchronously before the await means one round submits exactly once.
+- **Survival gates the reward, server-side**: `api/submit-run.mjs` re-derives
+  survival from round duration and ignores the client's claim. `resolve_run`
+  gains `p_survived` and gates the prize draw inside the locked transaction; the
+  old 8-arg overload is dropped so a stale DB fails closed.
+- **Client-side value creation closed**: `recordRun()` no longer mints
+  `floor(score/10)` spendable points; `redeem()` fails closed with
+  `server_required`; `grantPoints()` deleted; order points are mirrored only by
+  `loyalty.js`, only from a real response.
+- **`signin.js` actually registers** (was a `setTimeout` pretending to). Button
+  says "Continue", not "Send Code" — nothing is sent and **nothing is verified**.
+  Guest sign-in clears any stored identity, so guest rounds are practice rounds.
+- Rounds are labelled **before** play as prize or practice (`.game-stake`).
+
+### Verified
+
+- **69 unit tests** (+20), **252 browser tests across 6 viewports, 3 consecutive
+  clean runs.** Lint, typecheck, format clean.
+- The reward suites stub the backend at the network boundary, so real pages,
+  engine, service layer and store are exercised: denial, 500, aborted request,
+  malformed body, `won`-with-no-prize, flagged run → **no prize rendered**;
+  explicit award → exactly the server's prize.
+- Adversarial suite: max-int scores, forged result objects, 8 concurrent
+  submissions, stale tokens, prototype pollution, cheat-key sweep. **It caught a
+  real defect** — a forged balance persisting via the UI bridge — now fixed.
+
+### ⚠️ Required before any deploy
+
+**`supabase/schema.sql` must be applied by hand.** The new `resolve_run`
+signature and the `round_time_sec` / `survival_tolerance` settings rows are
+required for `submit-run` to work at all. Per
+`.claude/rules/database-migrations.md` this is a human action.
+
+### Still open on the reward path (see ADR 0009 "Outstanding")
+
+No integration test against a real Supabase instance — no credentials exist
+here, so row locking, one-time token consumption and campaign budget remain
+verified by code reading only. RLS unverified. No rate limiting, emergency
+campaign shutdown, or audit-log surface. **No real OTP** (unverified identity is
+a standing product decision; real verification needs an SMS provider).
+
+---
+
+## Previous checkpoint — 2026-08-07 (production-readiness pass, stages 0-3)
 
 Full audit: `docs/audit/2026-08-07-production-readiness-audit.md`.
 **Git now exists** (it did not before): baseline `00ddfed`, tag

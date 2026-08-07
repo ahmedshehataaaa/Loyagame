@@ -81,6 +81,9 @@ function load() {
 let state = load();
 const listeners = new Set();
 
+/* Deliberately NOT part of the persisted `state`. See setLastReward(). */
+let lastReward = null;
+
 function persist() {
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
@@ -137,21 +140,27 @@ export const Store = {
     commit();
   },
 
-  /** Record a finished run; returns the derived result for the victory screen. */
+  /**
+   * Record a finished run; returns the derived result for the result screen.
+   *
+   * This deliberately does NOT touch `rewardPoints`. It used to mint
+   * `floor(score / 10)` points per round straight into localStorage, which the
+   * rewards catalogue then let the player spend on real products — a
+   * spendable currency created entirely in the browser. Points now only ever
+   * arrive from the server (`setOrderPoints`), earned by ordering. Score,
+   * best score and games played stay local: they are statistics, not value.
+   */
   recordRun({ score, itemsSliced, won }) {
     const s = Math.max(0, Math.floor(num(score)));
     const g = state.progress;
     const isBest = s > g.bestScore;
-    const earned = Math.max(0, Math.floor(s / 10)); // 10 game points -> 1 reward point
 
     g.lastScore = s;
     g.bestScore = Math.max(g.bestScore, s);
     g.gamesPlayed += 1;
-    g.rewardPoints += earned;
     g.lastRun = {
       score: s,
       itemsSliced: Math.max(0, Math.floor(num(itemsSliced))),
-      earned,
       won: !!won,
       isBest,
       at: Date.now(),
@@ -160,31 +169,61 @@ export const Store = {
     return g.lastRun;
   },
 
-  /** Spend points on a reward. Returns {ok, error}. */
+  /**
+   * Stash the server's reward decision for the result screen to render.
+   *
+   * Held in memory only, never persisted: a reward outcome is the answer to one
+   * specific submitted round, and a stale one rehydrated from localStorage on a
+   * later visit is exactly how a player ends up shown a prize that was never
+   * issued to them.
+   */
+  setLastReward(outcome) {
+    lastReward = outcome ?? null;
+    emit();
+    return lastReward;
+  },
+
+  /** The reward outcome for the most recent round in THIS session, if any. */
+  lastReward: () => lastReward,
+
+  /**
+   * Mirror the server's authoritative order-points balance.
+   *
+   * Write-only from a server response. This is the *only* way `rewardPoints`
+   * may increase; there is deliberately no local accrual path.
+   */
+  setOrderPoints(n) {
+    if (!Number.isFinite(n) || n < 0) return state.progress.rewardPoints;
+    state.progress.rewardPoints = Math.floor(n);
+    commit();
+    return state.progress.rewardPoints;
+  },
+
+  /**
+   * Redeeming is server-only and always fails here.
+   *
+   * This used to decrement a localStorage balance and mark the reward owned —
+   * i.e. the browser granted a real product. Redemption has to happen inside a
+   * server transaction that can enforce one-time use and a campaign budget
+   * (`redeem_wheel_win()` in supabase/schema.sql already does exactly that).
+   * Until the catalogue is wired to it (Stage 5), failing closed is the only
+   * safe behaviour: a refused redemption is an inconvenience, a
+   * browser-granted one is a financial loss.
+   */
   redeem(reward) {
-    const g = state.progress;
     if (!reward || !Number.isFinite(reward.cost) || reward.cost < 0) {
       return { ok: false, error: 'invalid_reward' };
     }
-    if (g.redeemedRewardIds.includes(reward.id)) return { ok: false, error: 'already_redeemed' };
-    if (g.rewardPoints < reward.cost) return { ok: false, error: 'insufficient_points' };
-
-    g.rewardPoints -= reward.cost;
-    g.redeemedRewardIds = g.redeemedRewardIds.concat(reward.id);
-    commit();
-    return { ok: true };
+    if (state.progress.redeemedRewardIds.includes(reward.id)) {
+      return { ok: false, error: 'already_redeemed' };
+    }
+    return { ok: false, error: 'server_required' };
   },
 
   toggleSound() {
     state.settings.soundEnabled = !state.settings.soundEnabled;
     commit();
     return state.settings.soundEnabled;
-  },
-
-  /** Test/demo helper — grant points without playing. */
-  grantPoints(n) {
-    state.progress.rewardPoints += Math.max(0, Math.floor(num(n)));
-    commit();
   },
 
   reset() {

@@ -8,6 +8,7 @@ import { el, button, iconButton, modal, fmt } from '../components/ui.js';
 import { GameEvents, applySoundSetting } from '../adapters/engine-bridge.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
+import { startRound, endRound } from '../services/loyalty.js';
 
 /* Round shape comes from the engine config, never from a literal here — these
    were hardcoded to '60' and three hearts, the pre-ADR-0001 values, and stayed
@@ -74,8 +75,59 @@ export function PlayPage(root) {
   });
   setTimeout(() => hint.classList.add('is-gone'), 3200);
 
-  const screen = el('div', { class: 'screen game-screen' }, hud, hint);
+  /* Says up front whether this round can pay out. Filled in once the server
+     answers; a player should never discover only at the end that the round was
+     never rewardable. */
+  const stakeEl = el('p', { class: 'game-stake', text: '' });
+
+  const screen = el('div', { class: 'screen game-screen' }, hud, hint, stakeEl);
   root.append(screen);
+
+  /* ---- Round session --------------------------------------
+     Ask the server to authorise the round. It records the play and issues the
+     one-time token that submit-run must present, so the round is bound to a
+     real server-initiated session rather than a score posted from nowhere.
+
+     Deliberately non-blocking: the engine starts immediately and the answer
+     lands within the first second or two. Making the player wait on a network
+     round-trip before the first item flies would be a worse experience than
+     labelling an unrewardable round as one. */
+  function stakeMessage(session) {
+    if (session.rewardable)
+      return { text: 'Prize round — last the full round to win.', live: true };
+    if (session.denyReason === 'no_identity') {
+      return { text: 'Practice round — sign in with your number to play for prizes.' };
+    }
+    if (session.denyReason === 'locked_win') {
+      return { text: 'Practice round — you already won recently.' };
+    }
+    if (session.failure === 'not_configured') {
+      return { text: 'Practice round — rewards are off in this build.' };
+    }
+    if (session.failure) return { text: "Practice round — couldn't reach the rewards service." };
+    return { text: 'Practice round — this round is not eligible for a prize.' };
+  }
+
+  /* Every round needs its OWN token: submit-run consumes it, so a replay that
+     reused the previous one would be rejected as a replay attempt. Called on
+     mount and again on every restart. */
+  function acquireSession() {
+    stakeEl.className = 'game-stake';
+    stakeEl.textContent = '';
+    return startRound()
+      .then((session) => {
+        const { text, live } = stakeMessage(session);
+        stakeEl.textContent = text;
+        stakeEl.classList.add(live ? 'is-live' : 'is-warn');
+      })
+      .catch((err) => {
+        // A failed session must never block play; it just cannot be rewardable.
+        console.error('startRound failed', err);
+        stakeEl.textContent = "Practice round — couldn't reach the rewards service.";
+        stakeEl.classList.add('is-warn');
+      });
+  }
+  acquireSession();
 
   /* ---- Engine lifecycle ------------------------------------ */
   applySoundSetting();
@@ -160,6 +212,8 @@ export function PlayPage(root) {
 
   function restart() {
     ended = false;
+    // A fresh token for the fresh round — see acquireSession().
+    acquireSession();
     try {
       window.Game.startGame();
     } catch (err) {
@@ -198,6 +252,16 @@ export function PlayPage(root) {
         won: result.won,
       });
 
+      /* The reward outcome comes from the server via LoyaltyData.submitRun and
+         is handed to the result screen as-is.
+
+         Deliberately does NOT write the order-points balance from this object.
+         `result` arrives through the engine's UI bridge, which any page script
+         can call with anything it likes; an adversarial test showed that
+         trusting it here let a forged balance persist to localStorage. The
+         loyalty service writes the mirror from the real response instead. */
+      Store.setLastReward(result.reward ?? null);
+
       if (result.won) {
         navigate('/win');
         return;
@@ -218,6 +282,8 @@ export function PlayPage(root) {
             style: { marginTop: '10px' },
             text: `You hit ${START_LIVES} burnt batches. Last the full ${ROUND_TIME} seconds to win.`,
           }),
+          // No reward panel here on purpose: an eliminated round is never
+          // reward-eligible, so there is nothing server-issued to show.
         ),
         actions: [
           button('Play again', {
@@ -241,6 +307,8 @@ export function PlayPage(root) {
   /* ---- Teardown -------------------------------------------- */
   return () => {
     clearInterval(poll);
+    // Drop the round session so a stale token can never be submitted later.
+    endRound();
     offs.forEach((off) => {
       try {
         off();

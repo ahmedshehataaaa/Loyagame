@@ -679,3 +679,100 @@ alter table runs               enable row level security;
 alter table wheel_wins         enable row level security;
 alter table settings           enable row level security;
 -- (no policies on purpose: anon key sees nothing; service role bypasses RLS)
+
+-- ============================================================
+-- 2026-08-07 — resolve_run gains a SURVIVAL gate (ADR 0004/0009)
+--
+-- Winning a round means surviving its full duration; only a won round may
+-- draw a prize. The previous signature had no survival input at all, so a
+-- player eliminated by bombs still spent their points and drew a prize as
+-- long as their balance cleared the threshold.
+--
+-- `p_survived` is computed SERVER-SIDE in api/submit-run.mjs from the round
+-- duration (see the comment there) — it is never the client's own claim.
+--
+-- The token is still consumed either way: the play is spent whether or not
+-- the player survived, which is what stops a losing round being retried for
+-- free. Only the prize draw is gated.
+--
+-- Additive and idempotent, matching this file's convention. The old
+-- 8-argument overload is dropped so a stale deployment cannot silently keep
+-- resolving runs without the gate — a missing-function error is a loud,
+-- fail-closed failure, which is the correct outcome for reward code.
+-- ============================================================
+drop function if exists resolve_run(uuid, integer, integer, text, integer, integer, integer, jsonb);
+drop function if exists resolve_run(uuid, integer, integer, text, integer, integer, integer, jsonb, boolean);
+create or replace function resolve_run(
+  p_token uuid, p_score integer, p_duration integer, p_device text,
+  p_points_threshold integer, p_min_ms integer, p_max_score integer, p_prizes jsonb,
+  p_survived boolean
+) returns table (ok boolean, won boolean, prize jsonb, suspicious boolean, gap integer, order_points integer)
+language plpgsql as $$
+declare
+  v_run runs%rowtype; v_elapsed_ms numeric; v_susp boolean := false;
+  v_total numeric := 0; v_r numeric; v_acc numeric := 0; v_prize jsonb; elem jsonb;
+  v_points integer := 0;
+begin
+  select * into v_run from runs where token = p_token and token_used = false for update;
+  if not found then
+    ok := false; won := false; return next; return;
+  end if;
+
+  v_elapsed_ms := extract(epoch from (now() - v_run.created_at)) * 1000;
+  if p_score > p_max_score then v_susp := true; end if;          -- impossible score
+  if coalesce(p_duration, 0) < p_min_ms then v_susp := true; end if;  -- too fast
+  if v_elapsed_ms > 900000 then v_susp := true; end if;         -- token > 15 min = replay
+
+  -- A survival claim the server's own clock cannot support is suspicious: the
+  -- token was issued when the round started, so a genuine full round cannot
+  -- have taken less wall-clock time than it claims to have lasted.
+  if coalesce(p_survived, false) and v_elapsed_ms < coalesce(p_duration, 0) * 0.9 then
+    v_susp := true;
+  end if;
+
+  update runs set score = p_score, duration_ms = p_duration, token_used = true,
+                  suspicious = v_susp,
+                  client_meta = case when v_susp then '{"reason":"resolve_flag"}'::jsonb else null end
+   where id = v_run.id;
+
+  -- Lock the player row and read the authoritative order-points balance.
+  select p.order_points into v_points from players p where p.id = v_run.player_id for update;
+  v_points := coalesce(v_points, 0);
+
+  -- THE GATE: survived AND enough points AND not flagged.
+  if coalesce(p_survived, false) and v_points >= p_points_threshold and not v_susp then
+    -- Spend the points via the ledger ONLY (the apply_ledger_delta trigger
+    -- updates players.order_points — never touch it directly here or the
+    -- deduction is applied twice).
+    insert into points_ledger (player_id, delta, reason, source, note)
+    values (v_run.player_id, -p_points_threshold, 'wheel_spend', 'manual', 'wheel spin spend');
+
+    select sum((e->>'weight')::numeric) into v_total from jsonb_array_elements(p_prizes) e;
+    v_r := random() * v_total;
+    for elem in select * from jsonb_array_elements(p_prizes) loop
+      v_acc := v_acc + (elem->>'weight')::numeric;
+      if v_r <= v_acc then v_prize := elem; exit; end if;
+    end loop;
+    if v_prize is null then v_prize := p_prizes->0; end if;
+
+    insert into wheel_wins (player_id, device_id, prize_key, prize_label, score)
+    values (v_run.player_id, p_device, v_prize->>'key', v_prize->>'label', p_score);
+
+    -- Re-read the post-spend balance (the trigger has already applied).
+    select p.order_points into v_points from players p where p.id = v_run.player_id;
+    ok := true; won := true; prize := v_prize; suspicious := false; gap := 0;
+    order_points := coalesce(v_points, 0);
+  else
+    ok := true; won := false; suspicious := v_susp;
+    gap := greatest(0, p_points_threshold - v_points);
+    order_points := v_points;
+  end if;
+  return next;
+end $$;
+
+-- Settings the survival gate reads (api/submit-run.mjs). Tunable without a
+-- redeploy, per .claude/rules/database-migrations.md.
+insert into settings (key, value) values
+  ('round_time_sec', '30'::jsonb),
+  ('survival_tolerance', '0.95'::jsonb)
+on conflict (key) do nothing;

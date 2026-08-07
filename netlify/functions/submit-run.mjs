@@ -24,15 +24,35 @@ export default async (req) => {
     const s = await getSettings();
     const prizes = s.wheel_prizes || [];
     const pointsThreshold = s.wheel_points_threshold ?? 4000;
+
+    /* SURVIVAL IS RE-DERIVED HERE, NOT TAKEN FROM THE CLIENT.
+       Winning a round means lasting the full duration (ADR 0004), and only a
+       won round may be paid out. The request carries a `survived` flag, but it
+       is a claim from a browser and is deliberately ignored: a round that ends
+       early ended because the player lost their lives, so the ROUND DURATION
+       the client reports — already bounded below by `min_run_ms` and cross-
+       checked against the server's own token age inside resolve_run — is the
+       evidence. Anyone forging a long duration to fake survival has to survive
+       `min_run_ms` of real wall-clock time against a token the server
+       timestamped, which is the same barrier that protects the score. */
+    const roundSec = Number(s.round_time_sec ?? 30);
+    const requiredMs = roundSec * 1000 * Number(s.survival_tolerance ?? 0.95);
+    const reportedMs = Math.round(durationMs || 0);
+    const survived = reportedMs >= requiredMs;
+
     const rows = await rpc('resolve_run', {
       p_token: token,
       p_score: Math.round(score),
-      p_duration: Math.round(durationMs || 0),
+      p_duration: reportedMs,
       p_device: device || null,
       p_points_threshold: pointsThreshold,
       p_min_ms: s.min_run_ms ?? 5000,
       p_max_score: s.max_plausible_score ?? 2000000,
       p_prizes: prizes,
+      // Requires the resolve_run signature in supabase/schema.sql at or after
+      // 2026-08-07. The RPC consumes the token either way (the play is spent)
+      // but only draws a prize when this is true.
+      p_survived: survived,
     });
     const r = rows[0];
     if (!r || !r.ok) return bad('invalid_token', 409);
@@ -51,6 +71,9 @@ export default async (req) => {
     }
     return ok({
       won: false,
+      // `survived: false` is why there is no prize when the points balance was
+      // sufficient — the client needs to tell those two denials apart.
+      survived,
       gap: r.gap,
       suspicious: r.suspicious,
       wheel,
