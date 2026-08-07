@@ -1,6 +1,14 @@
 ---
 description: Rules for external integrations — Vercel, Netlify, Foodics POS, Supabase
-globs: ["vercel.json", "netlify.toml", ".vercel/**", "api/pos-credit.mjs", "netlify/functions/pos-credit.mjs", "supabase/**"]
+globs:
+  [
+    'vercel.json',
+    'netlify.toml',
+    '.vercel/**',
+    'api/pos-credit.mjs',
+    'netlify/functions/pos-credit.mjs',
+    'supabase/**',
+  ]
 ---
 
 # Integrations

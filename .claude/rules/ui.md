@@ -1,6 +1,6 @@
 ---
 description: Rules for the DOM/CSS app shell (src/pages, src/components, src/styles)
-globs: ["src/pages/**", "src/components/**", "src/styles/**"]
+globs: ['src/pages/**', 'src/components/**', 'src/styles/**']
 ---
 
 # UI code

@@ -2,7 +2,16 @@
    credit_points, adjust_points, lookup_player, flag_player,
    clear_flags, redeem_prize. Manual credit is the POS fallback until
    the Foodics webhook is registered. */
-import { sb, rpc, ok, bad, isAdmin, normalizeLoosePhone, getSettings, readBody } from './_lib/db.mjs';
+import {
+  sb,
+  rpc,
+  ok,
+  bad,
+  isAdmin,
+  normalizeLoosePhone,
+  getSettings,
+  readBody,
+} from './_lib/db.mjs';
 
 async function findPlayer(rawPhone) {
   const phone = normalizeLoosePhone(rawPhone);
@@ -30,8 +39,11 @@ export default async (req) => {
         }
         if (points <= 0) return bad('invalid_points');
         const rows = await rpc('credit_order_points', {
-          p_phone: phone, p_order_id: body.orderId ?? null,
-          p_points: Math.round(points), p_source: 'manual', p_note: body.note ?? 'admin credit',
+          p_phone: phone,
+          p_order_id: body.orderId ?? null,
+          p_points: Math.round(points),
+          p_source: 'manual',
+          p_note: body.note ?? 'admin credit',
           p_amount_egp: Number.isFinite(body.amountEgp) ? body.amountEgp : null,
         });
         return ok({ result: rows[0] });
@@ -43,8 +55,13 @@ export default async (req) => {
         if (!Number.isFinite(body.delta) || body.delta === 0) return bad('invalid_delta');
         await sb('/points_ledger', {
           method: 'POST',
-          body: { player_id: player.id, delta: Math.round(body.delta),
-                  reason: 'adjust', source: 'manual', note: body.note ?? 'admin adjustment' },
+          body: {
+            player_id: player.id,
+            delta: Math.round(body.delta),
+            reason: 'adjust',
+            source: 'manual',
+            note: body.note ?? 'admin adjustment',
+          },
         });
         const fresh = await sb(`/players?id=eq.${player.id}&select=order_points`);
         return ok({ newBalance: fresh[0].order_points });
@@ -63,9 +80,14 @@ export default async (req) => {
       case 'flag_player': {
         const player = await findPlayer(body.phone);
         if (!player) return bad('player_not_found', 404);
-        const flags = [...player.flags, {
-          type: body.type || 'review', at: new Date().toISOString(), note: body.note ?? null,
-        }];
+        const flags = [
+          ...player.flags,
+          {
+            type: body.type || 'review',
+            at: new Date().toISOString(),
+            note: body.note ?? null,
+          },
+        ];
         await sb(`/players?id=eq.${player.id}`, { method: 'PATCH', body: { flags } });
         return ok({ flags });
       }
@@ -80,7 +102,8 @@ export default async (req) => {
       case 'redeem_prize': {
         if (!Number.isFinite(body.winId)) return bad('invalid_win_id');
         const rows = await rpc('redeem_wheel_win', {
-          p_win_id: body.winId, p_redeemed_by: body.redeemedBy || 'dashboard',
+          p_win_id: body.winId,
+          p_redeemed_by: body.redeemedBy || 'dashboard',
         });
         const r = rows[0];
         if (!r.ok) return bad(r.error, r.error === 'not_found' ? 404 : 409);

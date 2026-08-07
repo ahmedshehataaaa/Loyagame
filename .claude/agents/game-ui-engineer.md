@@ -15,6 +15,7 @@ own the DOM/CSS screen layer — not the canvas gameplay rendering (that's
 
 `src/` (your layer, ES modules, router-driven) and `engine/` (canvas game
 loop, classic scripts) are **not reconciled**. Concretely:
+
 - `src/pages/victory.js` currently reads `Store.progress().lastRun` — a
   local mock, not the actual result from `engine/game.js`'s `endGame()` /
   `LoyaltyData.submitRun()`. Anything you build on `Store` may be showing

@@ -3,7 +3,15 @@
    Callers: the Foodics webhook (x-webhook-secret) or staff/admin
    tools (x-admin-key). Unknown phones get a stub player so points
    wait for them when they first open the game. */
-import { rpc, ok, bad, isPosCaller, normalizeLoosePhone, getSettings, readBody } from '../lib/db.mjs';
+import {
+  rpc,
+  ok,
+  bad,
+  isPosCaller,
+  normalizeLoosePhone,
+  getSettings,
+  readBody,
+} from '../lib/db.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('method_not_allowed', 405);

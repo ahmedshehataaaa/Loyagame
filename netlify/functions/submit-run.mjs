@@ -49,8 +49,14 @@ export default async (req) => {
         pointsThreshold,
       });
     }
-    return ok({ won: false, gap: r.gap, suspicious: r.suspicious, wheel,
-                orderPoints: r.order_points, pointsThreshold });
+    return ok({
+      won: false,
+      gap: r.gap,
+      suspicious: r.suspicious,
+      wheel,
+      orderPoints: r.order_points,
+      pointsThreshold,
+    });
   } catch (e) {
     console.error('submit-run:', e.message);
     return bad('server_error', 500);

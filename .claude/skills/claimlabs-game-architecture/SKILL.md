@@ -54,11 +54,13 @@ first since it's cross-cutting, and update `docs/architecture/` when done.
 ## Migrating toward the target structure
 
 Target (from CLAUDE.md / ClaimLabs' broader plan):
+
 ```
 games/slice-rush/src/{scenes,entities,systems,mechanics,ui,audio}/
 games/slice-rush/{assets,config,tests}/
 packages/{game-runtime,campaign-config,reward-engine,anti-cheat,analytics-events,design-system,shared-types,test-utilities}/
 ```
+
 Migrate incrementally, one seam at a time, and only when a real task
 touches that area — don't do a big-bang move. A reasonable order, given
 what already has natural boundaries: `api/`+`lib/`+`supabase/` →

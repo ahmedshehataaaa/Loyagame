@@ -28,6 +28,7 @@ taskkill //F //IM python3.exe   # if a stray one is found
 ```
 http://localhost:8765/?play&dev&anyday
 ```
+
 - `?play` — bypass the mobile/tablet-only gate (for desktop testing)
 - `?dev` — enable dev helpers
 - `?anyday` — bypass any day-of-week gating inherited from prior loyalty
@@ -39,7 +40,7 @@ http://localhost:8765/?play&dev&anyday
    running (above).
 2. Check the browser console/network tab for `ERR_CONNECTION_REFUSED` on
    any of the ~17 requests the app fires on load (CSS, JS modules, item
-   sprites). If present with the *old* single-threaded server, that's ADR
+   sprites). If present with the _old_ single-threaded server, that's ADR
    0003's bug — restart with the fixed `server.py`.
 3. If requests all succeed (200) but the screen is still blank, this is a
    real app bug, not the known server issue — start

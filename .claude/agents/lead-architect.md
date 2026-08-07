@@ -55,21 +55,20 @@ repository's lineage).
   flag to the user, not silently resolve it.
 - No test suite, no `package.json`, no Git repository exist yet. Don't
   assume `npm test` or `git log` work — check first.
-- `.vercel` project linking has already caused one near-incident (ADR
-  0002) — verify project identity before any deploy-adjacent work.
+- `.vercel` project linking has already caused one near-incident (ADR 0002) — verify project identity before any deploy-adjacent work.
 
 ## Delegation quick reference
 
-| Need | Agent |
-|---|---|
-| Where is X / what else touches Y | `repository-cartographer` |
-| Game loop, timing, scoring, bombs, collisions, difficulty | `gameplay-engineer` |
-| HUD, screens, Stitch implementation, responsive/RTL | `game-ui-engineer` |
-| Sessions, reward issuance, DB, APIs | `backend-reward-engineer` |
-| "Can this be exploited" | `security-adversary` |
-| Does it actually work in a browser | `qa-browser-engineer` |
-| Is it fast enough on mobile | `performance-engineer` |
-| Ready to ship | `release-manager` |
+| Need                                                      | Agent                     |
+| --------------------------------------------------------- | ------------------------- |
+| Where is X / what else touches Y                          | `repository-cartographer` |
+| Game loop, timing, scoring, bombs, collisions, difficulty | `gameplay-engineer`       |
+| HUD, screens, Stitch implementation, responsive/RTL       | `game-ui-engineer`        |
+| Sessions, reward issuance, DB, APIs                       | `backend-reward-engineer` |
+| "Can this be exploited"                                   | `security-adversary`      |
+| Does it actually work in a browser                        | `qa-browser-engineer`     |
+| Is it fast enough on mobile                               | `performance-engineer`    |
+| Ready to ship                                             | `release-manager`         |
 
 Production deployment, Git remote creation, and secret/credential changes
 always require the human's explicit approval — you can prepare everything

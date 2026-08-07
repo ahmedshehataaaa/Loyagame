@@ -20,7 +20,7 @@ isn't there.
   screenshot or read DOM/canvas state directly. A code read is not a test.
 - **Backend/RPCs** (`api/`, `supabase/schema.sql`): `curl` the actual
   endpoint or call the RPC directly and show the response. For anything
-  security-relevant, `security-adversary`'s exploit-attempt checklist *is*
+  security-relevant, `security-adversary`'s exploit-attempt checklist _is_
   the test.
 - **UI** (`src/`): screenshot at a real mobile viewport, compare against
   the Stitch reference if one exists (`claimlabs-stitch-to-code`).
@@ -41,6 +41,7 @@ beyond Playwright itself.
 
 Required categories once a suite exists (don't skip any when adding
 coverage for a new feature):
+
 - **Unit**: pure logic — scoring math, combo windows, discount-tier
   resolution.
 - **Integration**: `api/*.mjs` handlers against a real (local/staging)

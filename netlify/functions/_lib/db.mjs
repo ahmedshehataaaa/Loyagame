@@ -51,7 +51,9 @@ export function normalizeLoosePhone(raw) {
 // Stat months roll over on Cairo time, not the device's.
 export function monthKey(d = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit',
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: '2-digit',
   }).format(d); // "YYYY-MM"
 }
 
@@ -79,16 +81,23 @@ export async function getSettings() {
 const digest = (v) => createHash('sha256').update(String(v)).digest();
 const secretEquals = (a, b) => {
   if (!a || !b) return false;
-  try { return timingSafeEqual(digest(a), digest(b)); } catch { return false; }
+  try {
+    return timingSafeEqual(digest(a), digest(b));
+  } catch {
+    return false;
+  }
 };
 
-export const isAdmin = (req) =>
-  secretEquals(req.headers.get('x-admin-key'), process.env.ADMIN_KEY);
+export const isAdmin = (req) => secretEquals(req.headers.get('x-admin-key'), process.env.ADMIN_KEY);
 
 export const isPosCaller = (req) =>
   isAdmin(req) ||
   secretEquals(req.headers.get('x-webhook-secret'), process.env.FOODICS_WEBHOOK_SECRET);
 
 export async function readBody(req) {
-  try { return await req.json(); } catch { return null; }
+  try {
+    return await req.json();
+  } catch {
+    return null;
+  }
 }

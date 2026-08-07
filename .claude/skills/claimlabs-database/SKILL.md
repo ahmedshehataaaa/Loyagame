@@ -32,8 +32,8 @@ architecture.
   (`min_run_ms`, `max_plausible_score`, `wheel_points_threshold`,
   `wheel_prizes`, `max_plays`, etc.) — this is how gameplay/reward tuning
   changes without a redeploy; check here before assuming a value is
-  hardcoded in `engine/config.js` (that file is the *client mirror/offline
-  fallback*, not necessarily the live value).
+  hardcoded in `engine/config.js` (that file is the _client mirror/offline
+  fallback_, not necessarily the live value).
 
 ## Locking pattern — the load-bearing safety mechanism
 

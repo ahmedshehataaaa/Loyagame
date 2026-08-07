@@ -28,8 +28,8 @@ constraint needs a deliberate, documented decision to change.
   comparison via `secretEquals`. Any new privileged endpoint uses one of
   these, not a new ad hoc check.
 - **Validation**: manual, inline, fail-fast (`if (!body) return
-  bad('bad_json')`, `if (!Number.isFinite(score) || score < 0) return
-  bad('invalid_score')`) — no schema library. Keep this pattern for
+bad('bad_json')`, `if (!Number.isFinite(score) || score < 0) return
+bad('invalid_score')`) — no schema library. Keep this pattern for
   consistency unless a validation library is a deliberate, documented
   addition (it would need a `package.json` to exist first).
 - **Business logic in RPCs, not in the handler**: handlers are thin —
@@ -39,8 +39,8 @@ constraint needs a deliberate, documented decision to change.
   transactional logic into JS where it loses the database's locking
   guarantees.
 - **Errors are logged server-side, not leaked to the client**: `catch (e)
-  { console.error('label:', e.message); return bad('server_error', 500);
-  }` — match this, don't return `e.message` or a stack trace in the
+{ console.error('label:', e.message); return bad('server_error', 500);
+}` — match this, don't return `e.message` or a stack trace in the
   response body.
 
 ## Dual-host mirror discipline

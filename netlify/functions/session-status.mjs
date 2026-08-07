@@ -17,7 +17,8 @@ export default async (req) => {
   try {
     const s = await getSettings();
     const rows = await rpc('check_eligibility', {
-      p_phone: e164, p_device: device,
+      p_phone: e164,
+      p_device: device,
       p_window_hrs: s.play_window_hrs ?? 24,
       p_max_plays: s.max_plays ?? 5,
       p_lockout_hrs: s.win_lockout_hrs ?? 12,
@@ -30,7 +31,7 @@ export default async (req) => {
     return ok({
       phone: e164,
       eligible: r.eligible,
-      reason: r.reason,                 // ok | locked_win | daily_cap
+      reason: r.reason, // ok | locked_win | daily_cap
       lockedUntil: r.locked_until,
       nextPlayAt: r.next_play_at,
       playsLeft: r.plays_left,

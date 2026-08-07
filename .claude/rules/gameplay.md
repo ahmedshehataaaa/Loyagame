@@ -1,6 +1,6 @@
 ---
 description: Rules for the core game loop and tuning (engine/*.js)
-globs: ["engine/game.js", "engine/config.js", "engine/platform.js", "engine/audio.js"]
+globs: ['engine/game.js', 'engine/config.js', 'engine/platform.js', 'engine/audio.js']
 ---
 
 # Gameplay code

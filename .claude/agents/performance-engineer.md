@@ -22,7 +22,7 @@ webpack output.
   teleport physics; check for new per-frame allocations (particle arrays,
   etc.) if asked to touch this.
 - `server.py` now serves with `Cache-Control: no-store, no-cache,
-  must-revalidate` on **every** response, including static assets — correct
+must-revalidate` on **every** response, including static assets — correct
   for local dev (forces fresh reloads) but confirm this doesn't leak into
   whatever serves production (Vercel/Netlify static hosting config, not
   `server.py`, should own real caching headers there).

@@ -1,6 +1,6 @@
 ---
 description: Rules for backend API code (Vercel Functions + Netlify mirror)
-globs: ["api/**", "netlify/functions/**", "lib/**"]
+globs: ['api/**', 'netlify/functions/**', 'lib/**']
 ---
 
 # Backend / API code

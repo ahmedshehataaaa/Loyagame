@@ -44,7 +44,7 @@ checklist belongs to.
 
 - [ ] Does new brand/content-specific data belong in `engine/config.js`'s
       constants, not hardcoded inline?
-- [ ] Comments explain *why*, not *what* (match existing style in
+- [ ] Comments explain _why_, not _what_ (match existing style in
       `engine/config.js`, `lib/db.mjs`).
 - [ ] No unrelated refactors bundled into a focused change.
 

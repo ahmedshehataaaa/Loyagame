@@ -1,6 +1,6 @@
 ---
 description: Rules for test code (once a suite exists)
-globs: ["tests/**", "**/*.test.js", "**/*.test.mjs", "**/*.spec.js", "games/slice-rush/tests/**"]
+globs: ['tests/**', '**/*.test.js', '**/*.test.mjs', '**/*.spec.js', 'games/slice-rush/tests/**']
 ---
 
 # Tests

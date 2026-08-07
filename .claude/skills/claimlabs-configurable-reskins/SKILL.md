@@ -23,6 +23,7 @@ again.
 ## What already is config-driven (the reskin surface, per build)
 
 `engine/config.js` exports:
+
 - `BRAND` — name, tagline, game name, colors, ink/outline color, knife
   emoji.
 - `FOODS` — per-item id, sprite path, points, hit radius, splatter color,

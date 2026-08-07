@@ -42,14 +42,14 @@ Two things define this architecture more than the folder layout:
 ## Known architectural debt
 
 - **HUD duplication**: `engine/game.js`'s canvas HUD and `src/pages/
-  play.js`'s DOM overlay both render score/lives during a round
+play.js`'s DOM overlay both render score/lives during a round
   simultaneously (confirmed by screenshot 2026-08-06). Resolving this
   means picking one owner for in-round HUD state — likely `src/` reading
   from a shared event/state bridge that `engine/game.js` emits into,
   rather than each layer tracking its own copy.
 - **`src/pages/victory.js` reads a local mock `Store`**, not the real
   round result from `engine/game.js`'s `endGame()`/`LoyaltyData.
-  submitRun()`. The `src/` app shell was built before or independently of
+submitRun()`. The `src/` app shell was built before or independently of
   the real backend integration finishing — it needs to be wired to the
   actual result, not sample/placeholder data.
 - **Per-client folder duplication instead of shared engine + config**:
@@ -78,7 +78,7 @@ reasonable extraction order, given what already has natural boundaries:
    validated schema (currently unvalidated — a malformed `FOODS` entry
    fails silently to an emoji fallback rather than erroring loudly).
 3. Reconcile `engine`/`src` (resolve the HUD duplication and the `Store`
-   vs. real-result gap) *before* splitting `engine/game.js` into
+   vs. real-result gap) _before_ splitting `engine/game.js` into
    `scenes/entities/systems/mechanics/` — splitting a file that's about to
    be substantially rewritten anyway is wasted motion.
 4. Only once a second live client is actually being onboarded: extract the

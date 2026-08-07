@@ -5,7 +5,7 @@
 This file previously held a Krispy Kreme "Glaze Rush" session log — copied
 into this folder when the McDonald's build was forked from Krispy Kreme, and
 never updated. That log is preserved below under **Prior history** since it's
-still accurate about the shared engine's evolution; just not about *this*
+still accurate about the shared engine's evolution; just not about _this_
 folder specifically.
 
 ### Where things actually stand
@@ -40,7 +40,7 @@ folder specifically.
   domains). Detached this session — renamed to
   `.vercel.krispy-kreme-link.bak` — so a deploy from this folder won't
   silently overwrite Krispy Kreme's production site. **A fresh `vercel
-  link` (new or existing McDonald's-specific project) is needed before this
+link` (new or existing McDonald's-specific project) is needed before this
   build can be deployed.**
 - **Known stale-branding bug:** the in-round HUD still renders lives as
   🌶️ (chili pepper) glyphs — a leftover from the original Pasta & Heat
@@ -91,13 +91,13 @@ state and reskinned for McDonald's.
 8. **Reward chooser — compliance fix (DESIGN.md §6):** replaced the random
    prize-wheel spin with a **deterministic reward menu**. `endGame()` →
    `UI.showChooser()` → player taps a real product → `LoyaltyData.claimReward
-   (key)` → `UI.showReward(prize)`. The old wheel/spin code was left in place
+(key)` → `UI.showReward(prize)`. The old wheel/spin code was left in place
    (dead on the win path) in case the spin animation was wanted purely as
    post-choice presentation.
 
-   *(This is the fix that was later reverted when the McDonald's build
+   _(This is the fix that was later reverted when the McDonald's build
    pivoted back to a random-weighted wheel — see the current checkpoint
-   above.)*
+   above.)_
 
 ### Known small gaps at that time
 

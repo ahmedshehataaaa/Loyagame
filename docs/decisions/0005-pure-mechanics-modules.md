@@ -39,7 +39,7 @@ it. `engine/game.js` calls `Mechanics.*` at run time.
 
 **Why the global namespace is safe here:** classic `<script>` tags execute
 before any `type="module"` code, so the engine cannot `import`. But the engine
-only *reads* `Mechanics` inside `startGame()` / `update()` / `spawnWave()`, and
+only _reads_ `Mechanics` inside `startGame()` / `update()` / `spawnWave()`, and
 nothing calls those until `src/pages/play.js` mounts — which is module code, and
 therefore runs after `src/game/index.js`. The ordering is guaranteed by the
 module/script contract, not by luck.

@@ -73,12 +73,12 @@ mcdonalds/
 Unlike the original Slicy-P prototype, this build's backend is real, not
 `localStorage` mocks:
 
-| Endpoint | Does |
-|---|---|
-| `POST /api/start-run` | Grants a round; issues a one-time server token |
+| Endpoint               | Does                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| `POST /api/start-run`  | Grants a round; issues a one-time server token                                       |
 | `POST /api/submit-run` | Resolves the round server-side (`resolve_run` RPC, row-locked, plausibility-checked) |
-| `POST /api/pos-credit` | POS/Foodics webhook credits order-points (secret-verified) |
-| `admin-*` | Dashboard data for `admin.html` |
+| `POST /api/pos-credit` | POS/Foodics webhook credits order-points (secret-verified)                           |
+| `admin-*`              | Dashboard data for `admin.html`                                                      |
 
 Recommended stack (already in use): **Vercel Functions** + **Supabase
 Postgres** (PostgREST) + **Foodics webhook** for POS integration.

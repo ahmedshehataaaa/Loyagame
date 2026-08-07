@@ -22,11 +22,19 @@ export default async (req) => {
       const patch = { consent: true, country_code: cc, last_seen_at: new Date().toISOString() };
       // A phone with real balance being re-claimed is worth a look.
       if (player.order_points > 0 || player.games > 0) {
-        patch.flags = [...player.flags, { type: 'reclaim', at: new Date().toISOString(),
-          note: 'phone re-registered while holding points/history' }];
+        patch.flags = [
+          ...player.flags,
+          {
+            type: 'reclaim',
+            at: new Date().toISOString(),
+            note: 'phone re-registered while holding points/history',
+          },
+        ];
       }
       const rows = await sb(`/players?id=eq.${player.id}`, {
-        method: 'PATCH', body: patch, headers: { Prefer: 'return=representation' },
+        method: 'PATCH',
+        body: patch,
+        headers: { Prefer: 'return=representation' },
       });
       player = rows[0];
     } else {

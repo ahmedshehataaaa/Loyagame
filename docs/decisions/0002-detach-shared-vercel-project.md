@@ -15,7 +15,7 @@ including its `.vercel` link, without relinking.
 ## Decision
 
 Renamed `mcdonalds/.vercel` → `mcdonalds/.vercel.krispy-kreme-link.bak`
-(reversible — nothing deleted). This was deliberately the *smaller* action:
+(reversible — nothing deleted). This was deliberately the _smaller_ action:
 provisioning a brand-new Vercel project via API was considered and rejected
 for this pass, since creating cloud resources on the user's account without
 them choosing the name/team/settings is a bigger, less reversible action

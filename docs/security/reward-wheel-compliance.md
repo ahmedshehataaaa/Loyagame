@@ -6,7 +6,7 @@ in agent memory.**
 
 > **Update 2026-08-07.** The project owner was presented with this conflict and
 > chose to **keep the weighted-random wheel** — recorded in
-> `docs/decisions/0008-keep-weighted-random-wheel.md`. That is a *product*
+> `docs/decisions/0008-keep-weighted-random-wheel.md`. That is a _product_
 > decision about mechanics. It is **not** the legal sign-off this file asks for,
 > and it does not close this issue.
 >

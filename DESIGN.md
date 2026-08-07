@@ -50,6 +50,7 @@ Rush**.
 --c-ink:             #27251F  structural outline / heading
 --c-surface:        #FFF8F6   card paper
 ```
+
 These are the real, currently-shipping tokens — single source of truth,
 extracted from the Stitch project. Do not hand-roll new colors per screen.
 
@@ -65,10 +66,10 @@ extracted from the Stitch project. Do not hand-roll new colors per screen.
 
 Customers must never confuse them.
 
-| | GAME SCORE | ORDER POINTS |
-|---|---|---|
-| Earned by | slicing skill | real purchases only (Foodics) |
-| Spent/used for | leaderboard rank, bragging rights | unlocking the reward wheel |
+|                | GAME SCORE                        | ORDER POINTS                  |
+| -------------- | --------------------------------- | ----------------------------- |
+| Earned by      | slicing skill                     | real purchases only (Foodics) |
+| Spent/used for | leaderboard rank, bragging rights | unlocking the reward wheel    |
 
 Rule: playing better must **never** look like it earns purchase points.
 
@@ -82,9 +83,11 @@ The original rule (written during the Krispy Kreme phase, and still the
 better-informed position): **do not** implement "spend order-points on a
 random wheel for real-value prizes" — that risks sweepstakes/gambling
 classification. The correct flow is deterministic / player-chosen:
+
 ```
 N ORDER POINTS  →  THRESHOLD REACHED  →  CHOOSE YOUR REWARD
 ```
+
 A spinning selector is fine **only as presentation after the reward is
 already assigned/chosen** — never as the thing deciding the prize.
 
@@ -118,6 +121,7 @@ then tablet/desktop scale-up). Desktop scales the phone experience.
 ## 8. Game feel spec (where most effort goes)
 
 Every slice fires several things at once:
+
 - **Swipe ribbon** trail following the finger, fading 120–250ms.
 - **Split:** whole → two halves rotate apart under gravity (bake-then-clip
   along the real cut angle — already implemented, keep it).
@@ -155,9 +159,9 @@ Touch targets ≥ 44px. Buttons animate on press. No zero-feedback taps.
 ## 11. Mobile shell rules (P0, art-agnostic)
 
 - Shell is `100dvh × 100vw`, `position:fixed; inset:0; overflow:hidden;
-  touch-action:none; overscroll-behavior:none`.
+touch-action:none; overscroll-behavior:none`.
 - Respect `env(safe-area-inset-*)` on UI screens (notch/home-bar).
-- No visible scrollbars — long screens scroll *inside* their own container,
+- No visible scrollbars — long screens scroll _inside_ their own container,
   never the page.
 - No pull-to-refresh, no text selection, no pinch-zoom during play.
 
@@ -167,9 +171,11 @@ Touch targets ≥ 44px. Buttons animate on press. No zero-feedback taps.
 already partially true: `engine/config.js`'s `CONFIG`/`BRAND`/`FOODS`/`BOMB`
 constants are the reskin surface between this build, Krispy Kreme, and
 Slicy-P. Target structure per the ClaimLabs architecture:
+
 ```
 games/slice-rush/{engine shared}, campaign config per client, assets per client
 ```
+
 Each menu item ships as: `sprite (whole), points, hit radius, splatter color,
 label` (already the `FOODS` shape) — prefer real sprites over emoji, already
 the case here (`assets/items/*.png`).
@@ -182,8 +188,8 @@ Status against this build, verified against the actual code (not aspirational):
   `start-run`, `submit-run` requires it, `resolve_run` row-locks the run and
   validates duration/plausible-score bounds server-side (`min_run_ms`,
   `max_plausible_score` in `settings`). ⚠️ Not yet: full slice-event streaming
-  + server replay — the server trusts the final score/duration pair within
-  bounds, not a move-by-move replay.
+  - server replay — the server trusts the final score/duration pair within
+    bounds, not a move-by-move replay.
 - **Point ownership:** ✅ order-points are credited only via the Foodics/POS
   webhook (`api/pos-credit.mjs`), never client-writable.
 - **Foodics → backend only:** ✅ webhook secret verified via constant-time
@@ -192,7 +198,7 @@ Status against this build, verified against the actual code (not aspirational):
   `credit_order_points` in `supabase/schema.sql` before relying on it for a
   real launch.
 - **Reward issuance:** ✅ server-decided (`resolve_run`), not client-side —
-  but see §6's open compliance flag on *how* it decides.
+  but see §6's open compliance flag on _how_ it decides.
 
 ## 14. Non-goals (do NOT add)
 

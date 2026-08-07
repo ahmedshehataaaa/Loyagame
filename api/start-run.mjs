@@ -18,9 +18,11 @@ export default async (req) => {
   try {
     const s = await getSettings();
     const rows = await rpc('start_play', {
-      p_phone: e164, p_cc: cc, p_device: device,
+      p_phone: e164,
+      p_cc: cc,
+      p_device: device,
       p_window_hrs: s.play_window_hrs ?? 24,
-      p_max_plays: s.max_plays ?? 999999,   // play cap removed; see settings.max_plays
+      p_max_plays: s.max_plays ?? 999999, // play cap removed; see settings.max_plays
       p_lockout_hrs: s.win_lockout_hrs ?? 12,
       p_month: monthKey(),
     });

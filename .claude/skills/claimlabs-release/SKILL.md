@@ -10,7 +10,7 @@ description: Release workflow for Slice Rush — preview deployment, smoke tests
 1. **Vercel project identity.** `mcdonalds/.vercel` was detached from a
    shared/wrong project on 2026-08-06 (ADR 0002) and has not been
    relinked as of this writing. Before any deploy: confirm (via `vercel
-   link` interactively, or the Vercel MCP `get_project` tool) exactly
+link` interactively, or the Vercel MCP `get_project` tool) exactly
    which project is the target, and get explicit human confirmation. Never
    assume a `.vercel/project.json` that exists is correct without
    checking its `projectName` against what's intended.

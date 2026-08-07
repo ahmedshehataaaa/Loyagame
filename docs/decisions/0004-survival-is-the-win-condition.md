@@ -29,7 +29,7 @@ win.** Score remains a leaderboard/bragging statistic.
   `resolveOutcome({livesRemaining, timeLeftSec})` returns `survived` or
   `eliminated`. Ties (lives and clock both hitting zero on the same frame)
   resolve to `eliminated` — the hazard wins.
-- `endGame()` derives the outcome from actual round state *before* submitting,
+- `endGame()` derives the outcome from actual round state _before_ submitting,
   and passes it along as `{outcome, survived, livesRemaining, ...}`.
 - The HUD now reads `SURVIVE 30s`, not a score target.
 - The loss modal says `Burnt out!` and explains the two-bomb rule, instead of

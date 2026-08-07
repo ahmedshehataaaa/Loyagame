@@ -7,7 +7,7 @@ description: Review workflow for Slice Rush changes — correctness, maintainabi
 
 ## Use `REVIEW.md` as the checklist
 
-This skill is the *process*; `REVIEW.md` (repo root) is the actual
+This skill is the _process_; `REVIEW.md` (repo root) is the actual
 line-by-line checklist — correctness, security, maintainability, tests,
 duplication/architecture, unintended changes. Keep them in sync: if a
 review turns up a new recurring failure mode worth checking every time,

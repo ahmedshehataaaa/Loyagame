@@ -11,11 +11,11 @@ instructed.
 ## Slice Rush — current scope
 
 - 30-second round. Win: survive the full round. Loss: hit 2 bombs.
-  *(Caveat, verified in code: "survive to win" is not yet a distinct game
+  _(Caveat, verified in code: "survive to win" is not yet a distinct game
   state — see `docs/project-inventory.md` → "Incomplete features."
   Currently, win/loss for reward purposes is decided by score vs. the wheel
   points threshold, not survival. Don't assume the brief and the shipped
-  code agree; check both.)*
+  code agree; check both.)_
 - Restaurant-specific branding: colors, menu items, hazards, copy, assets,
   reward rules — driven by `engine/config.js`'s `CONFIG`/`BRAND`/`FOODS`/
   `BOMB` constants per build. This is the reskin surface; see
@@ -75,6 +75,7 @@ python3 server.py                 # http://localhost:8765
 #   ?dev    — enable dev helpers
 #   ?anyday — bypass any day-of-week gating inherited from prior builds
 ```
+
 There is currently **no** `npm install`, `npm test`, `npm run build`, or
 lint/typecheck command — no `package.json` exists. Setting this up (or
 deciding not to, given the no-bundler constraint) is a reasonable first
@@ -92,7 +93,7 @@ implementation task; see `claimlabs-testing`.
   screen first.
 - **Reward decisions are server-only.** `resolve_run`, `start_play`,
   `credit_order_points` in `supabase/schema.sql` are the authority. Client
-  code (`engine/game.js`, `src/`) may only *display* what the server
+  code (`engine/game.js`, `src/`) may only _display_ what the server
   returns, never compute a win/prize itself.
 - **One engine, per-client config.** Brand/menu/hazard content lives in
   `engine/config.js`'s exported constants. Do not fork gameplay logic per
@@ -125,7 +126,7 @@ implementation task; see `claimlabs-testing`.
   a deliberate decision (documented as an ADR) changes it.
 - `engine/config.js` is the single tuning/content surface — don't hardcode
   round time, lives, spawn rates, or brand colors elsewhere.
-- Comments explain *why*, not *what* — match the existing style in
+- Comments explain _why_, not _what_ — match the existing style in
   `engine/config.js` and `lib/db.mjs` (both already do this well).
 - Keep `engine/` (classic scripts) and `src/` (ES modules) each internally
   consistent with their own existing patterns; don't introduce a third

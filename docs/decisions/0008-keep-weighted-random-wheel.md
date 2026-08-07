@@ -49,8 +49,8 @@ Recorded consequences of that choice, which are **not** resolved by it:
   the tree. It is not being revived, but it should not be deleted while the
   compliance question is open — it is the implementation path if the answer comes
   back "no wheel".
-- ADR 0004 (survival wins) is independent of this: survival decides the *round*,
-  order-points decide *wheel eligibility*, and the wheel decides *which prize*.
+- ADR 0004 (survival wins) is independent of this: survival decides the _round_,
+  order-points decide _wheel eligibility_, and the wheel decides _which prize_.
 
 ## Verification
 

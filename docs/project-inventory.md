@@ -31,16 +31,16 @@ the GitHub connector (branches/PRs need a repo to exist first) — see
 
 All under `C:\Users\user\Desktop\first project\`:
 
-| Folder | Brand | Round rules (code) | Recency | Verdict |
-|---|---|---|---|---|
-| **`mcdonalds/`** | McDonald's, internal name **McSlice Rush** | 30s / 2 lives (fixed 2026-08-06, was 60s/3) | Newest by ~6.6 days vs. everything else; actively being refactored (`src/` ES-module layer added over `engine/`) | **Source of truth** |
-| `krispy-kreme/` | Krispy Kreme "Glaze Rush" | 60s / 3 lives, wheel reward model | `mcdonalds/` was forked from this state | Parent lineage, not current |
-| `krispy-kreme.backup-20260725-172931/`, `krispy-kreme.backup-20260725-184929/` | Krispy Kreme | — | Timestamped pre-cleanup backups | Untouched, inactive |
-| `fastfood-ninja/` | Nashville Pasta & Heat — "Slicy-P" / "Pasta Ninja" | 60s / 3 lives, discount-tier codes | Original engine all reskins descend from, per its own `HANDOFF.md` | Historical reference for core engine intent |
-| `slicy-p-deploy/`, `slicy-p-ui/` | Slicy-P | — | Static export snapshots of `fastfood-ninja/`, Aug 1 2026 | Superseded |
-| `pasta-react/` | Slicy-P | — | React/Tailwind UI-only rebuild, "does not share the loyalty logic" per its own docs | Dead-end experiment, not wired to any backend |
-| `Downloads/stitch_mcslice_rewards_arcade*.zip` (×10) | McDonald's | — | Stitch design-tool exports, Aug 1–4 2026 | Design source material (`mcdonalds/stitch-export/` is the extracted, in-repo copy) |
-| `Downloads/ClaimLabs-Pitch-Deck*.pdf` (×3) | ClaimLabs | — | Business collateral | Not code |
+| Folder                                                                         | Brand                                              | Round rules (code)                          | Recency                                                                                                          | Verdict                                                                            |
+| ------------------------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **`mcdonalds/`**                                                               | McDonald's, internal name **McSlice Rush**         | 30s / 2 lives (fixed 2026-08-06, was 60s/3) | Newest by ~6.6 days vs. everything else; actively being refactored (`src/` ES-module layer added over `engine/`) | **Source of truth**                                                                |
+| `krispy-kreme/`                                                                | Krispy Kreme "Glaze Rush"                          | 60s / 3 lives, wheel reward model           | `mcdonalds/` was forked from this state                                                                          | Parent lineage, not current                                                        |
+| `krispy-kreme.backup-20260725-172931/`, `krispy-kreme.backup-20260725-184929/` | Krispy Kreme                                       | —                                           | Timestamped pre-cleanup backups                                                                                  | Untouched, inactive                                                                |
+| `fastfood-ninja/`                                                              | Nashville Pasta & Heat — "Slicy-P" / "Pasta Ninja" | 60s / 3 lives, discount-tier codes          | Original engine all reskins descend from, per its own `HANDOFF.md`                                               | Historical reference for core engine intent                                        |
+| `slicy-p-deploy/`, `slicy-p-ui/`                                               | Slicy-P                                            | —                                           | Static export snapshots of `fastfood-ninja/`, Aug 1 2026                                                         | Superseded                                                                         |
+| `pasta-react/`                                                                 | Slicy-P                                            | —                                           | React/Tailwind UI-only rebuild, "does not share the loyalty logic" per its own docs                              | Dead-end experiment, not wired to any backend                                      |
+| `Downloads/stitch_mcslice_rewards_arcade*.zip` (×10)                           | McDonald's                                         | —                                           | Stitch design-tool exports, Aug 1–4 2026                                                                         | Design source material (`mcdonalds/stitch-export/` is the extracted, in-repo copy) |
+| `Downloads/ClaimLabs-Pitch-Deck*.pdf` (×3)                                     | ClaimLabs                                          | —                                           | Business collateral                                                                                              | Not code                                                                           |
 
 ## Source-of-truth recommendation
 
@@ -90,7 +90,7 @@ mcdonalds/
 ```
 
 Does not yet match the target `apps/ / games/slice-rush/ / packages/` layout
-— it's a single flat game folder with the right *seams* (`engine` vs `src`
+— it's a single flat game folder with the right _seams_ (`engine` vs `src`
 vs `api` vs `supabase`) to migrate incrementally. See
 [claimlabs-game-architecture](../.claude/skills/claimlabs-game-architecture/SKILL.md).
 

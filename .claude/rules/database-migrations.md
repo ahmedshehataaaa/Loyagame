@@ -1,6 +1,6 @@
 ---
 description: Rules for database schema and (future) migrations
-globs: ["supabase/**", "database/**"]
+globs: ['supabase/**', 'database/**']
 ---
 
 # Database & migrations
@@ -27,7 +27,7 @@ globs: ["supabase/**", "database/**"]
   ever be wired up for direct agent use.
 - **Config that should be tunable without a redeploy belongs in the
   `settings` table**, not hardcoded in a migration or in `engine/
-  config.js` alone — check `settings` for the live value of anything like
+config.js` alone — check `settings` for the live value of anything like
   `min_run_ms`, `max_plausible_score`, `wheel_points_threshold` before
   assuming the `engine/config.js` value is authoritative (it's the client
   mirror/offline fallback).

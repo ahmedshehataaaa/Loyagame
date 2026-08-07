@@ -18,7 +18,7 @@ The confirmed source of truth is `mcdonalds/` (see
 sometimes near-identical filenames: `krispy-kreme/` (and two timestamped
 backups), `fastfood-ninja/` (the original engine), `slicy-p-deploy/`,
 `slicy-p-ui/`, `pasta-react/`. A request to "find where X is handled" is
-genuinely ambiguous until you specify *which build*. Always report the full
+genuinely ambiguous until you specify _which build_. Always report the full
 path, not just a filename.
 
 ## Standing traps in this codebase (don't get fooled by them)

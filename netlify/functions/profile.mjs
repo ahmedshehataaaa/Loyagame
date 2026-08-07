@@ -10,7 +10,8 @@ export default async (req) => {
     if (!player) return bad('unknown_token', 401);
 
     sb(`/players?id=eq.${player.id}`, {
-      method: 'PATCH', body: { last_seen_at: new Date().toISOString() },
+      method: 'PATCH',
+      body: { last_seen_at: new Date().toISOString() },
     }).catch(() => {});
 
     return ok({

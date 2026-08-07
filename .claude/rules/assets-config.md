@@ -1,6 +1,15 @@
 ---
 description: Rules for assets and configuration files
-globs: ["assets/**", "engine/config.js", "src/styles/tokens.css", "manifest.webmanifest", "vercel.json", "netlify.toml", "*.webmanifest"]
+globs:
+  [
+    'assets/**',
+    'engine/config.js',
+    'src/styles/tokens.css',
+    'manifest.webmanifest',
+    'vercel.json',
+    'netlify.toml',
+    '*.webmanifest',
+  ]
 ---
 
 # Assets & configuration

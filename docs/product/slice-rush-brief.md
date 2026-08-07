@@ -9,13 +9,13 @@ rewards program. Current live client: McDonald's, internal build name
 
 ## Specified rules vs. what's actually implemented
 
-| Rule | Spec | Code (as of 2026-08-06) |
-|---|---|---|
-| Round length | 30 seconds | 30 seconds (`ROUND_TIME`, fixed via ADR 0001) |
-| Loss condition | Hit 2 bombs | Hit 2 bombs (`START_LIVES: 2`, fixed via ADR 0001) |
-| Win condition | Survive the full round | **Not implemented as a distinct state.** Timer expiring and lives hitting zero both call the same `endGame()`. "Won" (for reward purposes) is decided by score vs. the wheel points threshold, server-side — not by survival. This is a real, open gap between the brief and the shipped game — see `claimlabs-slice-rush-mechanics`. |
-| Branding | Restaurant-specific | Yes — `engine/config.js`'s `BRAND`/`FOODS`/`BOMB`, real McDonald's menu-item sprites. Some leftovers not yet re-themed (🌶️ chili lives glyph, rooster-P mascot). |
-| Rewards | Real discount codes, server-issued | Real, server-decided (`resolve_run` RPC) — but see the reward-model note below, this isn't discount codes anymore. |
+| Rule           | Spec                               | Code (as of 2026-08-06)                                                                                                                                                                                                                                                                                                               |
+| -------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Round length   | 30 seconds                         | 30 seconds (`ROUND_TIME`, fixed via ADR 0001)                                                                                                                                                                                                                                                                                         |
+| Loss condition | Hit 2 bombs                        | Hit 2 bombs (`START_LIVES: 2`, fixed via ADR 0001)                                                                                                                                                                                                                                                                                    |
+| Win condition  | Survive the full round             | **Not implemented as a distinct state.** Timer expiring and lives hitting zero both call the same `endGame()`. "Won" (for reward purposes) is decided by score vs. the wheel points threshold, server-side — not by survival. This is a real, open gap between the brief and the shipped game — see `claimlabs-slice-rush-mechanics`. |
+| Branding       | Restaurant-specific                | Yes — `engine/config.js`'s `BRAND`/`FOODS`/`BOMB`, real McDonald's menu-item sprites. Some leftovers not yet re-themed (🌶️ chili lives glyph, rooster-P mascot).                                                                                                                                                                      |
+| Rewards        | Real discount codes, server-issued | Real, server-decided (`resolve_run` RPC) — but see the reward-model note below, this isn't discount codes anymore.                                                                                                                                                                                                                    |
 
 ## Reward model has changed since the original brief
 
