@@ -4,14 +4,25 @@
    HUD over it. The engine owns its own rAF loop and pointer input;
    this page owns lifecycle: mount, pause, and hard teardown so no
    loop or listener survives a route change. */
-import { el, button, iconButton, modal, toast, fmt } from '../components/ui.js';
-import { GameEvents, WIN_SCORE, applySoundSetting } from '../adapters/engine-bridge.js';
+import { el, button, iconButton, modal, fmt } from '../components/ui.js';
+import { GameEvents, applySoundSetting } from '../adapters/engine-bridge.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 
+/* Round shape comes from the engine config, never from a literal here — these
+   were hardcoded to '60' and three hearts, the pre-ADR-0001 values, and stayed
+   visibly wrong for the first frames of every round after the round became 30s
+   with 2 lives. */
+const ROUND_TIME = window.CONFIG?.ROUND_TIME ?? 30;
+const START_LIVES = window.CONFIG?.START_LIVES ?? 2;
+const HEART = '❤';
+
 export function PlayPage(root) {
   // Route guard: playing without a profile would produce an unattributable score.
-  if (!Store.isSignedIn()) { navigate('/sign-in', { replace: true }); return; }
+  if (!Store.isSignedIn()) {
+    navigate('/sign-in', { replace: true });
+    return;
+  }
 
   const offs = [];
   let ended = false;
@@ -19,9 +30,14 @@ export function PlayPage(root) {
 
   /* ---- HUD ------------------------------------------------- */
   const scoreEl = el('b', { class: 'hud__score', text: '0' });
-  const timeEl  = el('b', { class: 'hud__time', text: '60' });
-  const livesEl = el('span', { class: 'hud__lives', 'aria-label': 'Lives remaining', text: '❤❤❤' });
-  const goalEl  = el('span', { class: 'hud__goal', text: `TARGET ${fmt(WIN_SCORE)}` });
+  const timeEl = el('b', { class: 'hud__time', text: String(ROUND_TIME) });
+  const livesEl = el('span', {
+    class: 'hud__lives',
+    'aria-label': `${START_LIVES} lives remaining`,
+    text: HEART.repeat(START_LIVES),
+  });
+  // The goal is to last the round, not to reach a score (ADR 0004).
+  const goalEl = el('span', { class: 'hud__goal', text: `SURVIVE ${ROUND_TIME}s` });
 
   const pauseBtn = iconButton('❚❚', 'Pause game', { onClick: () => togglePause(true) });
   const soundBtn = iconButton(Store.settings().soundEnabled ? '🔊' : '🔇', 'Toggle sound', {
@@ -32,13 +48,18 @@ export function PlayPage(root) {
     },
   });
 
-  const hud = el('div', { class: 'hud' },
-    el('div', { class: 'hud__pill hud__pill--score' },
-      el('small', { text: 'SCORE' }), scoreEl),
+  const hud = el(
+    'div',
+    { class: 'hud' },
+    el('div', { class: 'hud__pill hud__pill--score' }, el('small', { text: 'SCORE' }), scoreEl),
     el('div', { class: 'hud__mid' }, goalEl, livesEl),
-    el('div', { class: 'hud__right' },
+    el(
+      'div',
+      { class: 'hud__right' },
       el('div', { class: 'hud__pill hud__pill--time' }, el('small', { text: 'TIME' }), timeEl),
-      soundBtn, pauseBtn),
+      soundBtn,
+      pauseBtn,
+    ),
   );
 
   /* The engine binds #game once at load, so the canvas lives in the app
@@ -47,7 +68,10 @@ export function PlayPage(root) {
   const canvas = document.getElementById('game');
   stage.classList.add('is-playing');
 
-  const hint = el('p', { class: 'game-hint', text: 'Swipe across the food to slice it — avoid the burnt fries!' });
+  const hint = el('p', {
+    class: 'game-hint',
+    text: 'Swipe across the food to slice it — avoid the burnt fries!',
+  });
   setTimeout(() => hint.classList.add('is-gone'), 3200);
 
   const screen = el('div', { class: 'screen game-screen' }, hud, hint);
@@ -60,10 +84,15 @@ export function PlayPage(root) {
     window.Game.startGame();
   } catch (err) {
     console.error('engine failed to start', err);
-    screen.append(el('div', { class: 'state' },
-      el('span', { class: 'state__glyph', text: '⚠️' }),
-      el('p', { class: 'state__title', text: 'Game failed to start' }),
-      button('Back to start', { onClick: () => navigate('/') })));
+    screen.append(
+      el(
+        'div',
+        { class: 'state' },
+        el('span', { class: 'state__glyph', text: '⚠️' }),
+        el('p', { class: 'state__title', text: 'Game failed to start' }),
+        button('Back to start', { onClick: () => navigate('/') }),
+      ),
+    );
     return () => {};
   }
 
@@ -77,8 +106,10 @@ export function PlayPage(root) {
       scoreEl.textContent = fmt(d.score);
       timeEl.textContent = d.time ?? '';
       const lives = Math.max(0, Number(d.lives ?? 0));
-      livesEl.textContent = lives > 0 ? '❤'.repeat(lives) : '💀';
+      livesEl.textContent = lives > 0 ? HEART.repeat(lives) : '💀';
       livesEl.setAttribute('aria-label', `${lives} lives remaining`);
+      // The clock is the win condition, so flag the tense final stretch.
+      timeEl.classList.toggle('is-urgent', Number(d.time ?? ROUND_TIME) <= 10);
     }
   }, 100);
 
@@ -88,84 +119,137 @@ export function PlayPage(root) {
     if (ended) return;
     paused = on;
     if (on) {
-      try { window.Game.pauseGame(); } catch {}
+      try {
+        window.Game.pauseGame();
+      } catch {}
       pauseOverlay = modal({
         title: 'Paused',
         body: 'Take a breath. Your round is waiting.',
         actions: [
           button('Resume', { onClick: () => togglePause(false) }),
-          button('Restart', { variant: 'ghost', onClick: () => { closePause(); restart(); } }),
-          button('Quit to home', { variant: 'ghost', onClick: () => { closePause(); navigate('/'); } }),
+          button('Restart', {
+            variant: 'ghost',
+            onClick: () => {
+              closePause();
+              restart();
+            },
+          }),
+          button('Quit to home', {
+            variant: 'ghost',
+            onClick: () => {
+              closePause();
+              navigate('/');
+            },
+          }),
         ],
         onClose: () => togglePause(false),
       });
       screen.append(pauseOverlay);
     } else {
       closePause();
-      try { window.Game.resumeGame(); } catch {}
+      try {
+        window.Game.resumeGame();
+      } catch {}
     }
   }
-  function closePause() { pauseOverlay?.remove(); pauseOverlay = null; paused = false; }
+  function closePause() {
+    pauseOverlay?.remove();
+    pauseOverlay = null;
+    paused = false;
+  }
 
   function restart() {
     ended = false;
-    try { window.Game.startGame(); } catch (err) { console.error(err); }
+    try {
+      window.Game.startGame();
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   /* ---- Keyboard controls ----------------------------------- */
   function onKey(e) {
     const k = e.key.toLowerCase();
-    if (k === 'escape' || k === 'p') { e.preventDefault(); togglePause(!paused); }
+    if (k === 'escape' || k === 'p') {
+      e.preventDefault();
+      togglePause(!paused);
+    }
     if (k === 'r' && ended) restart();
   }
   addEventListener('keydown', onKey);
   offs.push(() => removeEventListener('keydown', onKey));
 
   /* Leaving the tab pauses, so the round can't drain unattended. */
-  function onVis() { if (document.hidden && !paused && !ended) togglePause(true); }
+  function onVis() {
+    if (document.hidden && !paused && !ended) togglePause(true);
+  }
   document.addEventListener('visibilitychange', onVis);
   offs.push(() => document.removeEventListener('visibilitychange', onVis));
 
   /* ---- Round end ------------------------------------------- */
-  offs.push(GameEvents.on('ended', (result) => {
-    if (ended) return;
-    ended = true;
+  offs.push(
+    GameEvents.on('ended', (result) => {
+      if (ended) return;
+      ended = true;
 
-    const run = Store.recordRun({
-      score: result.score,
-      itemsSliced: Number(canvas.dataset.slices || 0),
-      won: result.won,
-    });
+      const run = Store.recordRun({
+        score: result.score,
+        itemsSliced: Number(canvas.dataset.slices || 0),
+        won: result.won,
+      });
 
-    if (result.won) { navigate('/win'); return; }
+      if (result.won) {
+        navigate('/win');
+        return;
+      }
 
-    // Lost: in-design retry, no navigation away.
-    const overlay = modal({
-      title: "Time's up!",
-      body: el('div', null,
-        el('p', { class: 'result__score', text: fmt(run.score) }),
-        el('p', { class: 't-kicker', text: run.isBest ? 'NEW PERSONAL BEST' : 'FINAL SCORE' }),
-        el('p', { style: { marginTop: '10px' }, text:
-          `${fmt(Math.max(0, WIN_SCORE - run.score))} more to win the round.` }),
-        el('p', { class: 't-kicker', style: { marginTop: '8px' }, text: `+${fmt(run.earned)} REWARD POINTS BANKED` }),
-      ),
-      actions: [
-        button('Play again', { onClick: () => { overlay.remove(); restart(); } }),
-        button('Rewards', { variant: 'ghost', onClick: () => navigate('/rewards') }),
-        button('Home', { variant: 'ghost', onClick: () => navigate('/') }),
-      ],
-      onClose: () => { overlay.remove(); navigate('/'); },
-    });
-    screen.append(overlay);
-    toast(`+${fmt(run.earned)} reward points`, 'ok');
-  }));
+      /* Eliminated by hazards. The copy names the actual cause — the old text
+       said "Time's up!" and reported how far short of a score target the
+       player fell, which was wrong twice over once survival became the win
+       condition: the round had not run out, and there is no target. */
+      const overlay = modal({
+        title: 'Burnt out!',
+        body: el(
+          'div',
+          null,
+          el('p', { class: 'result__score', text: fmt(run.score) }),
+          el('p', { class: 't-kicker', text: run.isBest ? 'NEW PERSONAL BEST' : 'FINAL SCORE' }),
+          el('p', {
+            style: { marginTop: '10px' },
+            text: `You hit ${START_LIVES} burnt batches. Last the full ${ROUND_TIME} seconds to win.`,
+          }),
+        ),
+        actions: [
+          button('Play again', {
+            onClick: () => {
+              overlay.remove();
+              restart();
+            },
+          }),
+          button('Rewards', { variant: 'ghost', onClick: () => navigate('/rewards') }),
+          button('Home', { variant: 'ghost', onClick: () => navigate('/') }),
+        ],
+        onClose: () => {
+          overlay.remove();
+          navigate('/');
+        },
+      });
+      screen.append(overlay);
+    }),
+  );
 
   /* ---- Teardown -------------------------------------------- */
   return () => {
     clearInterval(poll);
-    offs.forEach((off) => { try { off(); } catch {} });
-    try { window.Game.idle(); } catch {}   // stops spawning; engine goes idle
-    stage.classList.remove('is-playing');  // hide the shared canvas again
+    offs.forEach((off) => {
+      try {
+        off();
+      } catch {}
+    });
+    try {
+      window.Game.idle();
+    } catch {} // stops spawning; engine goes idle
+    stage.classList.remove('is-playing'); // hide the shared canvas again
     pauseOverlay?.remove();
   };
 }

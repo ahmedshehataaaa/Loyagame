@@ -1,8 +1,20 @@
 # OPEN: Reward wheel compliance conflict
 
-**Status: unresolved. Needs a legal/business decision, not an engineering
+**Status: STILL UNRESOLVED. Needs a legal/business decision, not an engineering
 fix. Do not silently change this — see `[[feedback-flag-dont-fix]]` pattern
 in agent memory.**
+
+> **Update 2026-08-07.** The project owner was presented with this conflict and
+> chose to **keep the weighted-random wheel** — recorded in
+> `docs/decisions/0008-keep-weighted-random-wheel.md`. That is a *product*
+> decision about mechanics. It is **not** the legal sign-off this file asks for,
+> and it does not close this issue.
+>
+> Still outstanding: **written sign-off from whoever owns legal/compliance risk
+> for ClaimLabs**, before any launch involving real prize value at the current
+> `WHEEL.pointsThreshold` and per-prize weights. When that exists, append it
+> below with the name and date of the person who gave it, and only then change
+> this status.
 
 ## The conflict
 

@@ -8,7 +8,7 @@
 
 const routes = new Map();
 let notFoundRedirect = '/';
-let current = null;          // { path, cleanup }
+let current = null; // { path, cleanup }
 let outlet = null;
 
 /** Normalise "#/play?x=1" -> "/play". */
@@ -22,19 +22,26 @@ async function render() {
   const path = parseHash();
   const entry = routes.get(path);
 
-  if (!entry) { navigate(notFoundRedirect, { replace: true }); return; }
+  if (!entry) {
+    navigate(notFoundRedirect, { replace: true });
+    return;
+  }
 
   // Tear the previous route down first — game loops and listeners
   // must not survive a route change.
   if (current?.cleanup) {
-    try { current.cleanup(); } catch (err) { console.warn('route cleanup failed', err); }
+    try {
+      current.cleanup();
+    } catch (err) {
+      console.warn('route cleanup failed', err);
+    }
   }
   current = null;
   outlet.innerHTML = '';
 
   let cleanup = null;
   try {
-    cleanup = await entry.view(outlet) || null;
+    cleanup = (await entry.view(outlet)) || null;
   } catch (err) {
     console.error(`route "${path}" failed to render`, err);
     outlet.innerHTML = `
@@ -54,7 +61,10 @@ async function render() {
 
 export const Router = {
   /** @param {string} path @param {(el:HTMLElement)=>void|(()=>void)} view */
-  add(path, view) { routes.set(path, { view }); return Router; },
+  add(path, view) {
+    routes.set(path, { view });
+    return Router;
+  },
 
   start(el, { fallback = '/' } = {}) {
     outlet = el;
@@ -70,7 +80,10 @@ export const Router = {
 
 export function navigate(path, { replace = false } = {}) {
   const target = `#${path}`;
-  if (location.hash === target) { render(); return; }
+  if (location.hash === target) {
+    render();
+    return;
+  }
   if (replace) location.replace(target);
   else location.hash = target;
 }

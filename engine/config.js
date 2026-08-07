@@ -5,14 +5,31 @@
    ============================================================ */
 
 const CONFIG = {
-  // Virtual resolution the game is designed at. Everything is drawn
-  // in this coordinate space and scaled to fit the screen (landscape).
-  WIDTH: 1280,
-  HEIGHT: 720,
+  // Virtual resolution the game is designed at. Everything is drawn in this
+  // coordinate space and scaled to fit the screen.
+  //
+  // PORTRAIT (ADR 0006). This was 1280×720 landscape, and the engine faked
+  // portrait support by rotating the whole #stage 90° in CSS — which left the
+  // canvas HUD lying sideways underneath an un-rotated DOM HUD. A phone game
+  // played one-handed in portrait should be authored in portrait; the taller
+  // field also gives items a longer, more readable arc.
+  WIDTH: 720,
+  HEIGHT: 1280,
 
-  GRAVITY: 1500,        // px/s^2 pulling items back down
-  START_LIVES: 2,        // Slice Rush spec: lose after 2 bombs
-  COMBO_WINDOW: 0.45,   // seconds; slices within this window chain a combo
+  // Ballistics. Items are launched by TARGET APEX, not by a hand-tuned
+  // velocity (see src/game/ballistics.js), so these stay correct if the
+  // virtual resolution ever changes again.
+  GRAVITY: 1900, // px/s^2 pulling items back down
+  LAUNCH: {
+    apexMin: 0.58, // fraction of HEIGHT an item rises, minimum
+    apexMax: 0.74, // ...and maximum. ~1.8-2.0s hang time at GRAVITY above.
+    maxLateralFrac: 0.2, // furthest sideways drift, fraction of WIDTH
+    marginFrac: 0.1, // keep launches/landings this far off each edge
+  },
+
+  START_LIVES: 2, // Slice Rush spec: lose after 2 bombs
+  COMBO_WINDOW: 0.45, // seconds; slices within this window chain a combo
+  HIT_TOLERANCE: 1.08, // slice hitbox vs sprite radius; >1 = forgiving on touch
 
   // ---- Backend API (Netlify Functions + Supabase) ----------------------
   // The client works fully offline when disabled (or unreachable):
@@ -34,7 +51,7 @@ const CONFIG = {
   // LIMITS so prizes stay affordable. The server is the source of truth
   // for points, limits + wheel results — the values here are the client
   // mirror (and the offline-demo fallback).
-  ROUND_TIME: 30,       // seconds per timed round — Slice Rush spec
+  ROUND_TIME: 30, // seconds per timed round — Slice Rush spec
 
   // Prize wheel — unlocked when order-points reach pointsThreshold. Weights
   // are the odds of each prize (they sum to 100 so each weight reads as a %).
@@ -44,16 +61,16 @@ const CONFIG = {
     enabled: true,
     pointsThreshold: 4000, // ORDER-POINTS needed to spin (a spin spends this); server-authoritative, this is the offline mirror
     prizes: [
-      { key: 'off5',       glyph: '🎟️', label: '5% off your order',   weight: 28 },
-      { key: 'fries',      glyph: '🍟', label: 'Free Fries',          weight: 20 },
-      { key: 'off10',      glyph: '🎟️', label: '10% off your order',  weight: 18 },
-      { key: 'hashbrown',  glyph: '🥔', label: 'Free Hash Brown',     weight: 12 },
-      { key: 'nuggets',    glyph: '🍗', label: 'Free 6pc Nuggets',    weight: 9  },
-      { key: 'off15',      glyph: '🎟️', label: '15% off your order',  weight: 6  },
-      { key: 'mcflurry',   glyph: '🍦', label: 'Free McFlurry®',      weight: 4  },
-      { key: 'off20',      glyph: '🎟️', label: '20% off your order',  weight: 2  },
-      { key: 'bigmac',     glyph: '🍔', label: 'Free Big Mac®',       weight: 0.8 },
-      { key: 'off25',      glyph: '💥', label: '25% off your order',  weight: 0.2 },
+      { key: 'off5', glyph: '🎟️', label: '5% off your order', weight: 28 },
+      { key: 'fries', glyph: '🍟', label: 'Free Fries', weight: 20 },
+      { key: 'off10', glyph: '🎟️', label: '10% off your order', weight: 18 },
+      { key: 'hashbrown', glyph: '🥔', label: 'Free Hash Brown', weight: 12 },
+      { key: 'nuggets', glyph: '🍗', label: 'Free 6pc Nuggets', weight: 9 },
+      { key: 'off15', glyph: '🎟️', label: '15% off your order', weight: 6 },
+      { key: 'mcflurry', glyph: '🍦', label: 'Free McFlurry®', weight: 4 },
+      { key: 'off20', glyph: '🎟️', label: '20% off your order', weight: 2 },
+      { key: 'bigmac', glyph: '🍔', label: 'Free Big Mac®', weight: 0.8 },
+      { key: 'off25', glyph: '💥', label: '25% off your order', weight: 0.2 },
     ],
   },
 
@@ -68,11 +85,16 @@ const CONFIG = {
     // plays-left counter entirely.
     maxPlays: 999999,
     windowHrs: 24,
-    winLockoutHrs: 12,   // separate limit: cooldown AFTER a win (still active)
+    winLockoutHrs: 12, // separate limit: cooldown AFTER a win (still active)
   },
 
-  // Difficulty ramps across a single 60s round.
-  RAMP_TIME: 50,
+  // Difficulty ramp, expressed as a FRACTION of ROUND_TIME rather than an
+  // absolute duration (ADR 0007). It used to be `RAMP_TIME: 50` against a 60s
+  // round; when the round became 30s the ramp silently stopped completing, so
+  // the curve only ever reached ~60% of its range and the closing seconds —
+  // the tensest part by design — plateaued mid-ramp. At 0.85 the curve tops
+  // out with ~4.5s left, so the finish sits at full intensity.
+  RAMP_FRACTION: 0.85,
   spawn: {
     easyInterval: 1.05,
     hardInterval: 0.5,
@@ -80,15 +102,20 @@ const CONFIG = {
     hardCount: [2, 4],
     bombChanceEasy: 0.05,
     bombChanceHard: 0.16,
+    // Fairness constraints — see src/game/wave-planner.js. These guarantee no
+    // wave can present an undodgeable hazard, which the brief forbids and the
+    // old unconstrained per-spawn roll produced routinely at high difficulty.
+    maxBombsPerWave: 1,
+    bombClearanceFrac: 0.18,
   },
 
   // ---- Power-ups (special sliceable items) ---------------------------
   POWERUP: {
-    goldenChance: 0.05,    // chance a normal spawn is a GOLDEN item (big points + bonus)
-    goldenMult: 3,         // golden items score this multiple
-    specialChance: 0.05,   // chance a wave includes a frenzy/freeze pickup
-    frenzyDuration: 5,     // seconds of rapid spawns after slicing ⚡
-    freezeDuration: 4,     // seconds of slow-motion after slicing ❄️
+    goldenChance: 0.05, // chance a normal spawn is a GOLDEN item (big points + bonus)
+    goldenMult: 3, // golden items score this multiple
+    specialChance: 0.05, // chance a wave includes a frenzy/freeze pickup
+    frenzyDuration: 5, // seconds of rapid spawns after slicing ⚡
+    freezeDuration: 4, // seconds of slow-motion after slicing ❄️
   },
 };
 
@@ -103,17 +130,17 @@ const BRAND = {
   // near-black #27251F (the "arcade juicy" comic look — see the Stitch
   // design system). Red is the ground colour, yellow the action/reward colour.
   colors: {
-    primary:  '#DA291C',   // McDonald's Red — hero ground
-    primary2: '#A81A10',   // deep red (pressed edges / bevel lips)
-    accent:   '#FFC72C',   // Golden Yellow — CTAs, currency, win states
-    accent2:  '#C8930A',   // deep gold (pressed edge under yellow)
-    green:    '#3fb84e',   // confirm / success
-    green2:   '#2c8e3e',
-    sky1:     '#FFF8F6',   // off-white / card surface
-    sky2:     '#C2331F',   // mid red
-    sky3:     '#A81A10',   // flat poster red
+    primary: '#DA291C', // McDonald's Red — hero ground
+    primary2: '#A81A10', // deep red (pressed edges / bevel lips)
+    accent: '#FFC72C', // Golden Yellow — CTAs, currency, win states
+    accent2: '#C8930A', // deep gold (pressed edge under yellow)
+    green: '#3fb84e', // confirm / success
+    green2: '#2c8e3e',
+    sky1: '#FFF8F6', // off-white / card surface
+    sky2: '#C2331F', // mid red
+    sky3: '#A81A10', // flat poster red
   },
-  ink: '#27251F',          // structural outline colour (4px comic stroke)
+  ink: '#27251F', // structural outline colour (4px comic stroke)
 };
 
 // Special power-up pickups.
@@ -136,31 +163,94 @@ const SPECIALS = {
 // Big Mac is the `hero` (signature sparkle burst) — it's the icon of the
 // brand, even though the McFlurry scores slightly higher.
 const FOODS = [
-  { id: 'bigmac',     img: 'assets/items/bigmac.png',     glyph: '🍔', points: 500, radius: 56, juice: '#d8892f', label: 'Big Mac®', hero: true },
-  { id: 'mcflurry',   img: 'assets/items/mcflurry.png',   glyph: '🍦', points: 600, radius: 50, juice: '#e8e2d4', label: 'McFlurry®' },
-  { id: 'filetofish', img: 'assets/items/filetofish.png', glyph: '🐟', points: 400, radius: 52, juice: '#f3e2b8', label: 'Filet-O-Fish®' },
-  { id: 'applepie',   img: 'assets/items/applepie.png',   glyph: '🥧', points: 300, radius: 48, juice: '#e0b060', label: 'Apple Pie' },
-  { id: 'fries',      img: 'assets/items/fries.png',      glyph: '🍟', points: 250, radius: 52, juice: '#f0b33a', label: 'World Famous Fries®' },
-  { id: 'hashbrown',  img: 'assets/items/hashbrown.png',  glyph: '🥔', points: 200, radius: 48, juice: '#d9a13f', label: 'Hash Brown' },
-  { id: 'nuggets',    img: 'assets/items/nuggets.png',    glyph: '🍗', points: 150, radius: 44, juice: '#d99a3f', label: 'Chicken McNuggets®' },
+  {
+    id: 'bigmac',
+    img: 'assets/items/bigmac.png',
+    glyph: '🍔',
+    points: 500,
+    radius: 56,
+    juice: '#d8892f',
+    label: 'Big Mac®',
+    hero: true,
+  },
+  {
+    id: 'mcflurry',
+    img: 'assets/items/mcflurry.png',
+    glyph: '🍦',
+    points: 600,
+    radius: 50,
+    juice: '#e8e2d4',
+    label: 'McFlurry®',
+  },
+  {
+    id: 'filetofish',
+    img: 'assets/items/filetofish.png',
+    glyph: '🐟',
+    points: 400,
+    radius: 52,
+    juice: '#f3e2b8',
+    label: 'Filet-O-Fish®',
+  },
+  {
+    id: 'applepie',
+    img: 'assets/items/applepie.png',
+    glyph: '🥧',
+    points: 300,
+    radius: 48,
+    juice: '#e0b060',
+    label: 'Apple Pie',
+  },
+  {
+    id: 'fries',
+    img: 'assets/items/fries.png',
+    glyph: '🍟',
+    points: 250,
+    radius: 52,
+    juice: '#f0b33a',
+    label: 'World Famous Fries®',
+  },
+  {
+    id: 'hashbrown',
+    img: 'assets/items/hashbrown.png',
+    glyph: '🥔',
+    points: 200,
+    radius: 48,
+    juice: '#d9a13f',
+    label: 'Hash Brown',
+  },
+  {
+    id: 'nuggets',
+    img: 'assets/items/nuggets.png',
+    glyph: '🍗',
+    points: 150,
+    radius: 44,
+    juice: '#d99a3f',
+    label: 'Chicken McNuggets®',
+  },
 ];
 
 // BURNT FRIES — the hazard. On-brand because the whole promise is hot, fresh
 // food; the burnt batch breaks it. Slicing it costs a life. It wears the
 // engine's pulsing red danger ring, with a charred splatter.
-const BOMB = { id: 'burnt', img: 'assets/items/burnt.png', glyph: '💣', radius: 50, juice: '#2b1a10', label: 'Burnt Fries — avoid!' };
+const BOMB = {
+  id: 'burnt',
+  img: 'assets/items/burnt.png',
+  glyph: '💣',
+  radius: 50,
+  juice: '#2b1a10',
+  label: 'Burnt Fries — avoid!',
+};
 
-
-// Menu DISCOUNT tiers — dead code in the current model (kept for parity).
-// Retheme brackets / percentages / codes to match the menu + margins.
-const DISCOUNT_TIERS = [
-  { min: 0,    pct: 5,  code: 'MC5',  label: '5% off your order' },
-  { min: 1000, pct: 10, code: 'MC10', label: '10% off your order' },
-  { min: 2000, pct: 15, code: 'MC15', label: '15% off your order' },
-  { min: 3000, pct: 20, code: 'MC20', label: '20% off your order' },
-  { min: 4500, pct: 25, code: 'MC25', label: '25% off your order' },
-];
+// DISCOUNT_TIERS (score-tier "% off" codes) was removed 2026-08-07. It had
+// been dead since the July 2026 pivot to the order-points prize wheel, and the
+// reward model was reconfirmed as the wheel on 2026-08-07 — so it was two
+// models out of date while still sitting in the file that reviewers are told is
+// the security-sensitive reward surface. Recover from git history (tag
+// baseline-2026-08-07) if a discount-tier model is ever revived.
 
 // Expose for ES module consumers (top-level const does not attach to window).
 window.CONFIG = CONFIG;
-window.FOODS = FOODS; window.BOMB = BOMB; window.BRAND = BRAND;
+window.FOODS = FOODS;
+window.BOMB = BOMB;
+window.BRAND = BRAND;
+window.SPECIALS = SPECIALS;

@@ -15,7 +15,8 @@ export function el(tag, props, ...children) {
     else if (k === 'html') node.innerHTML = v;
     else if (k === 'text') node.textContent = v;
     else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
-    else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k.startsWith('on') && typeof v === 'function')
+      node.addEventListener(k.slice(2).toLowerCase(), v);
     else node.setAttribute(k, v === true ? '' : String(v));
   }
   for (const c of children.flat()) {
@@ -28,26 +29,66 @@ export function el(tag, props, ...children) {
 export const fmt = (n) => Number(n || 0).toLocaleString();
 
 /* ---- Buttons ---------------------------------------------- */
-export function button(label, { variant = 'primary', size, onClick, href, disabled, icon, ...rest } = {}) {
+/**
+ * @typedef {object} ButtonOptions
+ * @property {'primary'|'ghost'|string} [variant]
+ * @property {'sm'|string} [size]
+ * @property {(e:Event)=>void} [onClick]
+ * @property {string} [href]     renders an <a> instead of a <button>
+ * @property {boolean} [disabled]
+ * @property {string} [icon]     decorative glyph placed before the label
+ * @property {string} [type]     button type, e.g. 'submit'
+ */
+
+/**
+ * @param {string} label
+ * @param {ButtonOptions & Record<string, any>} [opts]
+ */
+export function button(
+  label,
+  { variant = 'primary', size, onClick, href, disabled, icon, ...rest } = {},
+) {
   const cls = ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm'].filter(Boolean).join(' ');
   const kids = [icon && el('span', { 'aria-hidden': 'true', text: icon }), label];
   if (href) return el('a', { class: cls, href, ...rest }, ...kids);
-  return el('button', {
-    class: cls, type: 'button', disabled,
-    onClick: onClick || (() => {}), ...rest,
-  }, ...kids);
+  return el(
+    'button',
+    {
+      class: cls,
+      type: 'button',
+      disabled,
+      onClick: onClick || (() => {}),
+      ...rest,
+    },
+    ...kids,
+  );
 }
 
+/**
+ * @param {string} glyph
+ * @param {string} label accessible name — icon buttons have no visible text
+ * @param {{onClick?:(e:Event)=>void, href?:string, plain?:boolean} & Record<string, any>} [opts]
+ */
 export function iconButton(glyph, label, { onClick, href, plain, ...rest } = {}) {
   const cls = `icon-btn${plain ? ' icon-btn--plain' : ''}`;
   const kids = [el('span', { 'aria-hidden': 'true', text: glyph })];
   if (href) return el('a', { class: cls, href, 'aria-label': label, ...rest }, ...kids);
-  return el('button', { class: cls, type: 'button', 'aria-label': label, onClick, ...rest }, ...kids);
+  return el(
+    'button',
+    { class: cls, type: 'button', 'aria-label': label, onClick, ...rest },
+    ...kids,
+  );
 }
 
 /* ---- Screen header ----------------------------------------- */
+/**
+ * @param {string} title
+ * @param {{back?:string, onBack?:(e:Event)=>void, right?:Node}} [opts]
+ */
 export function topbar(title, { back = '/', onBack, right } = {}) {
-  return el('header', { class: 'topbar' },
+  return el(
+    'header',
+    { class: 'topbar' },
     onBack
       ? iconButton('←', 'Go back', { onClick: onBack })
       : iconButton('←', 'Go back', { href: `#${back}` }),
@@ -58,26 +99,45 @@ export function topbar(title, { back = '/', onBack, right } = {}) {
 
 /* ---- Stats & meter ----------------------------------------- */
 export function stat(value, label) {
-  return el('div', { class: 'stat' },
+  return el(
+    'div',
+    { class: 'stat' },
     el('b', { class: 'stat__value', text: fmt(value) }),
     el('small', { class: 'stat__label', text: label }),
   );
 }
 
+/**
+ * @param {number} value
+ * @param {number} max
+ * @param {{label?:string, hint?:string}} [opts]
+ */
 export function meter(value, max, { label, hint } = {}) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
-  return el('div', { class: 'meter' },
-    (label || hint) && el('div', { class: 'meter__head' },
-      label && el('span', { class: 't-kicker', text: label }),
-      hint && el('span', { class: 't-kicker', text: hint }),
-    ),
-    el('div', {
-      class: 'meter__track', role: 'progressbar',
-      'aria-valuenow': Math.round(value), 'aria-valuemin': '0', 'aria-valuemax': String(max),
-      'aria-label': label || 'Progress',
-    },
+  return el(
+    'div',
+    { class: 'meter' },
+    (label || hint) &&
+      el(
+        'div',
+        { class: 'meter__head' },
+        label && el('span', { class: 't-kicker', text: label }),
+        hint && el('span', { class: 't-kicker', text: hint }),
+      ),
+    el(
+      'div',
+      {
+        class: 'meter__track',
+        role: 'progressbar',
+        'aria-valuenow': Math.round(value),
+        'aria-valuemin': '0',
+        'aria-valuemax': String(max),
+        'aria-label': label || 'Progress',
+      },
       el('div', { class: 'meter__fill', style: { width: `${pct}%` } }),
-      pct > 2 && pct < 100 && el('i', { class: 'meter__spark', style: { left: `calc(${pct}% - 4px)` } }),
+      pct > 2 &&
+        pct < 100 &&
+        el('i', { class: 'meter__spark', style: { left: `calc(${pct}% - 4px)` } }),
     ),
   );
 }
@@ -91,15 +151,22 @@ const TABS = [
 ];
 
 export function tabbar(activePath) {
-  return el('nav', { class: 'tabbar', 'aria-label': 'Main' },
-    ...TABS.map((t) => el('button', {
-      class: 'tabbar__item', type: 'button',
-      'aria-current': t.path === activePath ? 'page' : null,
-      onClick: () => navigate(t.path),
-    },
-      el('i', { 'aria-hidden': 'true', text: t.icon }),
-      t.label,
-    )),
+  return el(
+    'nav',
+    { class: 'tabbar', 'aria-label': 'Main' },
+    ...TABS.map((t) =>
+      el(
+        'button',
+        {
+          class: 'tabbar__item',
+          type: 'button',
+          'aria-current': t.path === activePath ? 'page' : null,
+          onClick: () => navigate(t.path),
+        },
+        el('i', { 'aria-hidden': 'true', text: t.icon }),
+        t.label,
+      ),
+    ),
   );
 }
 
@@ -107,14 +174,21 @@ export function tabbar(activePath) {
 let toastTimer = null;
 export function toast(message, kind = '') {
   document.querySelector('.toast')?.remove();
-  const node = el('div', { class: `toast ${kind ? `toast--${kind}` : ''}`, role: 'status', 'aria-live': 'polite', text: message });
+  const node = el('div', {
+    class: `toast ${kind ? `toast--${kind}` : ''}`,
+    role: 'status',
+    'aria-live': 'polite',
+    text: message,
+  });
   document.body.append(node);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => node.remove(), 2600);
 }
 
 export function emptyState(glyph, title, body, action) {
-  return el('div', { class: 'state' },
+  return el(
+    'div',
+    { class: 'state' },
     el('span', { class: 'state__glyph', 'aria-hidden': 'true', text: glyph }),
     el('p', { class: 'state__title', text: title }),
     body && el('p', { class: 'state__body', text: body }),
@@ -123,20 +197,31 @@ export function emptyState(glyph, title, body, action) {
 }
 
 export function loadingState(text = 'Loading…') {
-  return el('div', { class: 'state' }, el('div', { class: 'spinner', role: 'status', 'aria-label': text }));
+  return el(
+    'div',
+    { class: 'state' },
+    el('div', { class: 'spinner', role: 'status', 'aria-label': text }),
+  );
 }
 
 /* ---- Modal --------------------------------------------------- */
 export function modal({ title, body, actions = [], onClose }) {
-  const panel = el('div', { class: 'modal__panel', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+  const panel = el(
+    'div',
+    { class: 'modal__panel', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
     el('h2', { class: 'modal__title', text: title }),
     typeof body === 'string' ? el('p', { text: body }) : body,
     el('div', { class: 'modal__actions' }, ...actions),
   );
   const overlay = el('div', { class: 'modal' }, panel);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay && onClose) onClose(); });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay && onClose) onClose();
+  });
   document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape' && onClose) { document.removeEventListener('keydown', esc); onClose(); }
+    if (e.key === 'Escape' && onClose) {
+      document.removeEventListener('keydown', esc);
+      onClose();
+    }
   });
   return overlay;
 }

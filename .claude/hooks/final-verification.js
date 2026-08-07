@@ -30,7 +30,7 @@ if (isGit) {
 // Cheap, repo-wide scan for the specific leftovers this project has a
 // documented history of shipping (see project-inventory.md).
 const scanTargets = ['engine', 'src', 'api', 'lib'];
-let cheatHits = [];
+const cheatHits = [];
 for (const dir of scanTargets) {
   if (!fs.existsSync(dir)) continue;
   const grep = sh(`grep -rniE "ffn_dev|SUPABASE_SERVICE_KEY\\s*=\\s*['\\"]|ADMIN_KEY\\s*=\\s*['\\"]" ${dir} --include=*.js --include=*.mjs`);

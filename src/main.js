@@ -3,7 +3,8 @@
    The engine bridge is imported first so `window.UI` and
    `window.LoyaltyData` exist before engine/game.js touches them.
    ============================================================ */
-import '../src/adapters/engine-bridge.js';
+import './game/index.js';
+import './adapters/engine-bridge.js';
 import { Router } from './core/router.js';
 import { Store } from './core/store.js';
 
@@ -21,10 +22,11 @@ try {
   if (reduced !== Store.settings().reducedMotion) {
     Store.get().settings.reducedMotion = reduced;
   }
-} catch { /* matchMedia unavailable — defaults stand */ }
+} catch {
+  /* matchMedia unavailable — defaults stand */
+}
 
-Router
-  .add('/', WelcomePage)
+Router.add('/', WelcomePage)
   .add('/sign-in', SignInPage)
   .add('/play', PlayPage)
   .add('/rewards', RewardsPage)

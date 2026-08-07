@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "allowJs": true,
+    "skipLibCheck": true,
+    // Do not follow imports into dependency JS. Without this, checkJs walks
+    // into vitest's chai and reports thousands of errors in code we don't own.
+    "maxNodeModuleJsDepth": 0,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.js", "tests/**/*.js", "types/**/*.d.ts"],
+  "exclude": ["node_modules", "_legacy-ui-backup", "stitch-export"]
+}

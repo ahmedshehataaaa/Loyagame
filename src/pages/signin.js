@@ -21,12 +21,19 @@ function validate(cc, digits) {
 export function SignInPage(root) {
   let submitting = false;
 
-  const ccSel = el('select', { class: 'field__input field__cc', id: 'cc', 'aria-label': 'Country code' },
-    ...CODES.map((c) => el('option', { value: c, text: c })));
+  const ccSel = el(
+    'select',
+    { class: 'field__input field__cc', id: 'cc', 'aria-label': 'Country code' },
+    ...CODES.map((c) => el('option', { value: c, text: c })),
+  );
 
   const input = el('input', {
-    class: 'field__input', id: 'phone', type: 'tel', inputmode: 'numeric',
-    autocomplete: 'tel-national', placeholder: '812 3456 7890',
+    class: 'field__input',
+    id: 'phone',
+    type: 'tel',
+    inputmode: 'numeric',
+    autocomplete: 'tel-national',
+    placeholder: '812 3456 7890',
     'aria-describedby': 'phone-err',
   });
 
@@ -38,13 +45,19 @@ export function SignInPage(root) {
     input.setAttribute('aria-invalid', msg ? 'true' : 'false');
   }
 
-  input.addEventListener('input', () => { if (err.textContent) setError(null); });
+  input.addEventListener('input', () => {
+    if (err.textContent) setError(null);
+  });
 
-  const form = el('form', { class: 'signin__card card', novalidate: true },
+  const form = el(
+    'form',
+    { class: 'signin__card card', novalidate: true },
     el('h1', { class: 'signin__title', text: "Let's Play!" }),
     el('p', { class: 'signin__sub', text: 'Enter your number to join the rush' }),
 
-    el('div', { class: 'field' },
+    el(
+      'div',
+      { class: 'field' },
       el('label', { class: 'field__label', for: 'phone', text: 'Mobile number' }),
       el('div', { class: 'field__row' }, ccSel, input),
       err,
@@ -52,12 +65,18 @@ export function SignInPage(root) {
 
     submit,
 
-    el('p', { class: 'signin__legal' },
-      'By continuing you agree to the program terms. Your number is used only for this loyalty game.'),
+    el(
+      'p',
+      { class: 'signin__legal' },
+      'By continuing you agree to the program terms. Your number is used only for this loyalty game.',
+    ),
 
-    el('div', { class: 'signin__alt' },
+    el(
+      'div',
+      { class: 'signin__alt' },
       button('Continue as guest', {
-        variant: 'ghost', size: 'sm',
+        variant: 'ghost',
+        size: 'sm',
         onClick: () => {
           Store.signIn({ name: 'Guest Slicer', isGuest: true, avatar: 'assets/avatar.png' });
           toast('Playing as guest', 'ok');
@@ -69,11 +88,15 @@ export function SignInPage(root) {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (submitting) return;                         // guard double submit
+    if (submitting) return; // guard double submit
 
     const digits = input.value.replace(/\D/g, '');
     const problem = validate(ccSel.value, digits);
-    if (problem) { setError(problem); input.focus(); return; }
+    if (problem) {
+      setError(problem);
+      input.focus();
+      return;
+    }
 
     submitting = true;
     submit.disabled = true;
@@ -92,12 +115,18 @@ export function SignInPage(root) {
     }, 550);
   });
 
-  root.append(el('div', { class: 'screen bg-burst signin' },
-    el('header', { class: 'signin__brand' },
-      el('img', { src: 'assets/brand-logo.png', alt: "McDonald's", width: '86', height: '86' }),
-      el('p', { class: 'welcome__slogan', text: "i'm lovin' it" }),
+  root.append(
+    el(
+      'div',
+      { class: 'screen bg-burst signin' },
+      el(
+        'header',
+        { class: 'signin__brand' },
+        el('img', { src: 'assets/brand-logo.png', alt: "McDonald's", width: '86', height: '86' }),
+        el('p', { class: 'welcome__slogan', text: "i'm lovin' it" }),
+      ),
+      form,
+      button('← Back', { variant: 'ghost', size: 'sm', onClick: () => navigate('/') }),
     ),
-    form,
-    button('← Back', { variant: 'ghost', size: 'sm', onClick: () => navigate('/') }),
-  ));
+  );
 }

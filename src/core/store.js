@@ -74,7 +74,7 @@ function load() {
   try {
     return sanitize(JSON.parse(localStorage.getItem(KEY) || 'null'));
   } catch {
-    return clone(DEFAULTS);   // unreadable / disabled storage — run in memory
+    return clone(DEFAULTS); // unreadable / disabled storage — run in memory
   }
 }
 
@@ -82,10 +82,25 @@ let state = load();
 const listeners = new Set();
 
 function persist() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* quota or private mode */ }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+  } catch {
+    /* quota or private mode */
+  }
 }
-function emit() { listeners.forEach((fn) => { try { fn(state); } catch { /* listener must not break writes */ } }); }
-function commit() { persist(); emit(); }
+function emit() {
+  listeners.forEach((fn) => {
+    try {
+      fn(state);
+    } catch {
+      /* listener must not break writes */
+    }
+  });
+}
+function commit() {
+  persist();
+  emit();
+}
 
 export const Store = {
   get: () => state,
@@ -94,13 +109,21 @@ export const Store = {
   settings: () => state.settings,
   isSignedIn: () => !!state.profile,
 
-  subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+  subscribe(fn) {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  },
 
   /** Sign in (or continue as guest) and persist the profile. */
   signIn({ name, isGuest = false, avatar }) {
-    const clean = String(name || '').trim().slice(0, 24) || 'Player';
+    const clean =
+      String(name || '')
+        .trim()
+        .slice(0, 24) || 'Player';
     state.profile = {
-      id: state.profile?.id || `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+      id:
+        state.profile?.id ||
+        `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
       name: clean,
       avatar,
       isGuest,
@@ -109,14 +132,17 @@ export const Store = {
     return state.profile;
   },
 
-  signOut() { state.profile = null; commit(); },
+  signOut() {
+    state.profile = null;
+    commit();
+  },
 
   /** Record a finished run; returns the derived result for the victory screen. */
   recordRun({ score, itemsSliced, won }) {
     const s = Math.max(0, Math.floor(num(score)));
     const g = state.progress;
     const isBest = s > g.bestScore;
-    const earned = Math.max(0, Math.floor(s / 10));   // 10 game points -> 1 reward point
+    const earned = Math.max(0, Math.floor(s / 10)); // 10 game points -> 1 reward point
 
     g.lastScore = s;
     g.bestScore = Math.max(g.bestScore, s);
@@ -161,5 +187,8 @@ export const Store = {
     commit();
   },
 
-  reset() { state = clone(DEFAULTS); commit(); },
+  reset() {
+    state = clone(DEFAULTS);
+    commit();
+  },
 };

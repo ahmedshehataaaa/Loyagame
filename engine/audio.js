@@ -34,7 +34,8 @@ const Sound = (() => {
     if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + dur);
     g.gain.setValueAtTime(vol, ctx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
-    o.connect(g); g.connect(master);
+    o.connect(g);
+    g.connect(master);
     o.start();
     o.stop(ctx.currentTime + dur);
   }
@@ -52,14 +53,19 @@ const Sound = (() => {
     f.frequency.value = filterFreq;
     const g = ctx.createGain();
     g.gain.value = vol;
-    src.connect(f); f.connect(g); g.connect(master);
+    src.connect(f);
+    f.connect(g);
+    g.connect(master);
     src.start();
   }
 
   return {
     unlock,
     isMuted: () => muted,
-    toggleMute() { muted = !muted; return muted; },
+    toggleMute() {
+      muted = !muted;
+      return muted;
+    },
 
     // A short upward "whoosh + squelch" when fruit is sliced.
     slice(combo = 1) {
@@ -77,11 +83,14 @@ const Sound = (() => {
       tone(120, 0.5, 'sawtooth', 0.5, 40);
     },
     // Soft tick for menu buttons.
-    click() { tone(660, 0.07, 'square', 0.18); },
+    click() {
+      tone(660, 0.07, 'square', 0.18);
+    },
     // Reward unlocked fanfare.
     reward() {
       [523, 659, 784, 1046].forEach((f, i) =>
-        setTimeout(() => tone(f, 0.25, 'triangle', 0.3), i * 110));
+        setTimeout(() => tone(f, 0.25, 'triangle', 0.3), i * 110),
+      );
     },
     // Game-over descending tone.
     gameover() {

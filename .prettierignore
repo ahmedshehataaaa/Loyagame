@@ -1,0 +1,10 @@
+_legacy-ui-backup/
+stitch-export/
+.vercel.krispy-kreme-link.bak/
+node_modules/
+test-results/
+playwright-report/
+.playwright-mcp/
+supabase/schema.sql
+*.min.js
+*.min.css
