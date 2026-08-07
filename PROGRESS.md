@@ -1,6 +1,68 @@
 # PROGRESS.md — McSlice Rush (McDonald's)
 
-## Current checkpoint — 2026-08-06 (ClaimLabs audit + first fixes)
+## Current checkpoint — 2026-08-07 (production-readiness pass, stages 0-3)
+
+Full audit: `docs/audit/2026-08-07-production-readiness-audit.md`.
+**Git now exists** (it did not before): baseline `00ddfed`, tag
+`baseline-2026-08-07`, branch `backup/pre-production-2026-08-07`. Local only,
+no remote.
+
+### Done this session
+
+- **Toolchain from zero**: `package.json`, ESLint 9, Prettier, `tsc --checkJs`
+  (+ `types/globals.d.ts`), Vitest, Playwright. `npm run verify` runs the lot.
+- **Portrait-native play field** (ADR 0006). Was 1280×720 landscape rotated 90°
+  in CSS; now 720×1280 upright, cover-scaled. The sideways canvas HUD and the
+  🌶️ chilli lives glyph are **gone** — the canvas HUD is deleted outright and
+  the DOM owns in-round UI alone. Doubled-HUD issue resolved.
+- **Win condition fixed** (ADR 0004): surviving the round wins; score is
+  leaderboard only. Previously `score >= 15000` decided it _in the browser_, so
+  bombing out at 28s with a high score showed the victory screen.
+- **Wave fairness + ramp** (ADR 0007): hazards are provably dodgeable (max 1 per
+  wave, ≥0.18 field-width corridor clearance); `RAMP_TIME 50` → `RAMP_FRACTION
+0.85` so difficulty actually completes inside the 30s round.
+- **Testable mechanics** (ADR 0005): `src/game/{rng,ballistics,collision,
+wave-planner,round-rules}.js`, pure and seeded, reached via `window.Mechanics`.
+- **49 unit + 72 Playwright tests** (6 viewports). Lint, typecheck, format clean.
+- Hitbox `0.85` → `HIT_TOLERANCE 1.08`; HUD seeded from `CONFIG`; `DISCOUNT_TIERS`
+  deleted; rotate-hint path removed.
+- **Reward wheel kept** per owner decision (ADR 0008). The compliance flag in
+  `docs/security/reward-wheel-compliance.md` remains **OPEN** — a product
+  decision is not the legal sign-off that file requires.
+
+### Corrections to earlier docs
+
+- **S1, the biggest open finding**: the shipped client is **fully
+  client-authoritative**. `src/adapters/engine-bridge.js` overwrites
+  `window.LoyaltyData` with a local stub; nothing in `src/` or `engine/` calls
+  `/api/*`. The Vercel/Supabase backend is **orphaned** — its client was retired
+  with `_legacy-ui-backup/data.js`. The 2026-08-06 entry below (and
+  `docs/project-inventory.md`) list server-authoritative resolution as a verified
+  working feature; that check confirmed the backend files exist, not that the
+  client calls them. **Still true, still unfixed — Stage 4.**
+- `victory.js` reading "a mock Store" is stale: it reads the real recorded run.
+
+### Next (priority order)
+
+1. **Stage 4 — server-authoritative rewards (S1).** Port the backend client out
+   of `_legacy-ui-backup/data.js`; `start-run` → `submit-run`; signed
+   short-lived session + nonce + one-time submit; server-minted codes; idempotent
+   issuance; atomic budget; rate limits; audit log; real phone+OTP.
+2. Stage 5 — screen architecture (merge win/loss → Result; add Loading, Verify,
+   Wallet, Terms, how-to-play overlay, error/offline) + replace the **off-brand
+   Pasta & Heat rooster mascot** + restore EN/AR i18n.
+3. Stage 6 game feel · 7 brand manifest · 8 performance · 9 analytics · 10 docs
+   and release.
+
+### Known environment gotcha
+
+Headless Chromium in this harness throttles `requestAnimationFrame` to ~1.3fps,
+so e2e specs must not assert on wall-clock round progress. Round-length and
+win/loss rules are covered deterministically in `tests/unit/` instead.
+
+---
+
+## Previous checkpoint — 2026-08-06 (ClaimLabs audit + first fixes)
 
 This file previously held a Krispy Kreme "Glaze Rush" session log — copied
 into this folder when the McDonald's build was forked from Krispy Kreme, and
