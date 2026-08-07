@@ -28,6 +28,7 @@ async function seedIdentity(page) {
   await page.addInitScript(
     ([idKey]) => {
       localStorage.setItem(idKey, JSON.stringify({ cc: '+20', phone: '1001234567' }));
+      localStorage.setItem('mcslice.coached.v1', '1');
       localStorage.setItem(
         'mcslice.v1',
         JSON.stringify({
@@ -139,7 +140,7 @@ test.describe('fake wins', () => {
       });
     });
 
-    await expect(page).toHaveURL(/#\/win$/);
+    await expect(page).toHaveURL(/#\/result$/);
     // This is the one place a forged object CAN reach the screen, because
     // play.js trusts the bridge it is wired to. Documented deliberately: the
     // defence is that the real backend never issued a code, so the prize is

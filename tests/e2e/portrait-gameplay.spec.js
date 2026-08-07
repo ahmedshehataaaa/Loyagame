@@ -18,6 +18,9 @@ import { test, expect } from '@playwright/test';
  * the flow changes the test has to walk the flow that actually exists.
  */
 async function startRound(page) {
+  // The how-to-play card gates the first round on a fresh device and pauses
+  // behind itself; these specs test layout and input, so skip it.
+  await page.addInitScript(() => localStorage.setItem('mcslice.coached.v1', '1'));
   await page.goto('/index.html#/');
   await page.getByRole('button', { name: /play now/i }).click();
 

@@ -4,11 +4,13 @@
    HUD over it. The engine owns its own rAF loop and pointer input;
    this page owns lifecycle: mount, pause, and hard teardown so no
    loop or listener survives a route change. */
-import { el, button, iconButton, modal, fmt } from '../components/ui.js';
+import { el, button, iconButton, modal } from '../components/ui.js';
 import { GameEvents, applySoundSetting } from '../adapters/engine-bridge.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { startRound, endRound } from '../services/loyalty.js';
+import { coachCard, hasSeenCoach } from '../components/coach.js';
+import { t, num } from '../core/i18n.js';
 
 /* Round shape comes from the engine config, never from a literal here — these
    were hardcoded to '60' and three hearts, the pre-ADR-0001 values, and stayed
@@ -38,26 +40,43 @@ export function PlayPage(root) {
     text: HEART.repeat(START_LIVES),
   });
   // The goal is to last the round, not to reach a score (ADR 0004).
-  const goalEl = el('span', { class: 'hud__goal', text: `SURVIVE ${ROUND_TIME}s` });
-
-  const pauseBtn = iconButton('❚❚', 'Pause game', { onClick: () => togglePause(true) });
-  const soundBtn = iconButton(Store.settings().soundEnabled ? '🔊' : '🔇', 'Toggle sound', {
-    onClick: () => {
-      const on = Store.toggleSound();
-      soundBtn.querySelector('span').textContent = on ? '🔊' : '🔇';
-      applySoundSetting();
-    },
+  const goalEl = el('span', {
+    class: 'hud__goal',
+    text: t('play.survive', { seconds: ROUND_TIME }),
   });
+
+  const pauseBtn = iconButton('❚❚', t('play.pause'), { onClick: () => togglePause(true) });
+  const soundBtn = iconButton(
+    Store.settings().soundEnabled ? '🔊' : '🔇',
+    t('common.toggleSound'),
+    {
+      onClick: () => {
+        const on = Store.toggleSound();
+        soundBtn.querySelector('span').textContent = on ? '🔊' : '🔇';
+        applySoundSetting();
+      },
+    },
+  );
 
   const hud = el(
     'div',
     { class: 'hud' },
-    el('div', { class: 'hud__pill hud__pill--score' }, el('small', { text: 'SCORE' }), scoreEl),
+    el(
+      'div',
+      { class: 'hud__pill hud__pill--score' },
+      el('small', { text: t('play.score') }),
+      scoreEl,
+    ),
     el('div', { class: 'hud__mid' }, goalEl, livesEl),
     el(
       'div',
       { class: 'hud__right' },
-      el('div', { class: 'hud__pill hud__pill--time' }, el('small', { text: 'TIME' }), timeEl),
+      el(
+        'div',
+        { class: 'hud__pill hud__pill--time' },
+        el('small', { text: t('play.time') }),
+        timeEl,
+      ),
       soundBtn,
       pauseBtn,
     ),
@@ -71,7 +90,7 @@ export function PlayPage(root) {
 
   const hint = el('p', {
     class: 'game-hint',
-    text: 'Swipe across the food to slice it — avoid the burnt fries!',
+    text: t('play.hint'),
   });
   setTimeout(() => hint.classList.add('is-gone'), 3200);
 
@@ -93,19 +112,12 @@ export function PlayPage(root) {
      round-trip before the first item flies would be a worse experience than
      labelling an unrewardable round as one. */
   function stakeMessage(session) {
-    if (session.rewardable)
-      return { text: 'Prize round — last the full round to win.', live: true };
-    if (session.denyReason === 'no_identity') {
-      return { text: 'Practice round — sign in with your number to play for prizes.' };
-    }
-    if (session.denyReason === 'locked_win') {
-      return { text: 'Practice round — you already won recently.' };
-    }
-    if (session.failure === 'not_configured') {
-      return { text: 'Practice round — rewards are off in this build.' };
-    }
-    if (session.failure) return { text: "Practice round — couldn't reach the rewards service." };
-    return { text: 'Practice round — this round is not eligible for a prize.' };
+    if (session.rewardable) return { text: t('play.stakePrize'), live: true };
+    if (session.denyReason === 'no_identity') return { text: t('play.stakeNoIdentity') };
+    if (session.denyReason === 'locked_win') return { text: t('play.stakeLocked') };
+    if (session.failure === 'not_configured') return { text: t('play.stakeOff') };
+    if (session.failure) return { text: t('play.stakeUnreachable') };
+    return { text: t('play.stakeIneligible') };
   }
 
   /* Every round needs its OWN token: submit-run consumes it, so a replay that
@@ -123,11 +135,31 @@ export function PlayPage(root) {
       .catch((err) => {
         // A failed session must never block play; it just cannot be rewardable.
         console.error('startRound failed', err);
-        stakeEl.textContent = "Practice round — couldn't reach the rewards service.";
+        stakeEl.textContent = t('play.stakeUnreachable');
         stakeEl.classList.add('is-warn');
       });
   }
   acquireSession();
+
+  /* First-run instruction, over the play screen rather than as a route the
+     player taps past before it can help. */
+  if (!hasSeenCoach()) {
+    const card = coachCard({
+      onStart: () => {
+        card.remove();
+        try {
+          window.Game.resumeGame();
+        } catch {}
+      },
+    });
+    screen.append(card);
+    // Pause behind the card so the round does not drain while it is read.
+    setTimeout(() => {
+      try {
+        window.Game.pauseGame();
+      } catch {}
+    }, 0);
+  }
 
   /* ---- Engine lifecycle ------------------------------------ */
   applySoundSetting();
@@ -141,8 +173,8 @@ export function PlayPage(root) {
         'div',
         { class: 'state' },
         el('span', { class: 'state__glyph', text: '⚠️' }),
-        el('p', { class: 'state__title', text: 'Game failed to start' }),
-        button('Back to start', { onClick: () => navigate('/') }),
+        el('p', { class: 'state__title', text: t('play.failed') }),
+        button(t('err.back'), { onClick: () => navigate('/') }),
       ),
     );
     return () => {};
@@ -155,7 +187,7 @@ export function PlayPage(root) {
     if (paused || ended) return;
     const d = canvas.dataset;
     if (d.score !== undefined) {
-      scoreEl.textContent = fmt(d.score);
+      scoreEl.textContent = num(d.score);
       timeEl.textContent = d.time ?? '';
       const lives = Math.max(0, Number(d.lives ?? 0));
       livesEl.textContent = lives > 0 ? HEART.repeat(lives) : '💀';
@@ -175,18 +207,18 @@ export function PlayPage(root) {
         window.Game.pauseGame();
       } catch {}
       pauseOverlay = modal({
-        title: 'Paused',
-        body: 'Take a breath. Your round is waiting.',
+        title: t('play.paused'),
+        body: t('play.pausedBody'),
         actions: [
-          button('Resume', { onClick: () => togglePause(false) }),
-          button('Restart', {
+          button(t('play.resume'), { onClick: () => togglePause(false) }),
+          button(t('play.restart'), {
             variant: 'ghost',
             onClick: () => {
               closePause();
               restart();
             },
           }),
-          button('Quit to home', {
+          button(t('play.quit'), {
             variant: 'ghost',
             onClick: () => {
               closePause();
@@ -246,7 +278,7 @@ export function PlayPage(root) {
       if (ended) return;
       ended = true;
 
-      const run = Store.recordRun({
+      Store.recordRun({
         score: result.score,
         itemsSliced: Number(canvas.dataset.slices || 0),
         won: result.won,
@@ -262,45 +294,10 @@ export function PlayPage(root) {
          loyalty service writes the mirror from the real response instead. */
       Store.setLastReward(result.reward ?? null);
 
-      if (result.won) {
-        navigate('/win');
-        return;
-      }
-
-      /* Eliminated by hazards. The copy names the actual cause — the old text
-       said "Time's up!" and reported how far short of a score target the
-       player fell, which was wrong twice over once survival became the win
-       condition: the round had not run out, and there is no target. */
-      const overlay = modal({
-        title: 'Burnt out!',
-        body: el(
-          'div',
-          null,
-          el('p', { class: 'result__score', text: fmt(run.score) }),
-          el('p', { class: 't-kicker', text: run.isBest ? 'NEW PERSONAL BEST' : 'FINAL SCORE' }),
-          el('p', {
-            style: { marginTop: '10px' },
-            text: `You hit ${START_LIVES} burnt batches. Last the full ${ROUND_TIME} seconds to win.`,
-          }),
-          // No reward panel here on purpose: an eliminated round is never
-          // reward-eligible, so there is nothing server-issued to show.
-        ),
-        actions: [
-          button('Play again', {
-            onClick: () => {
-              overlay.remove();
-              restart();
-            },
-          }),
-          button('Rewards', { variant: 'ghost', onClick: () => navigate('/rewards') }),
-          button('Home', { variant: 'ghost', onClick: () => navigate('/') }),
-        ],
-        onClose: () => {
-          overlay.remove();
-          navigate('/');
-        },
-      });
-      screen.append(overlay);
+      /* Both outcomes go to the same Result screen (ADR 0010). A win used to
+         be a route and a loss an in-place modal, which meant two layouts for
+         the same four facts — and they had already drifted apart. */
+      navigate('/result');
     }),
   );
 

@@ -4,6 +4,7 @@
    listeners and accessible names stay attached to the node.
    ============================================================ */
 import { navigate } from '../core/router.js';
+import { t } from '../core/i18n.js';
 
 export function el(tag, props, ...children) {
   const node = document.createElement(tag);
@@ -143,28 +144,30 @@ export function meter(value, max, { label, hint } = {}) {
 }
 
 /* ---- Bottom navigation -------------------------------------- */
+/* Labels are resolved per render so a language switch repaints them.
+   `/wallet` is in the player nav; `/assets` is dev-only and deliberately not. */
 const TABS = [
-  { path: '/', icon: '🏠', label: 'Home' },
-  { path: '/rewards', icon: '🎁', label: 'Rewards' },
-  { path: '/play', icon: '🎮', label: 'Play' },
-  { path: '/leaderboard', icon: '🏆', label: 'Ranks' },
+  { path: '/', icon: '🏠', key: 'common.home' },
+  { path: '/wallet', icon: '🎁', key: 'common.wallet' },
+  { path: '/play', icon: '🎮', key: 'common.play' },
+  { path: '/leaderboard', icon: '🏆', key: 'common.ranks' },
 ];
 
 export function tabbar(activePath) {
   return el(
     'nav',
     { class: 'tabbar', 'aria-label': 'Main' },
-    ...TABS.map((t) =>
+    ...TABS.map((tab) =>
       el(
         'button',
         {
           class: 'tabbar__item',
           type: 'button',
-          'aria-current': t.path === activePath ? 'page' : null,
-          onClick: () => navigate(t.path),
+          'aria-current': tab.path === activePath ? 'page' : null,
+          onClick: () => navigate(tab.path),
         },
-        el('i', { 'aria-hidden': 'true', text: t.icon }),
-        t.label,
+        el('i', { 'aria-hidden': 'true', text: tab.icon }),
+        t(tab.key),
       ),
     ),
   );

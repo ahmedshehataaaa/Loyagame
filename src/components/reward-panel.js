@@ -2,16 +2,17 @@
    Reward panel — renders a RewardOutcome.
 
    The only component allowed to display a prize, and it can only display
-   what `outcome.prize` contains. It has no access to the API, no fallback
-   copy that names a product, and no branch that invents a prize when one
-   is missing — every non-award state renders the outcome's own title and
-   message, which reward-state.js supplied.
+   what `outcome.prize` contains. It has no access to the API and no branch
+   that invents a prize when one is missing — every non-award state renders
+   copy looked up from i18n by status, so a new status without copy shows
+   its key rather than an empty card.
 
    Keeping this dumb is the point: if the panel cannot construct a prize,
-   then a bug elsewhere cannot make one appear on screen.
+   a bug elsewhere cannot make one appear on screen.
    ============================================================ */
-import { el, button, fmt } from './ui.js';
+import { el, button } from './ui.js';
 import { REWARD_STATUS } from '../services/reward-state.js';
+import { t, num } from '../core/i18n.js';
 
 /** Progress toward the points needed for a prize, when the server told us. */
 function pointsRow(outcome) {
@@ -21,11 +22,11 @@ function pointsRow(outcome) {
   return el(
     'div',
     { class: 'reward-panel__points' },
-    el('span', { class: 't-kicker', text: 'ORDER POINTS' }),
-    el('b', { text: `${fmt(pts)} / ${fmt(need)}` }),
-    short > 0
-      ? el('small', { text: `${fmt(short)} more to unlock a prize — earned by ordering.` })
-      : el('small', { text: 'Enough for a prize.' }),
+    el('span', { class: 't-kicker', text: t('reward.pointsLabel') }),
+    el('b', { text: `${num(pts)} / ${num(need)}` }),
+    el('small', {
+      text: short > 0 ? t('reward.pointsShort', { short: num(short) }) : t('reward.pointsEnough'),
+    }),
   );
 }
 
@@ -37,6 +38,8 @@ export function rewardPanel(outcome, handlers = {}) {
   if (!outcome) return null;
 
   const awarded = outcome.status === REWARD_STATUS.AWARDED && !!outcome.prize;
+  const title = t(`reward.${outcome.status}.title`);
+  const message = t(`reward.${outcome.status}.msg`);
 
   return el(
     'section',
@@ -46,30 +49,29 @@ export function rewardPanel(outcome, handlers = {}) {
       'aria-live': 'polite',
     },
 
-    el('span', { class: 't-kicker', text: awarded ? 'YOUR PRIZE' : 'REWARD' }),
-    el('p', { class: 'reward-panel__title', text: outcome.title }),
+    el('span', { class: 't-kicker', text: awarded ? t('reward.yours') : t('reward.label') }),
+    el('p', { class: 'reward-panel__title', text: title }),
 
     // The prize name comes from the server's response and nowhere else.
     awarded
       ? el('p', { class: 'reward-panel__prize', text: outcome.prize.label })
-      : el('p', { class: 'reward-panel__msg', text: outcome.message }),
+      : el('p', { class: 'reward-panel__msg', text: message }),
 
-    awarded
-      ? el('p', {
-          class: 'reward-panel__hint',
-          text: 'Saved to My Rewards. Show it at the counter to claim.',
-        })
-      : null,
+    awarded ? el('p', { class: 'reward-panel__hint', text: t('reward.savedHint') }) : null,
 
     pointsRow(outcome),
 
-    // Retry is offered only where retrying can actually change the answer —
-    // never for a denial, which would just re-ask a settled question.
+    // Retry is offered only where retrying can change the answer — never for a
+    // denial, which would just re-ask a settled question.
     outcome.retryable && handlers.onRetry
       ? el(
           'div',
           { class: 'reward-panel__actions' },
-          button('Check again', { variant: 'ghost', size: 'sm', onClick: handlers.onRetry }),
+          button(t('reward.checkAgain'), {
+            variant: 'ghost',
+            size: 'sm',
+            onClick: handlers.onRetry,
+          }),
         )
       : null,
 
@@ -77,7 +79,11 @@ export function rewardPanel(outcome, handlers = {}) {
       ? el(
           'div',
           { class: 'reward-panel__actions' },
-          button('View My Rewards', { variant: 'ghost', size: 'sm', onClick: handlers.onWallet }),
+          button(t('reward.viewWallet'), {
+            variant: 'ghost',
+            size: 'sm',
+            onClick: handlers.onWallet,
+          }),
         )
       : null,
   );

@@ -8,6 +8,10 @@
    round that ended in elimination — resolves to a state with
    `prize === null` and `awarded === false`.
 
+   Player-facing copy is NOT here: it lives in i18n keyed by status
+   (`reward.<status>.title` / `.msg`), so this stays pure, locale-free and
+   testable, and so Arabic gets every state for free.
+
    This is deliberately a pure function over (round outcome, API result)
    so the invariant can be proved exhaustively in tests rather than
    argued about. The bug it replaces was structural: the client computed
@@ -28,8 +32,6 @@ import { OUTCOME } from '../game/round-rules.js';
  * @property {boolean} awarded      true only for a server-issued prize
  * @property {null|{key:string,label:string}} prize
  * @property {boolean} retryable    can the player meaningfully try the same action again
- * @property {string} title         player-facing headline
- * @property {string} message       player-facing explanation
  * @property {number|null} orderPoints
  * @property {number|null} pointsThreshold
  */
@@ -46,53 +48,13 @@ export const REWARD_STATUS = /** @type {const} */ ({
   ERROR: 'error',
 });
 
-/** Copy for every non-award state. Keeping it here keeps the UI dumb. */
-const COPY = {
-  not_eligible: {
-    title: 'Round survived!',
-    message: 'You need more order points before you can claim a prize. Points come from ordering.',
-  },
-  eliminated: {
-    title: 'Burnt out!',
-    message: 'You hit too many burnt batches. Last the full round to be in for a prize.',
-  },
-  pending: {
-    title: 'Reward on its way',
-    message:
-      "We couldn't reach the rewards service. Your round is saved — check My Rewards shortly.",
-  },
-  unavailable: {
-    title: 'Practice round',
-    message: 'Rewards are not available in this build. Your score still counts locally.',
-  },
-  session_expired: {
-    title: 'Round expired',
-    message: 'This round took too long to submit. Play another to be in for a prize.',
-  },
-  rate_limited: {
-    title: 'Slow down a moment',
-    message: 'Too many rounds too quickly. Try again in a little while.',
-  },
-  flagged: {
-    title: 'Round under review',
-    message: 'This round needs a manual check before any prize is issued.',
-  },
-  error: {
-    title: 'Something went wrong',
-    message: "We couldn't confirm a prize for this round. No prize has been issued.",
-  },
-};
-
 /** Build a non-award outcome. Centralised so `prize:null` can never be forgotten. */
 function deny(status, extra = {}) {
-  const copy = COPY[status] ?? COPY.error;
   return {
     status,
     awarded: false,
     prize: null,
     retryable: status === 'pending' || status === 'error' || status === 'rate_limited',
-    title: copy.title,
-    message: copy.message,
     orderPoints: extra.orderPoints ?? null,
     pointsThreshold: extra.pointsThreshold ?? null,
   };
@@ -176,8 +138,6 @@ export function resolveRewardOutcome({ roundOutcome, apiResult }) {
     awarded: true,
     prize: { key: d.prize.key, label: d.prize.label },
     retryable: false,
-    title: 'You won!',
-    message: d.prize.label,
     orderPoints,
     pointsThreshold,
   };

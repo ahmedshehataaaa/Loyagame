@@ -44,19 +44,50 @@ async function render() {
     cleanup = (await entry.view(outlet)) || null;
   } catch (err) {
     console.error(`route "${path}" failed to render`, err);
-    outlet.innerHTML = `
-      <div class="screen bg-burst">
-        <div class="state">
-          <span class="state__glyph">⚠️</span>
-          <p class="state__title">Something broke</p>
-          <p class="state__body">This screen could not load. Try going back to the start.</p>
-          <a class="btn" href="#/" style="max-width:240px">Back to start</a>
-        </div>
-      </div>`;
+    const copy = await errorScreen();
+    // Built as nodes, not an innerHTML template, so translated copy can never
+    // be parsed as markup.
+    const wrap = document.createElement('div');
+    wrap.className = 'screen bg-burst';
+    const state = document.createElement('div');
+    state.className = 'state';
+    const glyph = document.createElement('span');
+    glyph.className = 'state__glyph';
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.textContent = '⚠️';
+    const title = document.createElement('p');
+    title.className = 'state__title';
+    title.textContent = copy.title;
+    const body = document.createElement('p');
+    body.className = 'state__body';
+    body.textContent = copy.body;
+    const back = document.createElement('a');
+    back.className = 'btn';
+    back.href = '#/';
+    back.style.maxWidth = '240px';
+    back.textContent = copy.back;
+    state.append(glyph, title, body, back);
+    wrap.append(state);
+    outlet.replaceChildren(wrap);
   }
   current = { path, cleanup };
   outlet.scrollTop = 0;
   document.dispatchEvent(new CustomEvent('route:changed', { detail: { path } }));
+}
+
+/* Error-screen copy is looked up lazily so the router does not import i18n at
+   module scope — it must stay loadable even if i18n itself is what failed. */
+async function errorScreen() {
+  try {
+    const { t } = await import('./i18n.js');
+    return { title: t('err.title'), body: t('err.body'), back: t('err.back') };
+  } catch {
+    return {
+      title: 'Something broke',
+      body: 'This screen could not load. Try going back to the start.',
+      back: 'Back to start',
+    };
+  }
 }
 
 export const Router = {
@@ -76,6 +107,12 @@ export const Router = {
   },
 
   current: () => current?.path ?? parseHash(),
+
+  /** Re-render the current route in place (used by the language switch). */
+  repaint() {
+    if (outlet) render();
+    return Router;
+  },
 };
 
 export function navigate(path, { replace = false } = {}) {

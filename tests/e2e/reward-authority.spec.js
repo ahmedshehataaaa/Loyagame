@@ -28,6 +28,9 @@ async function seedIdentity(page) {
   await page.addInitScript(
     ([idKey]) => {
       localStorage.setItem(idKey, JSON.stringify({ cc: '+20', phone: '1001234567' }));
+      // The how-to-play card gates the first round on a fresh device; these
+      // specs are about rewards, so skip it. journey.spec.js covers it.
+      localStorage.setItem('mcslice.coached.v1', '1');
       localStorage.setItem(
         'mcslice.v1',
         JSON.stringify({
@@ -132,7 +135,7 @@ async function finishRoundAsSurvivor(page, { score = 42000, durationMs = 30000 }
     },
     [score, durationMs],
   );
-  await expect(page).toHaveURL(/#\/win$/);
+  await expect(page).toHaveURL(/#\/result$/);
 }
 
 test.describe('the client never fabricates a reward', () => {

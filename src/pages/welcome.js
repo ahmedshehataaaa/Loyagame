@@ -1,20 +1,68 @@
-/* Welcome — Stitch "McSlice Rush - Ronald Welcome".
-   Hero character art over a red sunburst, then the primary CTA. */
+/* ============================================================
+   Welcome — campaign entry.
+
+   This is the first thing a player sees after scanning the code, so it has
+   to answer four questions before the tap: what the game is, how you lose,
+   how long a round takes, and what you can win. It previously answered
+   none of them — it showed a tagline over the Pasta & Heat rooster-"P"
+   mascot inherited from a different restaurant's build, with roughly 45%
+   of the viewport empty flat red between logo and copy.
+
+   The hero is now composed from the real McDonald's item sprites the game
+   actually throws, with a slice stroke through the middle. That fixes the
+   branding with assets this build owns rather than waiting on new art, and
+   it doubles as a preview of the gameplay.
+   ============================================================ */
 import { el, button, iconButton, tabbar, toast } from '../components/ui.js';
+import { coachCard, markCoachSeen } from '../components/coach.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
+import { t, toggleLang } from '../core/i18n.js';
+
+const ROUND_TIME = window.CONFIG?.ROUND_TIME ?? 30;
+
+/* The airborne items, as [sprite, class] pairs. Positioned in CSS so the
+   composition survives a locale/direction flip without JS. */
+const HERO_ITEMS = [
+  ['assets/items/bigmac.png', 'is-hero'],
+  ['assets/items/fries.png', 'is-left'],
+  ['assets/items/mcflurry.png', 'is-right'],
+  ['assets/items/nuggets.png', 'is-low'],
+];
+
+function heroArt() {
+  const stage = el('div', { class: 'hero', 'aria-hidden': 'true' });
+  for (const [src, cls] of HERO_ITEMS) {
+    stage.append(
+      el('img', {
+        class: `hero__item ${cls}`,
+        src,
+        alt: '',
+        loading: 'eager',
+        decoding: 'async',
+        onError: (e) => {
+          // Missing art must not leave a broken-image glyph in the hero.
+          e.target.style.display = 'none';
+        },
+      }),
+    );
+  }
+  // The slice: a single diagonal stroke, drawn not imaged.
+  stage.append(el('span', { class: 'hero__slash' }));
+  return stage;
+}
 
 export function WelcomePage(root) {
   const signedIn = Store.isSignedIn();
   const { soundEnabled } = Store.settings();
 
-  const soundBtn = iconButton(soundEnabled ? '🔊' : '🔇', 'Toggle sound', {
+  const soundBtn = iconButton(soundEnabled ? '🔊' : '🔇', t('common.toggleSound'), {
     plain: true,
     onClick: () => {
       const on = Store.toggleSound();
       soundBtn.querySelector('span').textContent = on ? '🔊' : '🔇';
       soundBtn.setAttribute('aria-pressed', String(on));
-      toast(on ? 'Sound on' : 'Sound off');
+      toast(on ? t('common.soundOn') : t('common.soundOff'));
     },
   });
   soundBtn.setAttribute('aria-pressed', String(soundEnabled));
@@ -22,59 +70,86 @@ export function WelcomePage(root) {
   const screen = el(
     'div',
     { class: 'screen bg-burst welcome' },
+
     el(
       'div',
       { class: 'welcome__bar' },
       soundBtn,
-      el('img', { class: 'welcome__arches', src: 'assets/brand-logo.png', alt: "McDonald's" }),
-      iconButton(signedIn ? '👤' : '→', signedIn ? 'Your profile' : 'Sign in', {
-        plain: true,
-        onClick: () => navigate('/sign-in'),
-      }),
-    ),
-
-    el('p', { class: 'welcome__slogan', text: "i'm lovin' it" }),
-
-    el(
-      'div',
-      { class: 'welcome__hero' },
       el('img', {
-        src: 'assets/mascot.png',
-        alt: '',
-        'aria-hidden': 'true',
-        class: 'welcome__mascot',
-        width: '260',
-        height: '260',
-        onError: (e) => {
-          e.target.style.display = 'none';
-        },
+        class: 'welcome__arches',
+        src: 'assets/brand-logo.png',
+        alt: "McDonald's",
+        width: '52',
+        height: '52',
+      }),
+      // Language is a first-class control, not a buried setting: an Arabic
+      // speaker should not have to read English to find it.
+      button(t('lang.switch'), {
+        variant: 'ghost',
+        size: 'sm',
+        onClick: () => toggleLang(),
       }),
     ),
+
+    el('p', { class: 'welcome__slogan', text: t('welcome.slogan') }),
+
+    heroArt(),
 
     el(
       'div',
       { class: 'welcome__copy' },
-      el('h1', { class: 't-display', html: 'Welcome to<br>McSlice Rush!' }),
-      el('p', { class: 'welcome__sub', text: 'Slice your way to real rewards' }),
+      el('h1', { class: 't-display', html: t('welcome.title') }),
+      el('p', { class: 'welcome__sub', text: t('welcome.sub', { seconds: ROUND_TIME }) }),
+      el('p', { class: 'welcome__prize', text: t('welcome.prizeTeaser') }),
       signedIn &&
-        el('p', { class: 'welcome__greet', text: `Back for more, ${Store.profile().name}?` }),
+        el('p', {
+          class: 'welcome__greet',
+          text: t('welcome.greet', { name: Store.profile().name }),
+        }),
     ),
 
     el(
       'div',
       { class: 'welcome__cta' },
-      button(signedIn ? 'Play Now' : 'Play Now', {
+      button(t('common.playNow'), {
         icon: '▶',
         onClick: () => navigate(signedIn ? '/play' : '/sign-in'),
       }),
       el(
         'div',
         { class: 'welcome__links' },
-        button('Rewards', { variant: 'ghost', size: 'sm', onClick: () => navigate('/rewards') }),
-        button('Leaderboard', {
+        button(t('welcome.howTo'), {
+          variant: 'ghost',
+          size: 'sm',
+          onClick: () => {
+            // Always available, so the coach card is never lost after first run.
+            const card = coachCard({
+              onStart: () => {
+                card.remove();
+                markCoachSeen();
+              },
+            });
+            screen.append(card);
+          },
+        }),
+        button(t('common.wallet'), {
+          variant: 'ghost',
+          size: 'sm',
+          onClick: () => navigate('/wallet'),
+        }),
+        button(t('common.leaderboard'), {
           variant: 'ghost',
           size: 'sm',
           onClick: () => navigate('/leaderboard'),
+        }),
+      ),
+      el(
+        'div',
+        { class: 'welcome__legal' },
+        button(t('common.terms'), {
+          variant: 'ghost',
+          size: 'sm',
+          onClick: () => navigate('/terms'),
         }),
       ),
     ),

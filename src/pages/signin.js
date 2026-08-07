@@ -13,16 +13,17 @@ import { el, button, toast } from '../components/ui.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { register, clearIdentity } from '../services/loyalty.js';
+import { t } from '../core/i18n.js';
 
 const CODES = ['+20', '+1', '+44', '+62', '+971', '+966'];
 
 /** Digits only, 6–13 long — matches the engine's old phone rule. */
 function validate(cc, digits) {
-  if (!digits) return 'Enter your mobile number.';
-  if (!/^\d+$/.test(digits)) return 'Numbers only, please.';
-  if (digits.length < 6) return 'That number looks too short.';
-  if (digits.length > 13) return 'That number looks too long.';
-  if (!cc) return 'Pick a country code.';
+  if (!digits) return t('signin.errEmpty');
+  if (!/^\d+$/.test(digits)) return t('signin.errDigits');
+  if (digits.length < 6) return t('signin.errShort');
+  if (digits.length > 13) return t('signin.errLong');
+  if (!cc) return t('signin.errCode');
   return null;
 }
 
@@ -47,7 +48,7 @@ export function SignInPage(root) {
 
   const err = el('small', { class: 'field__error', id: 'phone-err', role: 'alert' });
   // "Continue", not "Send Code" — nothing is sent and nothing is verified.
-  const submit = button('Continue', { type: 'submit' });
+  const submit = button(t('signin.continue'), { type: 'submit' });
 
   function setError(msg) {
     err.textContent = msg || '';
@@ -61,29 +62,27 @@ export function SignInPage(root) {
   const form = el(
     'form',
     { class: 'signin__card card', novalidate: true },
-    el('h1', { class: 'signin__title', text: "Let's Play!" }),
-    el('p', { class: 'signin__sub', text: 'Enter your number to join the rush' }),
+    el('h1', { class: 'signin__title', text: t('signin.title') }),
+    el('p', { class: 'signin__sub', text: t('signin.sub') }),
 
     el(
       'div',
       { class: 'field' },
-      el('label', { class: 'field__label', for: 'phone', text: 'Mobile number' }),
+      el('label', { class: 'field__label', for: 'phone', text: t('signin.label') }),
       el('div', { class: 'field__row' }, ccSel, input),
       err,
     ),
 
     submit,
 
-    el(
-      'p',
-      { class: 'signin__legal' },
-      'By continuing you agree to the program terms. Your number is used only for this loyalty game.',
-    ),
+    el('p', { class: 'signin__legal' }, t('signin.legal')),
+
+    el('p', { class: 'signin__legal', text: t('signin.unverified') }),
 
     el(
       'div',
       { class: 'signin__alt' },
-      button('Continue as guest', {
+      button(t('signin.guest'), {
         variant: 'ghost',
         size: 'sm',
         onClick: () => {
@@ -92,7 +91,7 @@ export function SignInPage(root) {
           // not rounds silently credited to a previous player on this device.
           clearIdentity();
           Store.signIn({ name: 'Guest Slicer', isGuest: true, avatar: 'assets/avatar.png' });
-          toast('Playing as guest — practice only, no prizes', 'ok');
+          toast(t('signin.guestNote'), 'ok');
           navigate('/play');
         },
       }),
@@ -113,7 +112,7 @@ export function SignInPage(root) {
 
     submitting = true;
     submit.disabled = true;
-    submit.textContent = 'Signing in…';
+    submit.textContent = t('signin.signingIn');
 
     /* A real call now. This used to be a `setTimeout` pretending to be a
        round-trip, which meant the number never reached the backend and no
@@ -131,14 +130,14 @@ export function SignInPage(root) {
           // The server's balance is authoritative from the moment we have it.
           const pts = res.data?.profile?.orderPoints;
           if (Number.isFinite(pts)) Store.setOrderPoints(pts);
-          toast('Signed in — go slice!', 'ok');
+          toast(t('signin.ok'), 'ok');
         } else if (res.kind === 'not_configured') {
           // Expected in a build with the backend switched off.
-          toast('Signed in — practice mode, no prizes', 'ok');
+          toast(t('signin.practice'), 'ok');
         } else {
           // Local play still works; the round just will not be rewardable, and
           // play.js says so on the stake label rather than failing silently.
-          toast("Signed in — couldn't reach rewards, practice only", 'bad');
+          toast(t('signin.noRewards'), 'bad');
         }
         navigate('/play');
       })
@@ -149,13 +148,13 @@ export function SignInPage(root) {
           isGuest: false,
           avatar: 'assets/avatar.png',
         });
-        toast("Signed in — couldn't reach rewards, practice only", 'bad');
+        toast(t('signin.noRewards'), 'bad');
         navigate('/play');
       })
       .finally(() => {
         submitting = false;
         submit.disabled = false;
-        submit.textContent = 'Continue';
+        submit.textContent = t('signin.continue');
       });
   });
 
@@ -170,7 +169,11 @@ export function SignInPage(root) {
         el('p', { class: 'welcome__slogan', text: "i'm lovin' it" }),
       ),
       form,
-      button('← Back', { variant: 'ghost', size: 'sm', onClick: () => navigate('/') }),
+      button(`← ${t('common.back')}`, {
+        variant: 'ghost',
+        size: 'sm',
+        onClick: () => navigate('/'),
+      }),
     ),
   );
 }

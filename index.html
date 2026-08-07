@@ -23,11 +23,73 @@
     <link rel="stylesheet" href="src/styles/components.css" />
     <link rel="stylesheet" href="src/styles/screens.css" />
 
+    <style>
+      /* Inlined deliberately: an external stylesheet cannot style the thing that
+       covers the wait for external stylesheets. */
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 14px;
+        background: #7d1109;
+        color: #fff8f6;
+        font:
+          600 13px/1.4 system-ui,
+          sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      #boot img {
+        filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
+      }
+      #boot-bar {
+        width: 132px;
+        height: 8px;
+        border: 3px solid #27251f;
+        border-radius: 999px;
+        background: #5c0d07;
+        overflow: hidden;
+      }
+      #boot-bar i {
+        display: block;
+        width: 40%;
+        height: 100%;
+        background: #ffc72c;
+        animation: boot-slide 1s ease-in-out infinite;
+      }
+      @keyframes boot-slide {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(250%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-bar i {
+          animation: none;
+          width: 100%;
+        }
+      }
+    </style>
+
     <!-- Hero art the first screen needs. -->
     <link rel="preload" as="image" href="assets/brand-logo.png" />
-    <link rel="preload" as="image" href="assets/mascot.png" />
+    <link rel="preload" as="image" href="assets/items/bigmac.png" />
   </head>
   <body>
+    <!-- Pre-boot loading state. Inline (no CSS/JS dependency) so it paints on the
+       first frame and covers exactly the gap it exists for: module evaluation
+       and first render. src/main.js removes it on the first route paint. -->
+    <div id="boot" role="status" aria-live="polite">
+      <img src="assets/brand-logo.png" alt="" width="72" height="72" />
+      <div id="boot-bar"><i></i></div>
+      <p>Loading&hellip;</p>
+    </div>
+
     <div id="app">
       <!-- The canvas engine binds #game once at load, so the stage lives in
          the shell for the whole session. /play reveals it; every other

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveRewardOutcome, REWARD_STATUS } from '../../src/services/reward-state.js';
 import { OUTCOME } from '../../src/game/round-rules.js';
+import { t, setLang } from '../../src/core/i18n.js';
 
 const survived = OUTCOME.SURVIVED;
 const eliminated = OUTCOME.ELIMINATED;
@@ -128,12 +129,28 @@ describe('failure states map to distinct, actionable statuses', () => {
     expect(out.status).toBe(expected);
   });
 
-  it('every outcome carries player-facing copy', () => {
-    for (const [kind] of cases) {
-      const out = resolveRewardOutcome({ roundOutcome: survived, apiResult: { ok: false, kind } });
-      expect(out.title.length).toBeGreaterThan(0);
-      expect(out.message.length).toBeGreaterThan(0);
+  it('every status has player-facing copy in every locale', () => {
+    /* Copy moved out of this module into i18n (keyed by status) so the resolver
+       stays pure and locale-free. The guarantee still has to hold, so it is
+       asserted where it now lives: every status a resolver can return must have
+       a title and a message in EN and AR. A status with no copy would render
+       its own key on screen. */
+    for (const status of Object.values(REWARD_STATUS)) {
+      for (const locale of ['en', 'ar']) {
+        setLang(/** @type {any} */ (locale));
+        const title = t(`reward.${status}.title`);
+        const msg = t(`reward.${status}.msg`);
+        expect(title, `${locale}/${status} title`).not.toBe(`reward.${status}.title`);
+        expect(title.length).toBeGreaterThan(0);
+        // `awarded` shows the prize label instead of a generic message, so it
+        // is the one status that legitimately has no `.msg`.
+        if (status !== REWARD_STATUS.AWARDED) {
+          expect(msg, `${locale}/${status} msg`).not.toBe(`reward.${status}.msg`);
+          expect(msg.length).toBeGreaterThan(0);
+        }
+      }
     }
+    setLang('en');
   });
 
   it('a flagged run is not paid out and says it is under review', () => {
