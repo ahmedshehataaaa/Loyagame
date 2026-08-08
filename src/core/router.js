@@ -44,6 +44,16 @@ async function render() {
     cleanup = (await entry.view(outlet)) || null;
   } catch (err) {
     console.error(`route "${path}" failed to render`, err);
+    // Lazy import: the router must stay loadable even if analytics is broken.
+    import('../analytics/index.js')
+      .then(({ track, EVENTS }) =>
+        track(EVENTS.ERROR_ENCOUNTERED, {
+          scope: 'route',
+          kind: err?.name ?? 'Error',
+          route: path,
+        }),
+      )
+      .catch(() => {});
     const copy = await errorScreen();
     // Built as nodes, not an innerHTML template, so translated copy can never
     // be parsed as markup.

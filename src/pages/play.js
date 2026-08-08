@@ -12,6 +12,7 @@ import { startRound, endRound } from '../services/loyalty.js';
 import { coachCard, hasSeenCoach } from '../components/coach.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives } from '../core/rules.js';
+import { track, EVENTS } from '../analytics/index.js';
 
 /* Round shape comes from the engine config, never from a literal here — these
    were hardcoded to '60' and three hearts, the pre-ADR-0001 values, and stayed
@@ -32,6 +33,8 @@ export function PlayPage(root) {
   const offs = [];
   let ended = false;
   let paused = false;
+  /** Remembered so REPLAY_STARTED can say what the player is replaying after. */
+  let lastOutcome = null;
 
   /* ---- HUD ------------------------------------------------- */
   const scoreEl = el('b', { class: 'hud__score', text: '0' });
@@ -133,6 +136,13 @@ export function PlayPage(root) {
         const { text, live } = stakeMessage(session);
         stakeEl.textContent = text;
         stakeEl.classList.add(live ? 'is-live' : 'is-warn');
+        // Whether the round could pay out is the single most useful dimension
+        // on this event: it splits practice traffic from prize traffic.
+        track(EVENTS.GAME_STARTED, {
+          rewardable: !!session.rewardable,
+          roundSeconds: ROUND_TIME,
+          lives: START_LIVES,
+        });
       })
       .catch((err) => {
         // A failed session must never block play; it just cannot be rewardable.
@@ -146,6 +156,7 @@ export function PlayPage(root) {
   /* First-run instruction, over the play screen rather than as a route the
      player taps past before it can help. */
   if (!hasSeenCoach()) {
+    track(EVENTS.INSTRUCTIONS_VIEWED, { trigger: 'first_run' });
     const card = coachCard({
       onStart: () => {
         card.remove();
@@ -205,6 +216,7 @@ export function PlayPage(root) {
     if (ended) return;
     paused = on;
     if (on) {
+      track(EVENTS.GAME_PAUSED, { reason: document.hidden ? 'tab_hidden' : 'player' });
       try {
         window.Game.pauseGame();
       } catch {}
@@ -233,6 +245,7 @@ export function PlayPage(root) {
       screen.append(pauseOverlay);
     } else {
       closePause();
+      track(EVENTS.GAME_RESUMED, {});
       try {
         window.Game.resumeGame();
       } catch {}
@@ -245,6 +258,7 @@ export function PlayPage(root) {
   }
 
   function restart() {
+    track(EVENTS.REPLAY_STARTED, { previousOutcome: lastOutcome ?? 'unknown' });
     ended = false;
     // A fresh token for the fresh round — see acquireSession().
     acquireSession();
@@ -295,6 +309,37 @@ export function PlayPage(root) {
          trusting it here let a forged balance persist to localStorage. The
          loyalty service writes the mirror from the real response instead. */
       Store.setLastReward(result.reward ?? null);
+
+      /* Round outcome, then reward outcome — two separate events because they
+         are two separate questions (ADR 0004/0009) and a funnel needs to see
+         survivors who still got nothing. */
+      lastOutcome = result.won ? 'won' : 'lost';
+      track(result.won ? EVENTS.GAME_WON : EVENTS.GAME_LOST, {
+        score: Number(result.score) || 0,
+        itemsSliced: Number(result.itemsSliced) || 0,
+        bestCombo: Number(result.bestCombo) || 0,
+        durationMs: Number(result.durationMs) || 0,
+      });
+
+      const reward = result.reward;
+      if (reward) {
+        if (reward.status === 'awarded' && reward.prize) {
+          // The prize KEY only. The code is a bearer token and never leaves.
+          track(EVENTS.REWARD_ISSUED, {
+            prizeKey: reward.prize.key,
+            orderPoints: reward.orderPoints ?? undefined,
+          });
+        } else if (reward.status === 'not_eligible') {
+          track(EVENTS.REWARD_ELIGIBLE, {
+            orderPoints: reward.orderPoints ?? undefined,
+            pointsThreshold: reward.pointsThreshold ?? undefined,
+          });
+        } else if (reward.status === 'flagged') {
+          track(EVENTS.SUSPICIOUS_ACTIVITY, { signal: 'server_flagged_run', scope: 'submit_run' });
+        } else if (reward.status === 'error' || reward.status === 'pending') {
+          track(EVENTS.ERROR_ENCOUNTERED, { scope: 'reward', kind: reward.status, route: '/play' });
+        }
+      }
 
       /* Both outcomes go to the same Result screen (ADR 0010). A win used to
          be a route and a loss an in-place modal, which meant two layouts for

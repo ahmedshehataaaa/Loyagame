@@ -8,10 +8,11 @@
    ============================================================ */
 import './game/index.js';
 import { loadCampaign } from './campaign/loader.js';
-import { initI18n, t, onLangChange } from './core/i18n.js';
+import { initI18n, t, onLangChange, currentLang } from './core/i18n.js';
 import './adapters/engine-bridge.js';
 import { Router, navigate } from './core/router.js';
 import { Store } from './core/store.js';
+import { track, setContext, EVENTS } from './analytics/index.js';
 
 import { WelcomePage } from './pages/welcome.js';
 import { SignInPage } from './pages/signin.js';
@@ -43,6 +44,15 @@ try {
 } catch {
   /* no URL access — built-in config stands */
 }
+
+/* Analytics context, set once so no call site has to repeat it. No vendor is
+   wired (see src/analytics/index.js) — events buffer until a sink is installed. */
+setContext({
+  campaignId: new URLSearchParams(location.search).get('campaign') ?? 'mcdonalds',
+  locale: currentLang(),
+});
+track(EVENTS.CAMPAIGN_VIEWED, { referrer: document.referrer ? 'external' : 'direct' });
+onLangChange((lang) => setContext({ locale: lang }));
 
 // Honour the OS reduced-motion preference in persisted settings too.
 try {
@@ -111,6 +121,22 @@ document.addEventListener(
   { once: true },
 );
 
-// Surface unexpected failures instead of dying silently mid-round.
-addEventListener('error', (e) => console.error('Uncaught error:', e.message));
-addEventListener('unhandledrejection', (e) => console.error('Unhandled rejection:', e.reason));
+/* Surface unexpected failures instead of dying silently mid-round, and count
+   them. Only the error KIND is sent — a message can contain anything, including
+   a URL with a token in it. */
+addEventListener('error', (e) => {
+  console.error('Uncaught error:', e.message);
+  track(EVENTS.ERROR_ENCOUNTERED, {
+    scope: 'window',
+    kind: e.error?.name ?? 'Error',
+    route: location.hash.slice(1) || '/',
+  });
+});
+addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled rejection:', e.reason);
+  track(EVENTS.ERROR_ENCOUNTERED, {
+    scope: 'promise',
+    kind: e.reason?.name ?? 'Rejection',
+    route: location.hash.slice(1) || '/',
+  });
+});

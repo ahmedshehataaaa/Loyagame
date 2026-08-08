@@ -14,6 +14,7 @@ import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { register, clearIdentity } from '../services/loyalty.js';
 import { t } from '../core/i18n.js';
+import { track, EVENTS } from '../analytics/index.js';
 
 const CODES = ['+20', '+1', '+44', '+62', '+971', '+966'];
 
@@ -29,6 +30,8 @@ function validate(cc, digits) {
 
 export function SignInPage(root) {
   let submitting = false;
+  // `method` records the PATH taken, never the number itself.
+  track(EVENTS.VERIFICATION_STARTED, { method: 'phone_unverified' });
 
   const ccSel = el(
     'select',
@@ -90,6 +93,7 @@ export function SignInPage(root) {
           // clear any stored identity: guest rounds must be practice rounds,
           // not rounds silently credited to a previous player on this device.
           clearIdentity();
+          track(EVENTS.VERIFICATION_COMPLETED, { method: 'guest', accepted: true });
           Store.signIn({ name: 'Guest Slicer', isGuest: true, avatar: 'assets/avatar.png' });
           toast(t('signin.guestNote'), 'ok');
           navigate('/play');
@@ -126,6 +130,10 @@ export function SignInPage(root) {
           avatar: 'assets/avatar.png',
         });
 
+        track(EVENTS.VERIFICATION_COMPLETED, {
+          method: 'phone_unverified',
+          accepted: !!res.ok,
+        });
         if (res.ok) {
           // The server's balance is authoritative from the moment we have it.
           const pts = res.data?.profile?.orderPoints;

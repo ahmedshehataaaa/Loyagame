@@ -18,6 +18,7 @@ import { navigate } from '../core/router.js';
 import { t, num } from '../core/i18n.js';
 import { REWARD_STATUS } from '../services/reward-state.js';
 import { pointsThreshold } from '../core/rules.js';
+import { track, EVENTS } from '../analytics/index.js';
 
 /** One issued prize. */
 function prizeCard(prize, { redeemed = false, expires = null } = {}) {
@@ -94,6 +95,7 @@ export function WalletPage(root) {
   );
 
   if (last && last.status === REWARD_STATUS.AWARDED && last.prize) {
+    track(EVENTS.REWARD_VIEWED, { prizeKey: last.prize.key, status: last.status });
     body.append(prizeCard(last.prize));
   } else {
     body.append(

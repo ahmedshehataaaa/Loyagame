@@ -5,6 +5,7 @@
 import { el, button, topbar, tabbar, fmt, emptyState, loadingState } from '../components/ui.js';
 import { RIVALS } from '../data/catalog.js';
 import { Store } from '../core/store.js';
+import { track, EVENTS } from '../analytics/index.js';
 import { navigate } from '../core/router.js';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -37,6 +38,7 @@ function seasonRemaining() {
 }
 
 export function LeaderboardPage(root) {
+  track(EVENTS.LEADERBOARD_VIEWED, {});
   const listHost = el('div', null, loadingState('Loading standings…'));
   const clockEl = el('b', { class: 'season__clock', text: seasonRemaining() });
   const tick = setInterval(() => {
