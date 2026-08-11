@@ -32,7 +32,7 @@
 
 /* Bump on every deploy that changes shell files. Without content hashing this
    version string IS the cache-busting mechanism, so it is load-bearing. */
-const VERSION = 'mcslice-2026-08-07a';
+const VERSION = 'mcslice-2026-08-12a';
 const SHELL_CACHE = `${VERSION}-shell`;
 const MEDIA_CACHE = `${VERSION}-media`;
 
@@ -54,6 +54,7 @@ const SHELL = [
   './src/styles/base.css',
   './src/styles/components.css',
   './src/styles/screens.css',
+  './src/styles/reference.css',
 ];
 
 const isMedia = (url) => /\.(png|jpe?g|svg|webp|avif|woff2?|ttf)$/i.test(url.pathname);

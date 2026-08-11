@@ -102,7 +102,7 @@ writeFileSync(
 if (appMap) writeFileSync(join(OUT, `${appName}.map`), appMap.text);
 
 /* ---- 3. CSS: one hashed file in cascade order -------------------------- */
-const CSS = ['tokens.css', 'base.css', 'components.css', 'screens.css'];
+const CSS = ['tokens.css', 'base.css', 'components.css', 'screens.css', 'reference.css'];
 const cssResult = await build({
   stdin: {
     contents: CSS.map((f) => `@import "./src/styles/${f}";`).join('\n'),

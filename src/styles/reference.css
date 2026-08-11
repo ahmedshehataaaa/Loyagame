@@ -1,0 +1,702 @@
+/* ============================================================
+   REFERENCE PASS — screens matched against the Stitch mockups.
+
+   Loaded LAST, after screens.css, and that is the whole point: the earlier
+   sheets already style these screens, so a rule of equal specificity placed
+   anywhere before them simply loses. The first attempt at this pass went
+   into components.css and had no visible effect for exactly that reason.
+
+   One block per screen, each naming the image it matches. These override
+   presentation only — type, colour, spacing, radius, weight. No element is
+   added or removed, no copy is changed, and no behaviour is touched.
+   ============================================================ */
+
+/* ---- 01 welcome — stitch-export/screens/welcome/reference.png --------
+   The mockup is quieter than what we had: bare arches, a WHITE slogan
+   rather than gold, the title in the rounded body face at normal case
+   rather than condensed all-caps with an outline, and a fully-rounded
+   gold pill with no ink border. */
+
+.welcome__arches {
+  width: 46px;
+  height: 46px;
+  /* The reference shows the arches with no container. `brand-logo.png` has
+     the red tile baked into its pixels and no bare-arches asset exists in
+     this repo, so the tile is rounded to sit closer to the mockup rather
+     than reproduced as a hard square. A transparent asset would close the
+     last of the gap. */
+  border-radius: 12px;
+}
+
+.welcome__slogan {
+  color: var(--c-white);
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 15px;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+/* The headline: rounded and heavy, not condensed and outlined. */
+.welcome__copy .t-display {
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: clamp(26px, 7.4vw, 32px);
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+  color: var(--c-white);
+}
+
+.welcome__sub {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* The mockup carries neither of these lines. They stay — they are real
+   information — but they stop competing with the headline for attention. */
+.welcome__prize,
+.welcome__greet {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  opacity: 0.82;
+}
+
+/* PLAY NOW: a gold pill. No ink border, no hard bevel — just the lip. */
+.welcome__cta .btn,
+.welcome .btn--primary {
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  padding: 17px 24px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: linear-gradient(180deg, var(--c-secondary-hi) 0%, var(--c-secondary) 70%);
+  box-shadow:
+    0 5px 0 0 var(--c-secondary-dark),
+    var(--lift);
+}
+.welcome__cta .btn:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow: 0 0 0 0 var(--c-secondary-dark);
+}
+
+/* The mockup's PLAY NOW carries no glyph. The span is left in the markup —
+   it is `aria-hidden` decoration either way — and simply not drawn. */
+.welcome__cta .btn > span[aria-hidden='true'] {
+  display: none;
+}
+
+/* The secondary row is subordinate in the mockup's hierarchy: quiet,
+   rounded, and clearly below the primary call to action. Single-line at
+   390px — wrapped to three lines it read as three broken chips. */
+.welcome__links {
+  gap: 8px;
+}
+.welcome__links .btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  padding: 11px 10px;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+.welcome__links .btn:active:not(:disabled) {
+  transform: none;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---- 02 sign-in — Downloads/02_signin_screen.png ---------------------
+   The mockup is a soft white card floating low on the red ground, with big
+   gold arches and a large gold script slogan above it. Ours was a bordered
+   cream panel with an Anton all-caps heading — a different visual language
+   entirely. Notably the mockup's phone entry reads as ONE field: the country
+   code and the number share a single rounded outline. */
+
+.signin__brand img {
+  width: 118px;
+  height: auto;
+  border-radius: 18px;
+}
+
+/* Gold and large here — unlike the welcome screen, where the same element
+   is white and small. Both are taken from their own reference. */
+.signin .welcome__slogan,
+.signin__brand .welcome__slogan {
+  color: var(--c-secondary);
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 30px;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  margin-top: 10px;
+}
+
+.signin__card {
+  background: var(--c-white);
+  border: 0;
+  border-radius: 28px;
+  padding: 34px 26px 30px;
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.45);
+  gap: 18px;
+}
+
+.signin__title {
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+  color: #1a1a1a;
+}
+
+.signin__sub {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 15px;
+  color: #5b5b5b;
+  text-transform: none;
+}
+
+/* The label is in the mockup only as the field's own placeholder, so it is
+   hidden from sight but kept for screen readers — the input still needs a
+   name, and dropping the element would take that away. */
+.signin__card .field__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* One field, not two controls: the row carries the outline and the fill, and
+   the code and number sit inside it unstyled. */
+.signin__card .field__row {
+  align-items: stretch;
+  gap: 0;
+  background: #f6f6f6;
+  border: 1.5px solid #e2e2e2;
+  border-radius: 18px;
+  padding: 6px 10px;
+  min-height: 64px;
+}
+.signin__card .field__row:focus-within {
+  border-color: var(--c-secondary);
+  background: var(--c-white);
+}
+.signin__card .field__row .field__input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 19px;
+  color: #2b2b2b;
+  padding-inline: 6px;
+}
+.signin__card .field__row .field__cc {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 62px;
+  font-weight: 600;
+  color: #2b2b2b;
+}
+.signin__card .field__input::placeholder {
+  color: #9a9a9a;
+}
+
+/* Send Code / Verify: gold, generous, no ink border. */
+.signin__card .btn {
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 21px;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 20px 24px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--c-secondary);
+  color: #1a1a1a;
+  box-shadow: 0 4px 0 0 var(--c-secondary-dark);
+}
+.signin__card .btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 0 var(--c-secondary-dark);
+}
+
+/* The guest route is secondary in the mockup's hierarchy — quiet, not a
+   second gold slab competing with Send Code. */
+.signin__alt .btn {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 12px 16px;
+  color: #6b6b6b;
+  background: transparent;
+  border: 1.5px solid #e2e2e2;
+  border-radius: var(--r-full);
+  box-shadow: none;
+}
+.signin__alt .btn:active:not(:disabled) {
+  transform: none;
+  background: #f2f2f2;
+}
+
+.signin__legal {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+/* The one-time-code entry: wide tracking so six digits read as six. */
+.field__input--code {
+  text-align: center;
+  font-size: 26px;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+  background: #f6f6f6;
+  border: 1.5px solid #e2e2e2;
+  border-radius: 18px;
+  padding: 16px 12px;
+  color: #2b2b2b;
+}
+
+/* ---- the arches, without their tile --------------------------------
+   Both mockups show bare gold arches on the red ground. `brand-logo.png`
+   has a red tile baked into its pixels and there is no transparent asset
+   in this repo, so the tile is dissolved rather than replaced.
+
+   `lighten` composites per channel as max(source, backdrop). The tile red
+   and the page red differ by about three units in one channel, so the tile
+   drops into the ground; the gold arches are higher than the red in every
+   channel, so they survive untouched. No new asset, no recolouring.
+
+   `isolation: isolate` is deliberately NOT set on an ancestor — the blend
+   has to reach the page ground to do its job. */
+.welcome__arches,
+.signin__brand img {
+  mix-blend-mode: lighten;
+  border-radius: 0;
+}
+
+/* The back control is not in the mockup at all. It stays reachable, but as
+   a quiet text-weight control rather than a full-width bordered slab. */
+.signin .btn--ghost:not(.signin__card .btn):not(.signin__alt .btn) {
+  width: auto;
+  align-self: center;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  padding: 10px 18px;
+  color: rgba(255, 255, 255, 0.88);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-full);
+  box-shadow: none;
+}
+
+/* The mockup floats the card low, with red above and below it. */
+.signin.screen {
+  justify-content: center;
+  gap: 26px;
+}
+
+/* ---- 03 rewards catalogue — Downloads/03_rewards_catalog_screen.png --
+   Two things carry this screen in the mockup and neither was present: the
+   points panel is a DARK slab (gold label, white number, gold rank pill,
+   gold-striped meter on a grey track), and each card's cost sits in a black
+   pill that overlaps the card's LEFT edge rather than tucked inside it. */
+
+.points-head {
+  background: #241c19;
+  border: 0;
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.6);
+}
+.points-head .t-kicker {
+  color: var(--c-secondary);
+  letter-spacing: 0.14em;
+  font-size: 12px;
+}
+.points-head__value {
+  color: var(--c-white);
+  font-size: 42px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.points-head .rank-chip {
+  background: linear-gradient(180deg, var(--c-secondary-hi), var(--c-secondary));
+  color: #241c19;
+  border: 0;
+  border-radius: var(--r-full);
+  padding: 8px 14px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+/* Grey remainder, gold fill — the mockup's meter reads as "how far along",
+   which a dark-on-dark track does not. */
+.points-head .meter__track {
+  background: #8e8e8e;
+  border: 0;
+  border-radius: var(--r-full);
+  height: 18px;
+  overflow: hidden;
+}
+.points-head .meter__fill {
+  background: repeating-linear-gradient(
+    115deg,
+    var(--c-secondary) 0 10px,
+    var(--c-secondary-hi) 10px 20px
+  );
+  border-radius: var(--r-full);
+}
+.points-head .meter__head .t-kicker {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+}
+
+/* Cards: the cost pill breaks out of the left edge, so the grid needs the
+   room to let it. */
+.reward-grid {
+  gap: 16px 18px;
+  padding-inline-start: 10px;
+}
+.reward {
+  position: relative;
+  overflow: visible;
+  border-radius: 16px;
+  border: 3px solid #241c19;
+  box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.35);
+  padding: 16px 12px 14px;
+}
+.reward--ready,
+.reward--owned {
+  background: var(--c-secondary);
+}
+.reward--locked {
+  background: #8e8e8e;
+}
+.reward__cost {
+  position: absolute;
+  top: 42%;
+  inset-inline-start: -10px;
+  transform: translateY(-50%);
+  background: #241c19;
+  color: var(--c-white);
+  border: 0;
+  border-radius: var(--r-full);
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  z-index: 2;
+}
+.reward__name {
+  color: #241c19;
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.reward--locked .reward__name {
+  color: #241c19;
+}
+.reward__desc {
+  color: rgba(36, 28, 25, 0.72);
+  font-size: 12px;
+  font-weight: 600;
+}
+/* The mockup centres the lock over the locked card rather than badging it. */
+.reward--locked .reward__flag {
+  position: absolute;
+  inset-block-end: 42px;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: 1.6em;
+  font-size: 22px;
+  background: transparent;
+  border: 0;
+  color: #241c19;
+}
+.reward--owned .reward__flag {
+  background: #241c19;
+  color: var(--c-secondary);
+  border-radius: var(--r-full);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+
+/* ---- 03 addendum: the lock reads as centred in the mockup ------------ */
+.reward--locked .reward__flag {
+  inset-block-start: 46%;
+  inset-block-end: auto;
+  font-size: 26px;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
+}
+
+/* ---- 04 spin to win — Downloads/04_spin_to_win_screen.png ------------
+   The mockup's title is WIDE and light, not the condensed black caps we
+   had: letterspaced roman on a plain red ground, with a pale pink wheel
+   face inside a thick gold ring, and a flat gold SPIN NOW with dark text.
+   The reveal state below it had a red-on-red COPY CODE, which is the one
+   outright legibility bug this pass found. */
+
+.spin__title {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: clamp(28px, 8.6vw, 36px);
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+  color: var(--c-white);
+}
+
+.spin__sub {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--c-white);
+  max-width: 19em;
+  margin-inline: auto;
+}
+
+/* Pale pink face, thick gold rim — the mockup's wheel is a flat disc, not
+   a bevelled one. */
+/* `.wheel` is the square positioning box, not the disc — giving it a border
+   without a radius drew a gold SQUARE around the wheel. The ring belongs on
+   a circular box. */
+.spin .wheel {
+  width: min(78vw, 320px);
+  aspect-ratio: 1;
+  background: #fdecea;
+  border: 11px solid var(--c-secondary);
+  border-radius: 50%;
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.5);
+}
+
+.wheel__hub {
+  background: var(--c-white);
+  border: 4px solid var(--c-secondary);
+}
+.wheel__hub::after {
+  background: #e0231b;
+}
+
+/* Flat gold slab, dark text, roman weight — not a bevelled arcade button. */
+.spin__actions .btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  padding: 18px 24px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--c-secondary);
+  color: #5b4a12;
+  box-shadow: none;
+}
+.spin__actions .btn:active:not(:disabled) {
+  transform: none;
+  filter: brightness(0.95);
+}
+/* The ghost actions in the reveal state must not be red text on the red
+   ground — that was unreadable. */
+.spin__actions .btn--ghost {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--c-white);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+}
+.spin__code button {
+  background: var(--c-secondary);
+  color: #5b4a12;
+  border: 0;
+  font-weight: 700;
+}
+
+/* ---- 05 leaderboard — Downloads/05_leaderboard_screen.png ------------
+   The mockup's ground is a dark maroon, not the bright red used elsewhere:
+   the gold countdown and the pale rows are what carry the screen, and they
+   only read that way against something dark. The player's own row is the
+   one loud element on it. */
+
+.screen.bg-burst:has(.lb-list) {
+  background:
+    radial-gradient(120% 80% at 50% 0%, #4a0d08 0%, #2a0705 55%, #1a0403 100%), var(--c-primary);
+}
+
+/* Gold slab, dark text — it is the header of the screen in the mockup. */
+.season {
+  background: linear-gradient(180deg, var(--c-secondary-hi), var(--c-secondary));
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.8);
+}
+.season .t-kicker {
+  color: #4a3a06;
+  letter-spacing: 0.14em;
+}
+.season__clock {
+  color: #241c19;
+  font-size: 32px;
+  letter-spacing: 0.01em;
+}
+
+/* Pale rows, grey rank, dark score. The gold-on-white score in ours read as
+   the most important thing on every row; in the mockup the NAME leads. */
+.lb-row {
+  background: #f6e6e6;
+  border: 3px solid #241c19;
+  border-radius: 14px;
+  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.45);
+}
+.lb-row__rank {
+  color: #9a8f8f;
+  font-weight: 700;
+}
+/* 15px, not 17: at 17 the longer handles in the seeded board truncated to
+   "BigMacSta…", and a leaderboard that hides who is on it has lost the plot. */
+.lb-row__name {
+  color: #1f1a1a;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.lb-row__score {
+  color: #6b6060;
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* The player's own row: gold, glowing, unmistakable. */
+.lb-row--you {
+  background: linear-gradient(180deg, var(--c-secondary-hi), var(--c-secondary));
+  border-color: #241c19;
+  box-shadow:
+    0 0 0 3px rgba(255, 199, 44, 0.35),
+    0 6px 0 0 rgba(0, 0, 0, 0.5);
+}
+.lb-row--you .lb-row__name,
+.lb-row--you .lb-row__score,
+.lb-row--you .lb-row__rank {
+  color: #241c19;
+}
+.tag-you {
+  background: #241c19;
+  color: var(--c-white);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.lb-head .t-kicker {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* ---- 06 item library — stitch-export/screens/asset-library/reference.png
+   PARTIAL, and the reason is structural rather than stylistic. The mockup is
+   a PLAYER-facing screen: a two-column grid of white cards, each with a
+   points value ("+500 PTS"), a gold "ITEM LIBRARY" title, and the bottom
+   nav. `/assets` is an internal QA dump — it says so on the screen — and its
+   markup carries filenames and pixel dimensions instead of point values, and
+   no nav. Those are elements and data, not presentation, so the last of the
+   gap cannot be closed from a stylesheet without inventing content.
+
+   What IS presentation has been matched: the card language (white, rounded,
+   two up, product art over a dark bold name) and the gold display title. */
+
+.asset-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.asset {
+  background: var(--c-white);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.5);
+  padding: 12px 12px 14px;
+  overflow: hidden;
+}
+/* The mockup's cards sit on plain white — the checkerboard is a QA device.
+   The frame keeps a fixed box: dropping its constraints let the sprites
+   render at their natural size and run straight over the captions. */
+.asset__frame {
+  background: var(--c-white);
+  border: 0;
+  border-radius: 10px;
+  padding: 6px;
+  height: 108px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.asset__frame img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+.asset__name {
+  color: #1f1a1a;
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+/* Filename and dimensions have no counterpart in the mockup. They are the
+   point of this screen, so they are demoted rather than hidden. */
+.asset__file,
+.asset__dims {
+  color: #9a9a9a;
+  font-size: 10px;
+  font-weight: 500;
+}
+.asset-group .section-head {
+  color: var(--c-secondary);
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 20px;
+  letter-spacing: 0.02em;
+}
+.asset-group__note {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  font-size: 13px;
+}
