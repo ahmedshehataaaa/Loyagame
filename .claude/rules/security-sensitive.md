@@ -28,11 +28,14 @@ order_points`, `runs`, or `wheel_wins` must take a `FOR UPDATE` lock in
   the same transaction, matching `resolve_run`'s pattern
   (`supabase/schema.sql` ~lines 385, 401). A race condition here is a
   financial-liability bug, not a style issue.
-- **`engine/config.js` is included in this rule** specifically because
-  `WHEEL`, `DISCOUNT_TIERS`, and `LIMITS` are content that directly
-  controls real money exposure — treat changes to these constants with the
-  same scrutiny as changes to `resolve_run` itself, not as a cosmetic
-  config edit.
+- **`engine/config.js` and `campaigns/*.json` are included in this rule**
+  because `WHEEL`, `LIMITS` and a manifest's `rewards` block directly control
+  real money exposure — same scrutiny as `resolve_run` itself, not a cosmetic
+  config edit. (`DISCOUNT_TIERS` was deleted in ADR 0008.)
+- **`src/services/loyalty.js` is the ONLY code permitted to call the reward
+  API**, and `src/services/reward-state.js` the only code permitted to decide
+  whether a prize is displayable (ADR 0009). Don't add a second caller, and
+  don't let a screen construct a prize.
 - **Open compliance flag**: `docs/security/reward-wheel-compliance.md` —
   read it before touching `WHEEL` or `resolve_run`'s prize-selection logic.
   Surface it in every review that touches this area; do not resolve it

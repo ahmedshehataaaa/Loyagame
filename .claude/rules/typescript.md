@@ -16,11 +16,13 @@ If you're introducing TypeScript for the first time:
   in `docs/decisions/` explaining why (e.g., adopting `packages/
 shared-types` from the target structure) and get `lead-architect`
   sign-off first.
-- It requires a `package.json` and a build step to exist, which currently
-  don't — that's a bigger change than it looks, since `engine/`'s
-  global-script loading pattern and `src/`'s no-bundler ES modules both
-  currently work specifically _because_ there's no compile step. Adding
-  TS changes that constraint for the whole project, not just the new file.
+- A `package.json` and a production build now exist (ADR 0013), so this is
+  less of a leap than it was — but `npm run dev` still serves the source with
+  NO compile step, and that is deliberate. Introducing TS would put a build
+  between an edit and a reload for the first time. Weigh that explicitly.
+- Type checking already runs today via `tsc --checkJs` over JSDoc
+  (`npm run typecheck`), with engine globals declared in `types/globals.d.ts`.
+  Reach for a JSDoc type before reaching for a `.ts` file.
 - Prefer starting TS adoption in a new, isolated `packages/shared-types` or
   similar boundary rather than converting `engine/game.js` in place — don't
   let a "let's try TS" task turn into an accidental rewrite of working

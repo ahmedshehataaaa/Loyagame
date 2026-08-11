@@ -11,16 +11,15 @@ globs: ['src/pages/**', 'src/components/**', 'src/styles/**']
   project ("McSlice Rewards Arcade"). Don't inline a new hex value or font
   when a token exists; extend `tokens.css` if a design genuinely needs a
   new one.
-- **`src/pages/victory.js` currently reads a mock `Store`**, not the real
-  round result from `engine/game.js`. Don't build new features assuming
-  `Store` reflects actual gameplay state — verify which is true for the
-  specific data you need before relying on it.
-- **Don't add a third HUD renderer.** The canvas (`engine/game.js`) and
-  the DOM overlay (`src/pages/play.js`) already both draw score/lives
-  during a round — a known, unresolved duplication. If your change touches
-  in-round UI, either scope around this explicitly or treat resolving it
-  as the task (with `lead-architect` sign-off, since it's cross-cutting
-  with `gameplay-engineer`'s territory).
+- **`victory.js` no longer exists.** Win and loss share one
+  `src/pages/result.js` (ADR 0010); `/win` survives only as a redirect for
+  links already in the wild. It reads the real recorded run, and the reward
+  comes from the server via `rewardPanel`.
+- **The DOM is the ONLY in-round UI renderer.** The canvas HUD was deleted
+  (ADR 0006). The engine pushes changed values via `UI.hud()`; there is no poll
+  and no second renderer. Don't add one.
+- **Anything over the canvas must not intercept pointers** — see
+  `.claude/rules/gameplay.md`. An overlay once made the game unsliceable.
 - **Mobile-only, mobile-first.** Canonical frame 390×844; test 375×667,
   393×852, 430×932, then tablet/desktop scale-up. Desktop always shows the
   mobile gate — don't build assuming a real desktop layout is needed
@@ -28,10 +27,11 @@ globs: ['src/pages/**', 'src/components/**', 'src/styles/**']
 - **Respect `prefers-reduced-motion`** — `src/main.js` already reads this
   into `Store.settings().reducedMotion`; extend that pattern for any new
   animated element, don't bypass it.
-- **RTL/i18n**: no i18n mechanism confirmed wired into `src/` yet (the
-  `fastfood-ninja` lineage had one in `_legacy-ui-backup/i18n.js` — check
-  whether `src/` has adopted an equivalent before assuming English-only is
-  acceptable or building a second, competing i18n system).
+- **i18n is `src/core/i18n.js`** — EN + AR with RTL, restored in ADR 0010
+  after the `src/` rewrite dropped it entirely. Every player-facing string goes
+  through `t()`; numbers through `num()` (Arabic uses its own digits). A unit
+  test asserts locale parity both ways and matching `{placeholder}` sets, so an
+  untranslated key fails the build rather than shipping.
 - Compare implementation against the Stitch reference (`stitch-export/`)
   at the same viewport before calling a screen done — see
   `claimlabs-stitch-to-code`.

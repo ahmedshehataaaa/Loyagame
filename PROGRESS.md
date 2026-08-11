@@ -1,6 +1,84 @@
 # PROGRESS.md — McSlice Rush (McDonald's)
 
-## Current checkpoint — 2026-08-07 (Stage 4: server-authoritative rewards)
+## Current checkpoint — 2026-08-11 (all 10 audit stages complete)
+
+Audit: `docs/audit/2026-08-07-production-readiness-audit.md`. Every decision:
+`docs/decisions/` (ADRs 0004–0015).
+
+### The single most important finding, found last
+
+**The game could not be sliced at all.** `.game-screen` won the pointer hit test
+across the entire play field, so input never reached the canvas — 0 slices in 48
+real mouse swipes. Every test missed it because they dispatched `MouseEvent`s
+directly at the canvas, which bypasses hit-testing: they proved the slicing
+maths and proved none of it was reachable. Fixed in ADR 0015, along with a move
+to Pointer Events with capture. Measured after: 250 points in 2 swipes.
+
+The generalisable lesson, now written into `.claude/rules/tests.md`: **a
+synthetic event aimed at the element you hope handles it cannot tell you whether
+a player could reach it.**
+
+### Stage summary
+
+| Stage | What                                                   | ADR        |
+| ----- | ------------------------------------------------------ | ---------- |
+| 0     | Git baseline + backup branch                           | —          |
+| 1     | Toolchain from zero (lint, types, unit, e2e)           | —          |
+| 2     | Portrait-native play field; canvas HUD deleted         | 0006       |
+| 3     | Survival wins; fair waves; completing ramp             | 0004, 0007 |
+| 4     | Server-authoritative rewards (fixes S1)                | 0009       |
+| 5     | One Result screen; wallet/terms/coach; Arabic restored | 0010       |
+| 6     | Effect budgets; branded blade; reduced motion          | 0011       |
+| 7     | Restaurants become validated data                      | 0012       |
+| 8     | 1.19 MB purged; PWA fixed; production build            | 0013       |
+| 9     | Closed, redacting analytics taxonomy                   | 0014       |
+| 10    | Docs, CI, security review, release runbook             | —          |
+
+### Verification
+
+**157 unit + 654 browser tests** across 320/360/375/390/412/430, all passing.
+Lint, typecheck, format, campaign-manifest validation clean. CI runs all of it.
+
+Measured at 4× CPU throttle: **first contentful paint 376 ms**, 13 requests,
+469 KB transferred, **frame delta median 16.7 ms (~59.9 fps), p95 16.8 ms**.
+
+### Security review (2026-08-11)
+
+- No hardcoded secrets anywhere in shipped code; all four read from
+  `process.env` and compared with `timingSafeEqual`.
+- No client-side reward decision. `loyalty.js` is the only API caller;
+  `reward-state.js` the only code that may decide a prize is displayable.
+- No cheat key or point-injection path. `ffn_dev` bypasses only the _device
+  gate_ and grants nothing.
+- All 12 `api/*.mjs` byte-identical to their `netlify/functions/` mirrors apart
+  from the db import path.
+- `dist/` ships no `_legacy-ui-backup/`, no `stitch-export/`, no `.env`.
+
+### ⚠️ Required before any deploy — both human actions
+
+1. **Apply `supabase/schema.sql` by hand.** `resolve_run` gained a survival gate
+   and the old 8-arg overload is dropped, so a stale database fails loudly.
+2. **Link a Vercel project this build owns.** `.vercel/` was detached from
+   Krispy Kreme's live project (ADR 0002) and never relinked.
+
+### Still open, and why
+
+- **No integration test against a real database.** Row locking, one-time token
+  consumption and campaign budget are verified by code reading only — no
+  Supabase instance is reachable here. Biggest remaining risk.
+- **Reward-wheel compliance is UNRESOLVED.** ADR 0008 records the decision to
+  keep the weighted random draw; that is a product decision, not the written
+  legal sign-off `docs/security/reward-wheel-compliance.md` asks for.
+- **Identity is unverified** — no OTP, by explicit product decision. Multi-account
+  farming stays open.
+- No rate limiting or emergency campaign shutdown in the client-facing path.
+- Redemption is counter-only until the catalogue is wired to `redeem_wheel_win`.
+- No analytics vendor (events buffer behind `setSink()`); no Lighthouse run
+  (depends on hosting headers); images still PNG/JPEG; RLS assumed not verified.
+
+---
+
+## Previous checkpoint — 2026-08-07 (Stage 4: server-authoritative rewards)
 
 **Audit finding S1 is fixed.** The client now talks to the reward backend that
 had been orphaned; nothing about a reward is decided in the browser. Full

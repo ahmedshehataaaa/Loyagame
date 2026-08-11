@@ -1,5 +1,31 @@
 # Project Inventory — Slice Rush (McSlice Rush, McDonald's build)
 
+> **Updated 2026-08-11.** The 2026-08-07 audit and its ten remediation stages
+> are complete. Several findings recorded below as OPEN have since been fixed;
+> each is annotated inline with the ADR that closed it. Sections describing the
+> pre-remediation state are kept deliberately — this file is the record of what
+> was found, and deleting it would erase the reasoning. **`PROGRESS.md` is the
+> current-state summary; read that first.**
+>
+> Closed since the original audit:
+>
+> - Backend orphaned / client-authoritative rewards (S1) → **ADR 0009**
+> - No survival win state → **ADR 0004**
+> - `RAMP_TIME` exceeding the round → **ADR 0007**
+> - Doubled HUD and the 🌶️ lives glyph → **ADR 0006**
+> - Off-brand rooster mascot → **ADR 0010**
+> - No test suite → 157 unit + 654 browser tests
+> - No `package.json` / no tooling → full toolchain + CI
+> - Unbounded effect arrays (P7) → **ADR 0011**
+> - Unreferenced 1.19 MB of assets, broken PWA (P1–P5) → **ADR 0013**
+>
+> Found _after_ the audit and fixed: **the game could not be sliced at all** —
+> an overlay swallowed every pointer event (**ADR 0015**).
+>
+> Still open: no integration test against a real database; reward-wheel
+> compliance sign-off; unverified identity; rate limiting; RLS verification.
+> See `PROGRESS.md` → "Still open, and why".
+
 Audit date: 2026-08-06. This is a point-in-time snapshot — re-verify file
 paths and line numbers against current code before trusting them, per
 [claimlabs-project-discovery](../.claude/skills/claimlabs-project-discovery/SKILL.md).

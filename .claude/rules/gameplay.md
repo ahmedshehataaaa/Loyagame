@@ -9,25 +9,27 @@ globs: ['engine/game.js', 'engine/config.js', 'engine/platform.js', 'engine/audi
   calls `LoyaltyData.submitRun(score, durationMs)` — it does not decide
   "won," does not mint a code, does not display a prize that didn't come
   back from the server. See `claimlabs-reward-security`.
-- **All tuning lives in `CONFIG`/`BRAND`/`FOODS`/`BOMB`/`WHEEL`/
-  `DISCOUNT_TIERS` in `config.js`.** Don't hardcode a number in `game.js`
-  that should be a config value — that's exactly how `ROUND_TIME`/
-  `START_LIVES` stayed correct and centrally editable (see ADR 0001).
-- **`RAMP_TIME` (50s) currently exceeds `ROUND_TIME` (30s)** — known,
-  unresolved imbalance. Don't "fix" it as a drive-by inside an unrelated
-  change; it needs its own acceptance criteria (what should the difficulty
-  curve feel like at 30s) via `claimlabs-feature-planning`.
-- **The HUD renders twice** (canvas here, DOM overlay in
-  `src/pages/play.js`). If you touch the canvas HUD, check whether the DOM
-  overlay needs the same change, and don't assume fixing one side
-  resolves the visible duplication.
-- **Lives glyph is currently 🌶️** (chili pepper, `chilis` variable,
-  `game.js` ~line 611-616) — known stale branding from the original Pasta
-  & Heat build. Fix if in scope; otherwise leave it and don't treat it as
-  unrelated to a gameplay change that touches the same function.
+- **All tuning lives in `CONFIG`/`BRAND`/`FOODS`/`BOMB`/`WHEEL`/`FX`/`LAUNCH`
+  in `config.js`.** Don't hardcode a number in `game.js` that should be a config
+  value — that's exactly how `ROUND_TIME`/`START_LIVES` stayed correct and
+  centrally editable (see ADR 0001).
+- **Difficulty ramps as a FRACTION of the round** (`RAMP_FRACTION`, ADR 0007).
+  The old absolute `RAMP_TIME: 50` exceeded a 30s round, so the curve peaked at
+  ~0.6 and the tense finish never arrived. Don't reintroduce an absolute ramp:
+  changing `ROUND_TIME` must not silently break the curve again.
+- **The canvas draws NO HUD** (ADR 0006). It used to, alongside the DOM
+  overlay, so both rendered at once and disagreed. `publishState()` only
+  publishes values; `src/pages/play.js` is the sole in-round UI renderer.
+- **Input is Pointer Events with capture** (ADR 0015). Never rebind parallel
+  mouse+touch pairs: a touch browser emits compatibility mouse events, so both
+  paths fire for one swipe, and neither can follow a finger off the canvas.
+- **Anything laid over the canvas must be pointer-transparent.** `.game-screen`
+  once won the hit test across the whole play field and NOTHING could be sliced.
+  Check with `elementFromPoint`, not by dispatching events at the canvas —
+  dispatching bypasses hit-testing and hid that bug from every test.
 - Frame delta is clamped to ≤50ms — a correctness safeguard for
   tab-switches, not a performance knob; don't remove it while optimizing.
-- Verify changes by actually running a round (`python3 server.py`,
-  `?play&dev&anyday`), not by reading the diff — see
-  `claimlabs-slice-rush-mechanics` for exact current values to check
-  against.
+- Verify changes by actually running a round (`npm run dev`) with REAL input,
+  not by reading the diff. `npm run test:e2e` covers this; a swipe made by
+  dispatching events at the canvas proves nothing about whether a player could
+  make it.

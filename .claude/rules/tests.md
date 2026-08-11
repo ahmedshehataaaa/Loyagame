@@ -5,9 +5,19 @@ globs: ['tests/**', '**/*.test.js', '**/*.test.mjs', '**/*.spec.js', 'games/slic
 
 # Tests
 
-- **No test suite exists yet anywhere in this repo** as of 2026-08-06 —
-  see `claimlabs-testing` for the recommended stack (Playwright +
-  Node's built-in `node --test`) when this becomes the actual task.
+- **The suite is Vitest (unit) + Playwright (browser).** 157 unit tests over
+  the pure modules in `src/game/`, `src/services/`, `src/campaign/`,
+  `src/core/i18n.js` and `src/analytics/`; 654 browser tests across the six
+  supported viewports. `npm run verify` runs the static gates plus unit tests;
+  `npm run test:e2e` runs the browser suite.
+- **Prefer a pure module over a browser test.** Headless Chromium throttles
+  `requestAnimationFrame` to roughly 1.3fps here, so anything asserting on
+  wall-clock round progress is flaky for reasons unrelated to the game. Round
+  length, win/loss and the difficulty curve are covered deterministically in
+  `tests/unit/`.
+- **Browser tests must use REAL input.** Dispatching events at an element
+  bypasses hit-testing. That blind spot hid a bug where the play overlay
+  swallowed every pointer event and the game could not be sliced at all.
 - **Never delete or weaken a test to make a build pass.** If a test is
   failing, the failure is either a real bug (fix the code) or the test is
   wrong (fix the test, and say explicitly why the original assertion was

@@ -1,89 +1,135 @@
-# 🍔🔪 McSlice Rush
+# McSlice Rush
 
-A **Fruit-Ninja-style arcade slicing game** built as a scan-to-play McDonald's
-loyalty program. Players slice flying McDonald's menu items to score points,
-chain combos, and — once their real ORDER-POINTS balance clears a threshold —
-spin a prize wheel for real menu rewards.
+A scan-to-play, mobile-first arcade slicing game wired into a restaurant's
+rewards programme. Slice flying menu items for 30 seconds without hitting two
+burnt batches; survive, and the server decides whether you have earned a prize.
 
-> Client build for McDonald's. Reskinned from the shared Slicy-P engine
-> (originally built for Nashville Pasta & Heat, also reskinned as Krispy
-> Kreme "Glaze Rush"). Do not copy Slicy-P/Krispy Kreme content back into
-> this build without checking `engine/config.js` — brand content, rules and
-> the reward model have all diverged since the fork.
+Built by **ClaimLabs** as one reusable engine reskinned per restaurant through
+configuration — not a fork per client. This repository is the **McDonald's**
+campaign build.
 
-## ▶️ How to run
+---
 
-**Easiest:** double-click `index.html` — runs straight in the browser, no
-build step, no server, works offline. Play in **landscape**.
-
-**Or serve it** locally:
+## Quick start
 
 ```bash
-python3 server.py     # then open http://localhost:8765
+npm install
+npm run dev          # http://localhost:8765 — serves the source, no build step
 ```
 
-> **Testing on desktop:** add `?play` to the URL to bypass the mobile gate.
-> Chrome DevTools' device toolbar (`Cmd/Ctrl+Shift+M`) is the best way to
-> preview it.
+Open it on a phone, or on a desktop browser at a mobile viewport. The game is
+portrait-only by design.
 
-## 📱 Mobile & tablet only
-
-Built for touchscreens. Desktop shows a "play on your phone" gate (with a
-live QR code). Always runs in **landscape** — portrait auto-rotates.
-
-## 🎮 How to play
-
-- **Swipe / drag** to slice menu items → earn score.
-- Slice multiple items in one swipe for **combos** (score multiplier).
-- **Avoid 🔥 Burnt Fries** — slicing one costs a life. **2 lives** — round
-  ends after the 2nd hit.
-- Each round is a **30-second timer** — surviving it also ends the round.
-
-## 🎁 Reward model (current — "play-to-win" wheel, July 2026 pivot)
-
-- **Loyalty (order) points come only from real purchases** — credited
-  server-side via POS/Foodics webhook, never from gameplay.
-- **No discount-code tiers.** Reaching the round's score/points threshold
-  (`WHEEL.pointsThreshold` in `engine/config.js`, currently 4000 order-points)
-  unlocks a **prize wheel** at game-over — a real weighted spin server-decided
-  in `resolve_run` (`supabase/schema.sql`), the client only animates it.
-- Below the threshold, the player gets a "try again" nudge instead.
-- Winning locks the player out of the wheel for `LIMITS.winLockoutHrs` (12h);
-  round-play itself is currently **unlimited** (`LIMITS.maxPlays`).
-
-## 🗂️ Project structure
-
-```
-mcdonalds/
-├── index.html          # loads engine/*.js as globals, then src/main.js as an ES module
-├── engine/              # core game loop: config.js, platform.js, audio.js, game.js
-├── src/                 # newer app shell: core/{router,store}.js, pages/*.js,
-│                        #   adapters/engine-bridge.js, styles/*.css (McSlice Rush tokens)
-├── api/                 # Vercel functions: start-run, submit-run, pos-credit, admin-*...
-├── netlify/functions/    # mirror of api/ for Netlify hosting
-├── lib/db.mjs            # shared Supabase/PostgREST helper (service-role key, admin auth)
-├── supabase/schema.sql   # players, points_ledger, runs, wheel_wins, settings + RPCs
-├── assets/               # McDonald's item sprites, mascot, brand-logo
-├── stitch-export/        # Stitch design references ("McSlice Rewards Arcade")
-└── _legacy-ui-backup/    # retired pre-refactor UI, kept for reference, not shipped
+```bash
+npm run verify       # format + lint + typecheck + manifests + unit tests
+npm run test:e2e     # 654 browser tests across 6 mobile viewports
+npm run build        # hashed, minified dist/
+npm run preview      # serve dist/ on :8767
+npm run perf         # measured load + frame-rate baseline (4x CPU throttle)
 ```
 
-## 🔌 Backend (already wired, not just planned)
+## How it works
 
-Unlike the original Slicy-P prototype, this build's backend is real, not
-`localStorage` mocks:
+**One 30-second round. Two burnt batches ends it. Surviving the full round
+wins.** Score is leaderboard bragging rights and does not gate the win
+(ADR 0004).
 
-| Endpoint               | Does                                                                                 |
-| ---------------------- | ------------------------------------------------------------------------------------ |
-| `POST /api/start-run`  | Grants a round; issues a one-time server token                                       |
-| `POST /api/submit-run` | Resolves the round server-side (`resolve_run` RPC, row-locked, plausibility-checked) |
-| `POST /api/pos-credit` | POS/Foodics webhook credits order-points (secret-verified)                           |
-| `admin-*`              | Dashboard data for `admin.html`                                                      |
+Winning makes you _eligible_. An actual prize also needs order points, earned
+only by ordering — never by playing — and is drawn and issued **by the server**.
+The client displays what came back and nothing else (ADR 0009).
 
-Recommended stack (already in use): **Vercel Functions** + **Supabase
-Postgres** (PostgREST) + **Foodics webhook** for POS integration.
+## Architecture
 
-**Known gaps** (see the audit for the full list): `RAMP_TIME` (difficulty
-ramp, 50s) is longer than the round (30s) after the round-time change — the
-difficulty curve never reaches its "hard" end within a round. No automated
-test suite exists yet.
+```
+engine/          Canvas 2D game loop — classic scripts sharing top-level scope
+src/
+  game/          PURE, tested gameplay maths (ballistics, waves, collision, rules)
+  services/      The ONLY code that talks to the reward backend
+  campaign/      Manifest schema + loader — restaurants are data
+  analytics/     Closed event taxonomy with an allow-listed redactor
+  core/          router, store, i18n, live rule reads
+  pages/         One function per screen
+  components/    Shared render helpers
+api/             Vercel Functions   (mirrored byte-for-byte in netlify/functions/)
+lib/db.mjs       Supabase via raw PostgREST — no ORM, no npm deps
+supabase/        Tables + row-locked RPCs (resolve_run, start_play, ...)
+campaigns/       Per-restaurant manifests, schema-validated in CI
+```
+
+Two JS dialects coexist deliberately: `engine/*.js` are classic scripts
+(`game.js` reads `SPECIALS` straight out of `config.js`'s scope), `src/` is real
+ES modules. The engine reaches tested logic through `window.Mechanics`, published
+before it is ever ticked (ADR 0005).
+
+## Reskinning for another restaurant
+
+Add `campaigns/<id>.json` and load it with `?campaign=<id>`:
+
+```json
+{
+  "schemaVersion": 1,
+  "brand": { "id": "demo-diner", "name": "Demo Diner", "gameName": "Diner Dash Slice", ... },
+  "rules": { "roundSeconds": 45, "lives": 3 },
+  "items": [ ... ],
+  "hazard": { ... },
+  "rewards": { "pointsThreshold": 1500, "prizes": [ ... ] }
+}
+```
+
+`campaigns/example-reskin.json` is a working second campaign proving the path —
+different brand, rules, items, prizes and feature flags, same engine.
+
+The validator **fails loudly on anything touching money or fairness** (prize
+weights and labels, thresholds, round rules) and **falls back quietly on
+cosmetics** (a bad hex colour warns and defaults). An invalid manifest is
+rejected wholesale, because a half-applied campaign could pair one restaurant's
+prizes with another's threshold.
+
+## Deploying
+
+⚠️ **Two things must happen first, both by a human.**
+
+1. **Apply `supabase/schema.sql` by hand** to the target Supabase project. The
+   `resolve_run` signature gained a survival gate (ADR 0009) and the old
+   8-argument overload is dropped, so a stale database fails loudly rather than
+   silently resolving runs without the gate.
+2. **Link a Vercel project this build actually owns.** `.vercel/` was detached
+   from Krispy Kreme's live project (ADR 0002) and never relinked — a deploy
+   from here previously would have overwritten a different client's site.
+
+Then `npm run build` and publish `dist/`.
+
+Environment variables (server-side only, never in client code):
+`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ADMIN_KEY`, `FOODICS_WEBHOOK_SECRET`.
+
+## Known limitations
+
+Kept here rather than in a drawer, because every one of them is a real gap:
+
+- **No integration test against a real database.** Row locking, one-time token
+  consumption and campaign budget are verified by code reading only — no
+  Supabase instance is reachable from this environment. Biggest remaining risk.
+- **The reward wheel's compliance question is OPEN.** Weighted random draws for
+  real prize value need written legal sign-off before launch. ADR 0008 records
+  the decision to keep the wheel; that is a product decision, not the sign-off.
+  See `docs/security/reward-wheel-compliance.md`.
+- **Identity is unverified.** No OTP — `api/register.mjs` trusts the number as
+  typed, by an explicit product decision. Multi-account farming stays open.
+- **No rate limiting or emergency campaign shutdown** in the client-facing path.
+- **Redemption is counter-only.** The catalogue refuses to grant value in-app
+  until it is wired to `redeem_wheel_win`.
+- **No analytics vendor.** Events buffer behind a `setSink()` seam.
+- **Images are PNG/JPEG.** WebP/AVIF would cut the remaining ~345 KB.
+- **RLS is assumed, not verified.**
+
+## Documentation
+
+|                            |                                                       |
+| -------------------------- | ----------------------------------------------------- |
+| `docs/audit/`              | The 2026-08-07 production-readiness audit             |
+| `docs/decisions/`          | ADRs — every material decision, with what it replaced |
+| `docs/product/`            | Product brief                                         |
+| `docs/security/`           | Open compliance flags                                 |
+| `docs/analytics-events.md` | The event taxonomy                                    |
+| `docs/runbooks/`           | Local dev, pre-deploy checklist                       |
+| `CLAUDE.md`                | Orientation for an agent session                      |

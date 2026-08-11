@@ -10,16 +10,15 @@ instructed.
 
 ## Slice Rush — current scope
 
-- 30-second round. Win: survive the full round. Loss: hit 2 bombs.
-  _(Caveat, verified in code: "survive to win" is not yet a distinct game
-  state — see `docs/project-inventory.md` → "Incomplete features."
-  Currently, win/loss for reward purposes is decided by score vs. the wheel
-  points threshold, not survival. Don't assume the brief and the shipped
-  code agree; check both.)_
-- Restaurant-specific branding: colors, menu items, hazards, copy, assets,
-  reward rules — driven by `engine/config.js`'s `CONFIG`/`BRAND`/`FOODS`/
-  `BOMB` constants per build. This is the reskin surface; see
-  `claimlabs-configurable-reskins`.
+- 30-second round. **Win: survive the full round. Loss: hit 2 bombs.** Real,
+  not aspirational (ADR 0004): `resolveOutcome()` derives it from round state,
+  and `api/submit-run.mjs` re-derives survival from duration server-side before
+  any prize is drawn. Score is leaderboard bragging rights and does not gate
+  the win.
+- Restaurant-specific content lives in a **validated campaign manifest**
+  (`campaigns/<id>.json`, ADR 0012), loaded with `?campaign=<id>`.
+  `engine/config.js` is the tuning + fallback surface, not the reskin surface.
+  `campaigns/example-reskin.json` proves a second restaurant is a JSON file.
 - Real discount codes / prizes are issued **only** by the server
   (`resolve_run` RPC), never the client. This is non-negotiable — see
   Security below.
@@ -38,26 +37,36 @@ significantly since the fork).
 ```
 mcdonalds/
 ├── engine/        # classic global-script game loop (config, platform, audio, game)
-├── src/           # newer ES-module app shell (router, store, pages, components, styles)
-│                  #   NOT YET reconciled with engine/ — see known issue below
+├── src/           # ES-module app shell
+│   ├── game/      #   PURE, tested mechanics (ballistics, waves, collision, rules, fx)
+│   ├── services/  #   the ONLY code that talks to the reward backend
+│   ├── campaign/  #   manifest schema + loader
+│   ├── analytics/ #   closed event taxonomy + allow-listed redactor
+│   ├── core/      #   router, store, i18n, live rule reads
+│   └── pages/     #   one function per screen
 ├── api/           # Vercel Functions (start-run, submit-run, pos-credit, admin-*)
 ├── netlify/functions/  # mirror of api/ for Netlify hosting
 ├── lib/db.mjs      # Supabase/PostgREST helper, admin auth, phone normalization
 ├── supabase/schema.sql  # tables + atomic RPCs (resolve_run, start_play, credit_order_points...)
 ├── assets/         # McDonald's sprites — some still stale-branded, see known issues
+├── campaigns/     # per-restaurant manifests, schema-validated in CI
+├── scripts/       # build, campaign validation, perf baseline
+├── tests/         # unit (Vitest) + e2e (Playwright, 6 viewports)
 ├── stitch-export/  # Stitch design references ("McSlice Rewards Arcade")
 ├── _legacy-ui-backup/  # retired, not shipped
 └── docs/, .claude/  # this system
 ```
 
-No Git repository exists yet anywhere in this project tree. Do not assume
-`git log`/branches/PRs are available until one is created — see
-"Operations that require human approval."
+A local Git repository exists (created 2026-08-07; baseline tag
+`baseline-2026-08-07`, branch `backup/pre-production-2026-08-07`). **No remote
+is configured** — pushing anywhere is still a human decision.
 
 ## Technology stack
 
-- **Frontend:** vanilla JS, no bundler, no `package.json`. Canvas 2D
-  gameplay engine (`engine/game.js`) + ES-module app shell (`src/`).
+- **Frontend:** vanilla JS, no framework. Canvas 2D gameplay engine
+  (`engine/game.js`) + ES-module app shell (`src/`). Development needs **no
+  build step**; `npm run build` produces a hashed, minified `dist/` for
+  deployment only (ADR 0013).
 - **Backend:** Vercel Serverless Functions (`.mjs`), Supabase Postgres via
   PostgREST (raw `fetch`, no ORM).
 - **Local dev server:** `server.py` (Python stdlib, threaded as of ADR
@@ -67,29 +76,23 @@ No Git repository exists yet anywhere in this project tree. Do not assume
 ## Essential commands
 
 ```bash
-# Local dev (from mcdonalds/)
-python3 server.py                 # http://localhost:8765
-# Testing on desktop browser (bypasses mobile gate + Saturday-style gates
-# inherited from the loyalty model, plus dev helpers):
-#   ?play   — bypass mobile/tablet gate
-#   ?dev    — enable dev helpers
-#   ?anyday — bypass any day-of-week gating inherited from prior builds
-```
-
-A toolchain exists as of 2026-08-07 (`package.json`, no bundler — the app still
-ships as raw files):
-
-```bash
 npm install
-npm run verify      # format:check + lint + typecheck + unit tests
-npm test            # Vitest — pure gameplay/reward logic in src/game, src/services
-npm run test:e2e    # Playwright — 6 mobile viewports, starts server.py itself
-npm run lint        # ESLint 9 (flat config; engine/ src/ api/ sw.js each typed differently)
-npm run typecheck   # tsc --checkJs, ambient engine globals in types/globals.d.ts
+npm run dev              # http://localhost:8765 — serves the SOURCE, no build
+npm run verify           # format + lint + typecheck + manifests + unit tests
+npm test                 # Vitest — the pure modules
+npm run test:e2e         # Playwright — 654 tests, 6 mobile viewports
+npm run build            # hashed, minified dist/  (deployment only)
+npm run preview          # serve dist/ on :8767
+npm run perf             # measured load + fps baseline at 4x CPU throttle
+npm run validate:campaigns
 ```
 
-There is still **no build step** and no production bundle — `npm run build` does
-not exist by design (ADR 0005/0006 keep the no-bundler runtime).
+`?play` bypasses the mobile/tablet device gate on desktop. It grants no points,
+rewards or eligibility, and must never be extended to.
+`?campaign=<id>` loads a manifest from `campaigns/`.
+
+CI (`.github/workflows/verify.yml`) runs `npm run verify`, the production build
+with a bundle-size guard, and the full browser suite.
 
 Two harness facts worth knowing before writing tests:
 
@@ -102,14 +105,18 @@ Two harness facts worth knowing before writing tests:
 
 ## Architecture boundaries
 
-- **`engine/` vs `src/`:** `engine/*.js` are the real game loop (loaded as
-  plain `<script>` globals). `src/*.js` is a newer ES-module layer
-  (router/pages/store) wired in via `src/adapters/engine-bridge.js`. They
-  are **not fully reconciled** — `src/pages/victory.js` reads from its own
-  mock `Store`, not the real `engine.js` round result, and the in-round HUD
-  currently renders twice (once from each layer). Don't build new features
-  assuming these are unified; check which layer actually owns a given
-  screen first.
+- **`engine/` vs `src/`:** `engine/*.js` are the real game loop, loaded as
+  plain `<script>` globals that share top-level scope (`game.js` reads
+  `SPECIALS` out of `config.js`'s scope — never bundle them as ES modules).
+  `src/*.js` is the ES-module layer, wired in via
+  `src/adapters/engine-bridge.js`. The engine reaches tested logic through
+  `window.Mechanics`, published before it is ever ticked (ADR 0005).
+  The two are now reconciled: **the DOM owns all in-round UI** (the canvas HUD
+  was deleted, ADR 0006) and the result screen reads the real round.
+- **Anything laid over the canvas must be pointer-transparent** (ADR 0015). An
+  overlay once won the hit test across the whole play field and the game could
+  not be sliced at all — and every test missed it, because they dispatched
+  events straight at the canvas.
 - **Reward decisions are server-only.** `resolve_run`, `start_play`,
   `credit_order_points` in `supabase/schema.sql` are the authority. Client
   code (`engine/game.js`, `src/`) may only _display_ what the server
