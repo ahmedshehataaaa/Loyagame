@@ -22,7 +22,7 @@ portrait-only by design.
 
 ```bash
 npm run verify       # format + lint + typecheck + manifests + unit tests
-npm run test:e2e     # 654 browser tests across 6 mobile viewports
+npm run test:e2e     # 732 browser tests across 6 mobile viewports
 npm run build        # hashed, minified dist/
 npm run preview      # serve dist/ on :8767
 npm run perf         # measured load + frame-rate baseline (4x CPU throttle)

@@ -5,10 +5,10 @@ globs: ['tests/**', '**/*.test.js', '**/*.test.mjs', '**/*.spec.js', 'games/slic
 
 # Tests
 
-- **The suite is Vitest (unit) + Playwright (browser).** 157 unit tests over
+- **The suite is Vitest (unit) + Playwright (browser).** 183 unit tests over
   the pure modules in `src/game/`, `src/services/`, `src/campaign/`,
-  `src/core/i18n.js` and `src/analytics/`; 654 browser tests across the six
-  supported viewports. `npm run verify` runs the static gates plus unit tests;
+  `src/components/spin-wheel.js`, `src/core/i18n.js` and `src/analytics/`; 732
+  browser tests across the six supported viewports. `npm run verify` runs the static gates plus unit tests;
   `npm run test:e2e` runs the browser suite.
 - **Prefer a pure module over a browser test.** Headless Chromium throttles
   `requestAnimationFrame` to roughly 1.3fps here, so anything asserting on

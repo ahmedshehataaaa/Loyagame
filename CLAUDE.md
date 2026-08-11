@@ -80,7 +80,7 @@ npm install
 npm run dev              # http://localhost:8765 — serves the SOURCE, no build
 npm run verify           # format + lint + typecheck + manifests + unit tests
 npm test                 # Vitest — the pure modules
-npm run test:e2e         # Playwright — 654 tests, 6 mobile viewports
+npm run test:e2e         # Playwright — 732 tests, 6 mobile viewports
 npm run build            # hashed, minified dist/  (deployment only)
 npm run preview          # serve dist/ on :8767
 npm run perf             # measured load + fps baseline at 4x CPU throttle

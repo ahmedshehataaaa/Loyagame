@@ -1,6 +1,76 @@
 # PROGRESS.md — McSlice Rush (McDonald's)
 
-## Current checkpoint — 2026-08-11 (all 10 audit stages complete)
+## Current checkpoint — 2026-08-12 (Spin to Win + server-minted coupons)
+
+Decision record: **ADR 0016**. The reward reveal now runs through a prize
+wheel, and a win now comes with a coupon code the player can actually present
+at a counter.
+
+### The rule that holds the whole thing up
+
+**The server mints the coupon and picks the prize BEFORE the wheel is built.**
+`spinWheel()` is handed a thunk resolving to an already-recorded
+`RewardOutcome`, looks up which segment that names, and stops there. The spin is
+a reveal, never the randomness source — the inverse (spin, then ask the server
+to honour where it landed) would put a real-money decision back in the browser,
+which is the class of bug ADR 0009 closed.
+
+`mint_coupon_code()` generates `MC-XXXX-XXXX` inside `resolve_run`'s row-locked
+transaction, from an alphabet with `I`/`O`/`0`/`1` removed so a code read aloud
+at a counter cannot be mistyped. `wheel_wins.code` has a unique partial index.
+
+### What else landed
+
+- **Spawns stay inside the visible field** (`src/game/field.js`). COVER scaling
+  makes the virtual field wider than a tall viewport, and the fixed spawn
+  margins knew nothing about the crop: 32–40px of every edge-most item was off
+  screen on **four of the six supported viewports**. Now a pure, tested
+  geometry module derives the visible slice on every resize.
+- `src/core/rules.js` guards `window` itself, not just `CONFIG`, so the rules
+  modules can be imported by Node unit tests instead of throwing.
+- `el()` applies CSS custom properties. `Object.assign(node.style, …)` silently
+  drops every `--custom` key, which is why the wheel's segments settled at the
+  wrong angle.
+- Wheel action buttons carry `data-act` (`spin`/`close`/`retry`/`wallet`) so
+  tests address the action, not the translated label.
+
+### The 20 tests this broke, and why they were right to break
+
+`UI.showChooser()` emits `won: true`, so every legacy spec that finished a round
+as a survivor got the overlay instead of an immediate route change and sat on
+`#/play` until it timed out. Fixed by **traversing** the reveal
+(`tests/e2e/spin-reveal.js`), not by weakening an assertion. One case was
+strengthened: `an absurd score does not produce a prize` had been asserting an
+empty Result screen while the overlay was still up — passing vacuously. The
+hostile-body cases now also assert the wheel itself renders no prize, since the
+reveal is a second surface that could leak one.
+
+### Verification
+
+**183 unit + 732 browser tests**, all passing across 320/360/375/390/412/430.
+Format, lint, typecheck clean. `dist/` rebuilt (1120.2 KB, 51 files) and the
+production-build specs re-run against it.
+
+### Still required before any deploy — both human actions
+
+1. **Apply `supabase/schema.sql` by hand.** This checkpoint adds
+   `wheel_wins.code`, its unique index and `mint_coupon_code()`, on top of the
+   survival gate. Additive and idempotent; a stale database fails loudly.
+2. **Link a Vercel project this build owns** (ADR 0002, still open).
+
+### And one thing that got sharper, not smaller
+
+`docs/security/reward-wheel-compliance.md` is still open. The odds have not
+changed, but the UI is now literally a spinning prize wheel and the player walks
+away holding a code. ADR 0008 recorded a product decision; that is still not the
+legal sign-off this asks for. Re-raise it before launch.
+
+_(`docs/decisions/0012-*.md` is referenced by CLAUDE.md but does not exist —
+worth reconstructing.)_
+
+---
+
+## Previous checkpoint — 2026-08-11 (all 10 audit stages complete)
 
 Audit: `docs/audit/2026-08-07-production-readiness-audit.md`. Every decision:
 `docs/decisions/` (ADRs 0004–0015).
