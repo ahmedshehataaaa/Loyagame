@@ -20,6 +20,7 @@ import { segmentHitsCircle, distanceToSegment, corridorGap } from './collision.j
 import { planWave, difficultyAt } from './wave-planner.js';
 import { resolveOutcome, applyHazardHit, isWin, isPlausibleRun, OUTCOME } from './round-rules.js';
 import { capPush, burstSize, shakeAmount, shouldTick, FX_DEFAULTS } from './fx-budget.js';
+import { visibleVirtualRange, safeSpawnBounds, isFullyVisible, safeApexBand } from './field.js';
 
 export const Mechanics = {
   systemRng,
@@ -47,6 +48,10 @@ export const Mechanics = {
   shakeAmount,
   shouldTick,
   FX_DEFAULTS,
+  visibleVirtualRange,
+  safeSpawnBounds,
+  isFullyVisible,
+  safeApexBand,
 };
 
 window.Mechanics = Mechanics;

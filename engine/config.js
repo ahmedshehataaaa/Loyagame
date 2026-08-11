@@ -24,7 +24,8 @@ const CONFIG = {
     apexMin: 0.58, // fraction of HEIGHT an item rises, minimum
     apexMax: 0.74, // ...and maximum. ~1.8-2.0s hang time at GRAVITY above.
     maxLateralFrac: 0.2, // furthest sideways drift, fraction of WIDTH
-    marginFrac: 0.1, // keep launches/landings this far off each edge
+    marginFrac: 0.1, // fallback inset when the visible range is unknown
+    breathFrac: 0.02, // extra inset so a sprite never grazes the visible edge
   },
 
   START_LIVES: 2, // Slice Rush spec: lose after 2 bombs

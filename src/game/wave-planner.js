@@ -43,6 +43,8 @@ function withDefaults(t) {
     bombClearanceFrac: 0.18,
     maxLateralFrac: 0.2,
     marginFrac: 0.1,
+    // Set by the engine from the visible viewport; overrides marginFrac.
+    bounds: null,
     apexMin: 0.58,
     apexMax: 0.74,
     goldenChance: 0.05,
@@ -53,11 +55,18 @@ function withDefaults(t) {
   };
 }
 
-/** A corridor is the x-interval an item sweeps while airborne. */
+/**
+ * A corridor is the x-interval an item sweeps while airborne.
+ *
+ * `bounds` (when supplied) is the range actually VISIBLE on this viewport,
+ * already inset by the item radius — see src/game/field.js. It overrides the
+ * flat `marginFrac`, which knows nothing about the cover-scale crop and let
+ * items launch into the strips of the virtual field that are off screen.
+ */
 function makeCorridor(rng, tuning) {
-  const { marginFrac, maxLateralFrac } = tuning;
-  const lo = marginFrac;
-  const hi = 1 - marginFrac;
+  const { marginFrac, maxLateralFrac, bounds } = tuning;
+  const lo = bounds ? bounds.minFrac : marginFrac;
+  const hi = bounds ? bounds.maxFrac : 1 - marginFrac;
   const startXFrac = range(rng, lo, hi);
   const drift = range(rng, -maxLateralFrac, maxLateralFrac);
   // Clamp the landing point inside the margins rather than letting items
@@ -78,10 +87,12 @@ const clearOf = (c, others, clearance) =>
  * @returns {{startXFrac:number,targetXFrac:number}|null}
  */
 function findClearCorridor(bombs, tuning) {
-  const { marginFrac, bombClearanceFrac } = tuning;
+  const { marginFrac, bombClearanceFrac, bounds } = tuning;
+  const lo = bounds ? bounds.minFrac : marginFrac;
+  const hi = bounds ? bounds.maxFrac : 1 - marginFrac;
   const steps = 40;
   for (let i = 0; i <= steps; i++) {
-    const c = marginFrac + ((1 - 2 * marginFrac) * i) / steps;
+    const c = lo + ((hi - lo) * i) / steps;
     const candidate = { startXFrac: c, targetXFrac: c }; // vertical toss, narrowest possible
     if (clearOf(candidate, bombs, bombClearanceFrac)) return candidate;
   }

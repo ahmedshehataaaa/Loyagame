@@ -23,6 +23,13 @@ const Game = (() => {
     dpr = 1;
   let SW = CONFIG.WIDTH,
     SH = CONFIG.HEIGHT; // stage size in CSS px
+  // The visible slice of the virtual field, and the x-range a whole sprite can
+  // occupy within it. Recomputed on every resize.
+  let visible = { minXFrac: 0, maxXFrac: 1, minYFrac: 0, maxYFrac: 1, scale: 1 };
+  let spawnBounds = null;
+  // The apex band that keeps item TOPS on screen. Only differs from the
+  // configured band when the viewport is wider than the field's aspect ratio.
+  let apexBand = null;
   const W = CONFIG.WIDTH,
     H = CONFIG.HEIGHT;
 
@@ -48,6 +55,42 @@ const Game = (() => {
     canvas.height = Math.round(SH * dpr);
     canvas.style.width = SW + 'px';
     canvas.style.height = SH + 'px';
+
+    /* COVER scaling means the virtual field is WIDER than a tall viewport, so a
+       strip down each side is off screen. Recompute which slice is actually
+       visible so spawns can be kept inside it — items used to launch into the
+       cropped strips and appear to fly off the left/right edges. */
+    visible = Mechanics.visibleVirtualRange({
+      viewportW: SW,
+      viewportH: SH,
+      fieldW: W,
+      fieldH: H,
+    });
+    spawnBounds = Mechanics.safeSpawnBounds({
+      minXFrac: visible.minXFrac,
+      maxXFrac: visible.maxXFrac,
+      radiusFrac: maxItemRadius() / W,
+      breathFrac: CONFIG.LAUNCH.breathFrac ?? 0.02,
+    });
+
+    /* The same crop on the other axis. A viewport WIDER than the field (every
+       desktop window, which `?play` opens) is scaled by width, so the field
+       overflows top and bottom and the configured apex throws items straight
+       through the top edge. */
+    apexBand = Mechanics.safeApexBand({
+      minYFrac: visible.minYFrac,
+      apexMin: CONFIG.LAUNCH.apexMin,
+      apexMax: CONFIG.LAUNCH.apexMax,
+      breathFrac: CONFIG.LAUNCH.breathFrac ?? 0.02,
+    });
+  }
+
+  /* Largest sprite radius in play, so the inset covers the worst case. Read
+     live: a campaign manifest can change the roster after boot. */
+  function maxItemRadius() {
+    let r = BOMB?.radius ?? 0;
+    for (const f of FOODS) if (f.radius > r) r = f.radius;
+    return r;
   }
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 60));
@@ -146,10 +189,13 @@ const Game = (() => {
         ...CONFIG.spawn,
         goldenChance: CONFIG.POWERUP.goldenChance,
         specialChance: CONFIG.POWERUP.specialChance,
-        apexMin: CONFIG.LAUNCH.apexMin,
-        apexMax: CONFIG.LAUNCH.apexMax,
+        // Clamped to the visible field, not the raw config — see resize().
+        apexMin: apexBand?.apexMin ?? CONFIG.LAUNCH.apexMin,
+        apexMax: apexBand?.apexMax ?? CONFIG.LAUNCH.apexMax,
         maxLateralFrac: CONFIG.LAUNCH.maxLateralFrac,
         marginFrac: CONFIG.LAUNCH.marginFrac,
+        // Keeps every spawn inside the slice of the field that is on screen.
+        bounds: spawnBounds,
       },
     });
     spawnTimer = wave.intervalSec;
