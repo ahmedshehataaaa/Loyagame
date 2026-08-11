@@ -1172,3 +1172,49 @@
     margin-bottom: -2px;
   }
 }
+
+/* ---- The play screen must not swallow the blade ---------------
+   CRITICAL. `.game-screen` is a full-height flex container laid over the
+   canvas to position the HUD. With default `pointer-events: auto` it was the
+   hit-test winner across the ENTIRE play field, so mousedown/touchstart never
+   reached the canvas and NOTHING COULD BE SLICED by a real player.
+
+   It went unnoticed because the e2e tests dispatched MouseEvents directly onto
+   the canvas element, which bypasses hit-testing entirely — they proved the
+   engine's maths, not that input could reach it.
+
+   So the overlay is transparent to pointers by default, and only the things a
+   player actually presses opt back in. */
+.game-screen {
+  pointer-events: none;
+}
+.game-screen .hud,
+.game-screen .modal,
+.game-screen .coach,
+.game-screen .state,
+.game-screen .btn,
+.game-screen .icon-btn {
+  pointer-events: auto;
+}
+/* Purely informational: they sit over the field and must never block a swipe. */
+.game-hint,
+.game-stake {
+  pointer-events: none;
+}
+/* The HUD bar itself is a layout row; only its controls need to catch taps. */
+.hud {
+  pointer-events: none;
+}
+.hud button,
+.hud .icon-btn {
+  pointer-events: auto;
+}
+
+/* A toast is informational and must never intercept a swipe. On a 320x568
+   screen the "Playing as guest" toast landed squarely in the play field and
+   blocked the player's first seconds of slicing — on taller phones it happened
+   to sit below the action, which is exactly the kind of size-dependent bug that
+   ships. */
+.toast {
+  pointer-events: none;
+}

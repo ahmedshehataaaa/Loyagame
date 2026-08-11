@@ -460,34 +460,93 @@ const Game = (() => {
     lastSlicePos = null;
   }
 
-  canvas.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
-  window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
-  window.addEventListener('mouseup', onUp);
-  canvas.addEventListener(
-    'touchstart',
-    (e) => {
+  /* ---- Input: Pointer Events ------------------------------------------
+     One unified stream instead of a parallel mouse pair plus a touch pair.
+     The old code bound mousedown/mousemove/mouseup AND touchstart/touchmove/
+     touchend separately, which meant a device firing both (any modern touch
+     browser emits compatibility mouse events) ran every swipe through two code
+     paths, and neither path could track a finger that left the canvas.
+
+     `setPointerCapture` is the substantive win: once a swipe starts, this
+     element keeps receiving moves even when the pointer travels over the HUD or
+     off the edge of the screen. Slicing across the top of the field used to
+     stop dead at the HUD's bounding box.
+
+     `coalesced` events matter for slicing specifically: a fast flick can move
+     hundreds of pixels between frames, and the browser buffers the intermediate
+     positions. Feeding them all to the segment test is what stops a genuine
+     swipe passing through an item unregistered. */
+  const supportsPointer = typeof window.PointerEvent === 'function';
+
+  if (supportsPointer) {
+    canvas.addEventListener('pointerdown', (e) => {
+      // Ignore secondary buttons: a right-click is not a slice.
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
       e.preventDefault();
-      const t = e.changedTouches[0];
-      onDown(t.clientX, t.clientY);
-    },
-    { passive: false },
-  );
-  canvas.addEventListener(
-    'touchmove',
-    (e) => {
-      e.preventDefault();
-      for (const t of e.changedTouches) handleMove(t.clientX, t.clientY);
-    },
-    { passive: false },
-  );
-  canvas.addEventListener(
-    'touchend',
-    (e) => {
-      e.preventDefault();
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* capture is an optimisation, not a requirement */
+      }
+      onDown(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (pointerDown) e.preventDefault();
+      const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null;
+      if (events && events.length > 1) {
+        for (const c of events) handleMove(c.clientX, c.clientY);
+      } else {
+        handleMove(e.clientX, e.clientY);
+      }
+    });
+
+    const release = (e) => {
+      try {
+        if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        /* already released */
+      }
       onUp();
-    },
-    { passive: false },
-  );
+    };
+    canvas.addEventListener('pointerup', release);
+    canvas.addEventListener('pointercancel', release);
+    // A pointer leaving the window without an up event would otherwise leave the
+    // blade stuck "down" and slicing on the next unrelated move.
+    window.addEventListener('blur', onUp);
+  } else {
+    /* Fallback for browsers with no Pointer Events. Kept deliberately minimal —
+       it exists so the game degrades rather than dies, not as a second
+       first-class path. */
+    canvas.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', onUp);
+    canvas.addEventListener(
+      'touchstart',
+      (e) => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        onDown(t.clientX, t.clientY);
+      },
+      { passive: false },
+    );
+    canvas.addEventListener(
+      'touchmove',
+      (e) => {
+        e.preventDefault();
+        for (const t of e.changedTouches) handleMove(t.clientX, t.clientY);
+      },
+      { passive: false },
+    );
+    canvas.addEventListener(
+      'touchend',
+      (e) => {
+        e.preventDefault();
+        onUp();
+      },
+      { passive: false },
+    );
+  }
 
   // ---- Update -----------------------------------------------------------
   let totalSlices = 0;

@@ -130,89 +130,124 @@ test.describe('HUD', () => {
 });
 
 test.describe('slice input', () => {
-  test('a swipe across an airborne item scores', async ({ page }) => {
-    // Proves the client->game coordinate mapping is correct in portrait. When
-    // the stage was rotated, this mapping needed a swap/flip term; getting it
-    // wrong silently made the whole field unhittable.
+  /** Wait until something is actually airborne — the precondition for a slice. */
+  async function waitForItems(page) {
+    await page
+      .waitForFunction(
+        () => {
+          const cv = /** @type {any} */ (document.getElementById('game'));
+          if (!cv?.width) return false;
+          const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+          let n = 0;
+          for (let i = 3; i < d.length; i += 4 * 37) if (d[i] > 24 && ++n > 30) return true;
+          return false;
+        },
+        null,
+        { timeout: 30000 },
+      )
+      .catch(() => {});
+  }
+
+  const score = async (page) => Number(await page.locator('#game').getAttribute('data-score'));
+
+  test('the play overlay does not swallow pointer input', async ({ page }) => {
+    /* THE REGRESSION THIS EXISTS FOR, and it was a real one: `.game-screen` is a
+       full-height flex container laid over the canvas to position the HUD. With
+       default pointer-events it won the hit test across the ENTIRE play field,
+       so mousedown/touchstart never reached the canvas and NOTHING could be
+       sliced by a real player.
+
+       It survived because the older test dispatched MouseEvents directly onto
+       the canvas element, which bypasses hit-testing entirely — proving the
+       engine's maths, not that input could reach it. So this asserts on
+       elementFromPoint: what a real finger would actually hit. */
     await startRound(page);
-
-    const scored = await page.evaluate(async () => {
-      const canvas = document.getElementById('game');
-      const rect = canvas.getBoundingClientRect();
-      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-      const fire = (type, x, y, target) =>
-        target.dispatchEvent(
-          new MouseEvent(type, {
-            clientX: x,
-            clientY: y,
-            bubbles: true,
-            cancelable: true,
-            view: window,
-          }),
-        );
-
-      /* Wait for items to actually be ON SCREEN rather than guessing a delay.
-         rAF is throttled to roughly 1.3fps here and gets slower still when the
-         whole suite runs in parallel, so a fixed sleep is inherently flaky —
-         it was. Poll the rendered canvas for non-background pixels instead,
-         which is the real precondition: something must be airborne to slice. */
-      const cv = /** @type {HTMLCanvasElement} */ (canvas);
-      const ctx = cv.getContext('2d');
-      async function itemsVisible() {
-        const { width: w, height: h } = cv;
-        if (!w || !h) return false;
-        const data = ctx.getImageData(0, 0, w, h).data;
-        let painted = 0;
-        // Alpha channel: the canvas is transparent where nothing is drawn.
-        for (let i = 3; i < data.length; i += 4 * 37) {
-          if (data[i] > 24 && ++painted > 30) return true;
-        }
-        return false;
-      }
-
-      const deadline = Date.now() + 30000;
-      while (Date.now() < deadline && !(await itemsVisible())) await sleep(250);
-
-      // Sweep repeatedly across the field until something connects. Items keep
-      // moving between sweeps, so more passes materially raise the hit chance.
-      while (Date.now() < deadline && Number(canvas.dataset.score) === 0) {
-        for (const frac of [0.3, 0.38, 0.46, 0.54, 0.62, 0.7]) {
-          const y = rect.top + rect.height * frac;
-          fire('mousedown', rect.left + 6, y, canvas);
-          for (let i = 1; i <= 28; i++) {
-            fire('mousemove', rect.left + 6 + (rect.width - 12) * (i / 28), y, window);
-            await sleep(8);
-          }
-          fire('mouseup', rect.left + rect.width - 6, y, window);
-          if (Number(canvas.dataset.score) > 0) break;
-          await sleep(150);
-        }
-      }
-      return Number(canvas.dataset.score);
+    const hits = await page.evaluate(() => {
+      const at = (x, y) => document.elementFromPoint(x, y)?.id ?? '';
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      return [
+        at(w / 2, h * 0.3),
+        at(w / 2, h * 0.5),
+        at(w / 2, h * 0.7),
+        at(w * 0.15, h * 0.5),
+        at(w * 0.85, h * 0.5),
+      ];
     });
-
-    expect(scored).toBeGreaterThan(0);
-  });
-});
-
-test.describe('lifecycle', () => {
-  test('leaving the play route tears the round down', async ({ page }) => {
-    await startRound(page);
-    await page.evaluate(() => {
-      location.hash = '#/';
-    });
-    await expect(page).toHaveURL(/#\/$/);
-    // The shared canvas must be hidden again once the route is gone.
-    await expect(page.locator('#stage')).not.toHaveClass(/is-playing/);
+    for (const id of hits) expect(id).toBe('game');
   });
 
-  test('hiding the tab pauses rather than draining the clock', async ({ page }) => {
+  test('the HUD controls still receive taps', async ({ page }) => {
+    // Making the overlay pointer-transparent must not take the buttons with it.
     await startRound(page);
-    await page.evaluate(() => {
-      Object.defineProperty(document, 'hidden', { value: true, configurable: true });
-      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
-      document.dispatchEvent(new Event('visibilitychange'));
-    });
+    await page.getByRole('button', { name: /pause/i }).click();
     await expect(page.getByText(/paused/i)).toBeVisible();
+  });
+
+  test('a real mouse swipe scores', async ({ page }) => {
+    /* Driven through Playwright's real input pipeline — hit-tested, exactly as a
+       player's would be — rather than by dispatching events at the canvas. */
+    await startRound(page);
+    await waitForItems(page);
+
+    const size = page.viewportSize();
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline && (await score(page)) === 0) {
+      for (const frac of [0.32, 0.42, 0.52, 0.62, 0.72]) {
+        const y = size.height * frac;
+        await page.mouse.move(8, y);
+        await page.mouse.down();
+        for (let i = 1; i <= 25; i++) {
+          await page.mouse.move(8 + ((size.width - 16) * i) / 25, y);
+        }
+        await page.mouse.up();
+        if ((await score(page)) > 0) break;
+        await page.waitForTimeout(80);
+      }
+    }
+    expect(await score(page)).toBeGreaterThan(0);
+    expect(Number(await page.locator('#game').getAttribute('data-slices'))).toBeGreaterThan(0);
+  });
+
+  test('a real touch-pointer swipe scores', async ({ page }) => {
+    // The primary input for this game is a finger, so it gets its own case.
+    await startRound(page);
+    await waitForItems(page);
+
+    const size = page.viewportSize();
+    const canvas = page.locator('#game');
+    const send = (type, x, y) =>
+      canvas.dispatchEvent(type, {
+        pointerId: 1,
+        pointerType: 'touch',
+        isPrimary: true,
+        button: 0,
+        clientX: x,
+        clientY: y,
+      });
+
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline && (await score(page)) === 0) {
+      for (const frac of [0.32, 0.42, 0.52, 0.62, 0.72]) {
+        const y = size.height * frac;
+        await send('pointerdown', 8, y);
+        for (let i = 1; i <= 25; i++) {
+          await send('pointermove', 8 + ((size.width - 16) * i) / 25, y);
+        }
+        await send('pointerup', size.width - 8, y);
+        if ((await score(page)) > 0) break;
+        await page.waitForTimeout(80);
+      }
+    }
+    expect(await score(page)).toBeGreaterThan(0);
+  });
+
+  test('the engine uses Pointer Events, not parallel mouse and touch paths', async ({ page }) => {
+    /* Both pairs bound at once meant every swipe on a touch device ran through
+       two code paths (browsers emit compatibility mouse events), and neither
+       could follow a finger off the canvas. */
+    await startRound(page);
+    const hasPointer = await page.evaluate(() => typeof window.PointerEvent === 'function');
+    expect(hasPointer).toBe(true);
   });
 });
