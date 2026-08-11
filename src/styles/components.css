@@ -1218,3 +1218,17 @@
 .toast {
   pointer-events: none;
 }
+
+/* ---- Confetti must stay behind the numbers -------------------
+   `.confetti` is positioned with z-index:0 while its siblings on the result
+   screen are static. A positioned element beats a static one regardless of
+   document order, so the confetti painted OVER the final score, the points
+   figure and the prize label — directly contradicting the note in result.js
+   that it is decorative and must never sit over what the player came to read.
+
+   Promoting the content into the same stacking context fixes it without
+   touching the animation. */
+.victory > *:not(.confetti) {
+  position: relative;
+  z-index: 1;
+}
