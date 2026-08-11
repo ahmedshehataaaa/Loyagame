@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
-"""Minimal static file server for local development and the test suite.
+"""Static file server + local reward backend, for development and the test suite.
 
-Serves this script's own directory, avoiding os.getcwd() (sandbox-safe).
+Serves this script's own directory, avoiding os.getcwd() (sandbox-safe), and
+answers `/api/*` from `dev_api.py`.
+
+The API half exists because the shipped backend is Vercel Functions plus
+Supabase, neither of which is reachable from a laptop — so every reward call
+used to 404 and the player was told "Rewards are not available in this build"
+on every win. `dev_api.py` mirrors the same wire contract locally. It is a DEV
+server: nothing here ships, and `dist/` contains no Python at all.
 """
 
 import http.server
+import json
 import os
 import socketserver
 import sys
+
+import dev_api
 
 PORT = int(os.environ.get("PORT", "8765"))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -16,6 +26,28 @@ DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
+
+    def do_POST(self):
+        """Route `/api/*` to the dev backend; everything else is not a POST target."""
+        path = self.path.split("?", 1)[0]
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = 0
+        raw = self.rfile.read(length) if length else b"{}"
+
+        result = dev_api.handle(path, raw)
+        if result is None:
+            self.send_error(404, "No such endpoint")
+            return
+
+        status, payload = result
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def end_headers(self):
         # Disable caching so local edits always show on reload.

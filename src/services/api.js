@@ -15,7 +15,7 @@
  * Error kinds callers may branch on. Anything unrecognised collapses to
  * `server_error`, which callers must treat as "no reward" — never as "maybe".
  * @typedef {'offline'|'timeout'|'network'|'bad_response'|'server_error'
- *   |'invalid_token'|'rate_limited'|'not_configured'} ApiErrorKind
+ *   |'invalid_token'|'rate_limited'|'not_configured'|'no_identity'} ApiErrorKind
  */
 
 /**
@@ -25,11 +25,11 @@
  * dance for what is, at runtime, a plain property check.
  *
  * @template T
- * @typedef {{ok: true, data: T, kind?: undefined, status?: undefined, detail?: undefined}} ApiOk
+ * @typedef {{ok: true, data: T, kind?: undefined, status?: undefined, detail?: undefined, body?: undefined}} ApiOk
  */
 
 /**
- * @typedef {{ok: false, kind: ApiErrorKind, status?: number, detail?: string, data?: undefined}} ApiErr
+ * @typedef {{ok: false, kind: ApiErrorKind, status?: number, detail?: string, body?: any, data?: undefined}} ApiErr
  */
 
 /**
@@ -93,6 +93,11 @@ export async function postJson(path, body, opts = {}) {
         kind: classify(res.status, payload?.error),
         status: res.status,
         detail: typeof payload?.error === 'string' ? payload.error : undefined,
+        /* The failure envelope, for callers that need a detail the taxonomy
+           cannot carry — "how many tries are left" being the live example.
+           `ok` is still false, so this can never be mistaken for a success:
+           the reward path branches on `ok` alone and never reads this. */
+        body: payload ?? undefined,
       };
     }
 

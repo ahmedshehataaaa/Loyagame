@@ -6,6 +6,22 @@
 import { navigate } from '../core/router.js';
 import { t } from '../core/i18n.js';
 
+/**
+ * Apply a style object, including CSS custom properties.
+ *
+ * `Object.assign(node.style, obj)` silently DROPS any `--custom` key: a
+ * CSSStyleDeclaration has no such property to assign to, so the write is a
+ * no-op with no error. That cost real time on the spin wheel, where every
+ * segment's `--seg-a` vanished and the cards settled at the wrong angle.
+ */
+function applyStyle(node, styles) {
+  for (const [prop, value] of Object.entries(styles)) {
+    if (value == null) continue;
+    if (prop.startsWith('--')) node.style.setProperty(prop, String(value));
+    else node.style[prop] = value;
+  }
+}
+
 export function el(tag, props, ...children) {
   const node = document.createElement(tag);
   // `props` is often passed as an explicit null when a node only has
@@ -15,7 +31,7 @@ export function el(tag, props, ...children) {
     if (k === 'class') node.className = v;
     else if (k === 'html') node.innerHTML = v;
     else if (k === 'text') node.textContent = v;
-    else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
+    else if (k === 'style' && typeof v === 'object') applyStyle(node, v);
     else if (k.startsWith('on') && typeof v === 'function')
       node.addEventListener(k.slice(2).toLowerCase(), v);
     else node.setAttribute(k, v === true ? '' : String(v));

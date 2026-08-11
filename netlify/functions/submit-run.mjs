@@ -62,8 +62,13 @@ export default async (req) => {
       const prizeIndex = wheel.findIndex((w) => w.key === r.prize.key);
       return ok({
         won: true,
+        survived,
         prize: { key: r.prize.key, label: r.prize.label },
         prizeIndex: prizeIndex < 0 ? 0 : prizeIndex,
+        /* The coupon the player shows at the counter. Minted server-side by
+           resolve_run inside the same row-locked transaction that recorded the
+           win, so it cannot be requested independently of a real award. */
+        code: r.code ?? r.coupon_code ?? null,
         wheel,
         orderPoints: r.order_points,
         pointsThreshold,

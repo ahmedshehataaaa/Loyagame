@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { revealThroughWheel } from './spin-reveal.js';
 
 /* Proves the reward path is server-authoritative in the REAL app, not just in
    unit tests: the backend is stubbed at the network boundary with
@@ -135,6 +136,9 @@ async function finishRoundAsSurvivor(page, { score = 42000, durationMs = 30000 }
     },
     [score, durationMs],
   );
+  /* A survived round reveals through the wheel now (ADR 0016); these specs are
+     about what the RESULT screen may show, so pass through the reveal. */
+  await revealThroughWheel(page);
   await expect(page).toHaveURL(/#\/result$/);
 }
 

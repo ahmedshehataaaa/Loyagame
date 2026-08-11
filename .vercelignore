@@ -1,3 +1,9 @@
 netlify/
 *.bak
 *.backup-*
+
+# Local dev backend — mirrors the API contract for development only.
+# Never part of a deploy; the real endpoints are api/*.mjs.
+dev_api.py
+server.py
+__pycache__/

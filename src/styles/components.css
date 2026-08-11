@@ -577,7 +577,9 @@
   margin-top: var(--sp-xs);
 }
 .reward-panel__prize {
-  font-family: var(--font-display);
+  /* See .spin__prize — the display face cannot render ®. */
+  font-family: var(--font-body);
+  font-weight: var(--fw-black);
   font-size: clamp(22px, 6.5vw, 30px);
   text-transform: uppercase;
   color: var(--c-primary);
@@ -845,7 +847,8 @@
   border-color: var(--c-ink);
 }
 .wallet-card__prize {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: var(--fw-black);
   font-size: clamp(22px, 6.5vw, 30px);
   text-transform: uppercase;
   margin: var(--sp-sm) 0;
@@ -1231,4 +1234,230 @@
 .victory > *:not(.confetti) {
   position: relative;
   z-index: 1;
+}
+
+/* ---- Spin to Win --------------------------------------------
+   Built against 04_spin_to_win_screen.png: red ground, gold arches, wide-tracked
+   white caps, a gold-ringed wheel of product cards on a pale interior, a gold
+   pointer at top, and a full-width gold SPIN NOW button. */
+.spin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-md);
+  padding-bottom: calc(var(--sp-md) + env(safe-area-inset-bottom, 0px));
+  background: var(--c-primary);
+  overflow-y: auto;
+}
+.spin {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-sm);
+  text-align: center;
+}
+.spin__title {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 9vw, 44px);
+  letter-spacing: 0.06em; /* the reference tracks this noticeably wide */
+  text-transform: uppercase;
+  color: var(--c-white);
+  line-height: 1.05;
+}
+.spin__sub {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 26ch;
+}
+
+/* ---- The wheel ---- */
+.spin .wheel {
+  position: relative;
+  width: min(72vw, 300px);
+  aspect-ratio: 1;
+  margin-top: var(--sp-md);
+  margin-bottom: var(--sp-sm);
+  flex: 0 0 auto;
+}
+.wheel__disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--c-surface);
+  border: 10px solid var(--c-secondary);
+  box-shadow:
+    0 0 0 3px rgba(0, 0, 0, 0.12),
+    0 10px 28px rgba(0, 0, 0, 0.28);
+  transform: rotate(0deg);
+  will-change: transform;
+}
+/* Each segment is a full-size layer rotated about the wheel's centre, with the
+   card pinned to the top of that layer. The orbit radius is therefore the
+   WHEEL's box — translating the card itself by a percentage resolves against
+   the card's own height and threw every segment outside the disc. */
+.wheel__seg {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+.wheel__card {
+  position: absolute;
+  top: 9%;
+  left: 50%;
+  transform-origin: 50% 50%;
+  /* Set from the segment count in JS — see spin-wheel.js. */
+  width: var(--seg-w, 22%);
+  /* Upright relative to the viewer: counters the segment's own angle, plus the
+     disc's resting angle once the spin settles. */
+  transform: translateX(-50%) rotate(calc(-1 * var(--seg-a, 0deg)));
+  padding: 4px 2px;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  background: var(--c-white);
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+.wheel__art {
+  width: 100%;
+  height: auto;
+  max-height: 26px;
+  object-fit: contain;
+}
+.wheel__glyph {
+  font-size: 18px;
+  line-height: 1;
+}
+.wheel__label {
+  font-size: 5.5px;
+  font-weight: var(--fw-black);
+  line-height: 1.15;
+  color: var(--c-ink);
+  text-transform: uppercase;
+  text-align: center;
+  /* Three lines maximum, and it must WRAP rather than clip: a prize name cut
+     mid-word ("FREE HASH BRO...") is worse than a slightly smaller one. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+/* After the spin, cards right themselves so the prize names can be read. */
+.wheel__disc.is-settled .wheel__card {
+  transition: transform 320ms ease-out;
+  transform: translateX(-50%) rotate(calc(-1 * (var(--seg-a, 0deg) + var(--disc-rot, 0deg))));
+}
+
+.wheel__hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--c-white);
+  border: 5px solid var(--c-secondary);
+  box-shadow: inset 0 0 0 6px var(--c-white);
+}
+.wheel__hub::after {
+  content: '';
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  background: var(--c-primary);
+}
+.wheel__pointer {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 22px solid var(--c-secondary);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+
+/* ---- Result of the spin ---- */
+.spin__status {
+  min-height: 24px;
+  margin-top: var(--sp-sm);
+  color: var(--c-white);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-bold);
+}
+.spin__status.is-error {
+  color: var(--c-secondary);
+}
+.spin__won {
+  font-family: var(--font-display);
+  font-size: var(--fs-headline);
+  text-transform: uppercase;
+  color: var(--c-white);
+}
+.spin__prize {
+  /* Body face, not display: Anton has no ® and renders it as a filled blob,
+     and a prize name is exactly where a registered mark has to appear. */
+  font-family: var(--font-body);
+  font-weight: var(--fw-black);
+  font-size: clamp(22px, 7vw, 32px);
+  text-transform: uppercase;
+  color: var(--c-secondary);
+  margin-top: 2px;
+}
+.spin__code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-sm);
+  flex-wrap: wrap;
+}
+.spin__code-value {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--c-white);
+  color: var(--c-ink);
+  border: 3px dashed var(--c-ink);
+  user-select: all; /* one tap selects the whole code if clipboard is blocked */
+}
+.spin__hint,
+.spin__points {
+  font-size: var(--fs-small);
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: var(--sp-xs);
+}
+.spin__actions {
+  width: 100%;
+  display: grid;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The spin is skipped entirely in JS; this stops any residual transition. */
+  .wheel__disc {
+    transition: none !important;
+  }
+}
+@media (max-height: 700px) {
+  .spin .wheel {
+    width: min(58vw, 232px);
+  }
+  .spin__sub {
+    font-size: var(--fs-small);
+  }
 }

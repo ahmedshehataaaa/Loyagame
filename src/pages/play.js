@@ -10,6 +10,7 @@ import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { startRound, endRound } from '../services/loyalty.js';
 import { coachCard, hasSeenCoach } from '../components/coach.js';
+import { spinWheel } from '../components/spin-wheel.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives } from '../core/rules.js';
 import { track, EVENTS } from '../analytics/index.js';
@@ -321,7 +322,7 @@ export function PlayPage(root) {
         durationMs: Number(result.durationMs) || 0,
       });
 
-      const reward = result.reward;
+      const reward = result.reward ?? null;
       if (reward) {
         if (reward.status === 'awarded' && reward.prize) {
           // The prize KEY only. The code is a bearer token and never leaves.
@@ -341,10 +342,38 @@ export function PlayPage(root) {
         }
       }
 
-      /* Both outcomes go to the same Result screen (ADR 0010). A win used to
-         be a route and a loss an in-place modal, which meant two layouts for
-         the same four facts — and they had already drifted apart. */
-      navigate('/result');
+      /* LOSS: straight to the Result screen. No wheel — a wheel that turns and
+         lands on nothing reads as a loss the player caused, when they simply
+         were not eligible. */
+      if (!result.won) {
+        navigate('/result');
+        return;
+      }
+
+      /* WIN: reveal through the Spin to Win wheel (ADR 0016).
+
+         The server has ALREADY minted the coupon and chosen the prize by this
+         point — `LoyaltyData.submitRun()` awaited it above. So `mintCoupon`
+         hands the wheel a decision that is already recorded, and the spin can
+         only ever reveal it. The wheel is not the randomness source, and there
+         is no path here that could make it one. */
+      const overlay = spinWheel({
+        serverWheel: reward?.wheel ?? null,
+        mintCoupon: async () => reward,
+        onDone: () => {
+          overlay.remove();
+          navigate('/result');
+        },
+        onWallet: () => {
+          overlay.remove();
+          navigate('/wallet');
+        },
+        onSignIn: () => {
+          overlay.remove();
+          navigate('/sign-in');
+        },
+      });
+      screen.append(overlay);
     }),
   );
 

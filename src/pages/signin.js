@@ -1,20 +1,24 @@
-/* Sign In — Stitch "McSlice Rush - Ronald Sign In".
-   A country-code + phone field, inline validation, a guarded submit, and a
-   guest path.
+/* Sign In — two steps, matching 02_signin_screen.png: enter a number, then
+   enter the code that number receives.
 
-   ⚠️ THE NUMBER IS NOT VERIFIED. There is no OTP: `api/register.mjs` trusts the
-   number as typed by an explicit product decision (July 2026), and re-claiming
-   a number that already holds points appends a fraud flag for review at payout
-   rather than blocking. The button therefore says "Continue", not "Send Code" —
-   it used to say the latter while sending nothing, which promised a
-   verification step that does not exist. See ADR 0009 for what real
-   verification would require. */
+   THE NUMBER IS VERIFIED NOW. It previously was not: the button said "Continue"
+   precisely because "Send Code" had promised a verification step that did not
+   exist, and the honest thing at the time was to stop promising it. The step
+   exists now — `/send-otp` and `/verify-otp` — so the reference's "Send Code"
+   is truthful again, and `setIdentity()` runs only after the SERVER reports
+   `verified: true`.
+
+   Nothing here knows the correct code, and nothing here decides whether
+   verification passed. A check the browser can answer is a check an attacker
+   can answer — the same rule that governs the reward path. */
 import { el, button, toast } from '../components/ui.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
-import { register, clearIdentity } from '../services/loyalty.js';
+import { register, clearIdentity, sendOtp, verifyOtp } from '../services/loyalty.js';
 import { t } from '../core/i18n.js';
 import { track, EVENTS } from '../analytics/index.js';
+
+const RESEND_COOLDOWN_SEC = 30;
 
 const CODES = ['+20', '+1', '+44', '+62', '+971', '+966'];
 
@@ -31,7 +35,6 @@ function validate(cc, digits) {
 export function SignInPage(root) {
   let submitting = false;
   // `method` records the PATH taken, never the number itself.
-  track(EVENTS.VERIFICATION_STARTED, { method: 'phone_unverified' });
 
   const ccSel = el(
     'select',
@@ -50,8 +53,8 @@ export function SignInPage(root) {
   });
 
   const err = el('small', { class: 'field__error', id: 'phone-err', role: 'alert' });
-  // "Continue", not "Send Code" — nothing is sent and nothing is verified.
-  const submit = button(t('signin.continue'), { type: 'submit' });
+  // Truthful again: pressing this really does send a code.
+  const submit = button(t('signin.sendCode'), { type: 'submit', 'data-act': 'send-code' });
 
   function setError(msg) {
     err.textContent = msg || '';
@@ -102,6 +105,156 @@ export function SignInPage(root) {
     ),
   );
 
+  /* ---- Step 2: the code -----------------------------------------------
+     Swapped into the same card rather than pushed as a route, so Back still
+     means "leave sign-in" and a reload cannot strand a player on a code screen
+     waiting for a code that is no longer valid. */
+  function showCodeStep(cc, digits) {
+    const codeInput = el('input', {
+      class: 'field__input field__input--code',
+      id: 'otp',
+      type: 'text',
+      inputmode: 'numeric',
+      autocomplete: 'one-time-code',
+      maxlength: '6',
+      placeholder: '● ● ● ● ● ●',
+      'aria-describedby': 'otp-err',
+    });
+    const codeErr = el('small', { class: 'field__error', id: 'otp-err', role: 'alert' });
+    const verifyBtn = button(t('signin.verify'), { type: 'submit', 'data-act': 'verify' });
+    const resendBtn = button(t('signin.resend'), {
+      variant: 'ghost',
+      size: 'sm',
+      'data-act': 'resend',
+    });
+
+    let cooling = 0;
+    const tick = () => {
+      if (cooling <= 0) {
+        resendBtn.disabled = false;
+        resendBtn.textContent = t('signin.resend');
+        return;
+      }
+      resendBtn.disabled = true;
+      resendBtn.textContent = t('signin.resendIn', { sec: cooling });
+      cooling -= 1;
+      setTimeout(tick, 1000);
+    };
+    const startCooldown = () => {
+      cooling = RESEND_COOLDOWN_SEC;
+      tick();
+    };
+
+    const setCodeError = (msg) => {
+      codeErr.textContent = msg || '';
+      codeInput.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    };
+    codeInput.addEventListener('input', () => {
+      // Digits only, so a pasted "123 456" still verifies.
+      const cleaned = codeInput.value.replace(/\D/g, '').slice(0, 6);
+      if (cleaned !== codeInput.value) codeInput.value = cleaned;
+      if (codeErr.textContent) setCodeError(null);
+    });
+
+    let checking = false;
+    const codeForm = el(
+      'form',
+      { class: 'signin__card card', novalidate: true },
+      el('h1', { class: 'signin__title', text: t('signin.codeTitle') }),
+      el('p', { class: 'signin__sub', text: t('signin.codeSub', { phone: `${cc} ${digits}` }) }),
+      el(
+        'div',
+        { class: 'field' },
+        el('label', { class: 'field__label', for: 'otp', text: t('signin.codeLabel') }),
+        codeInput,
+        codeErr,
+      ),
+      verifyBtn,
+      el('div', { class: 'signin__alt' }, resendBtn),
+      el(
+        'div',
+        { class: 'signin__alt' },
+        button(t('signin.changeNumber'), {
+          variant: 'ghost',
+          size: 'sm',
+          'data-act': 'change-number',
+          onClick: () => {
+            codeForm.replaceWith(form);
+            submit.disabled = false;
+            submit.textContent = t('signin.sendCode');
+          },
+        }),
+      ),
+    );
+
+    resendBtn.addEventListener('click', async () => {
+      setCodeError(null);
+      const res = await sendOtp({ cc, phone: digits });
+      if (res.ok) {
+        toast(t('signin.codeSent'), 'ok');
+        startCooldown();
+      } else if (res.kind === 'rate_limited') {
+        setCodeError(t('signin.errTooSoon'));
+        startCooldown();
+      } else {
+        setCodeError(t('signin.errSendFailed'));
+      }
+    });
+
+    codeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (checking) return;
+      const code = codeInput.value.replace(/\D/g, '');
+      if (code.length !== 6) {
+        setCodeError(t('signin.errCodeLen'));
+        codeInput.focus();
+        return;
+      }
+
+      checking = true;
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = t('signin.verifying');
+
+      const res = await verifyOtp({ cc, phone: digits, code });
+
+      checking = false;
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = t('signin.verify');
+
+      /* The SERVER decides. `verifyOtp` stores the identity only on a genuine
+         `verified: true`, so no error shape here can sign anyone in. */
+      if (res.ok && res.data?.verified === true) {
+        Store.signIn({
+          name: `Player ${digits.slice(-4)}`,
+          isGuest: false,
+          avatar: 'assets/avatar.png',
+        });
+        const pts = res.data?.profile?.orderPoints;
+        if (Number.isFinite(pts)) Store.setOrderPoints(pts);
+        track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_otp', accepted: true });
+        toast(t('signin.verified'), 'ok');
+        navigate('/play');
+        return;
+      }
+
+      track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_otp', accepted: false });
+      const detail = res.ok ? res.data?.error : res.detail;
+      const left = res.ok ? res.data?.attemptsLeft : res.body?.attemptsLeft;
+      if (detail === 'code_expired') setCodeError(t('signin.errCodeExpired'));
+      else if (detail === 'too_many_attempts' || res.kind === 'rate_limited')
+        setCodeError(t('signin.errCodeMany'));
+      else if (Number.isFinite(left)) setCodeError(t('signin.errCodeWrong', { left }));
+      // Never guess the count: "0 tries left" next to a working input is worse
+      // than not saying, and that is exactly what a missing value produced.
+      else setCodeError(t('signin.errCodeWrongPlain'));
+      codeInput.select();
+    });
+
+    form.replaceWith(codeForm);
+    startCooldown();
+    codeInput.focus();
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (submitting) return; // guard double submit
@@ -116,53 +269,49 @@ export function SignInPage(root) {
 
     submitting = true;
     submit.disabled = true;
-    submit.textContent = t('signin.signingIn');
+    submit.textContent = t('signin.sending');
 
-    /* A real call now. This used to be a `setTimeout` pretending to be a
-       round-trip, which meant the number never reached the backend and no
-       round could ever be attributed to a player — so nothing was rewardable.
-       Registering here is what makes /start-run able to grant a prize round. */
+    /* Register so the player row exists, then ask for a code. Identity is NOT
+       kept at this point — `register()` sets it, so it is cleared again here
+       and only re-established by a verified `verifyOtp()`. A number nobody has
+       proved they hold must never be able to collect a prize. */
     register({ cc: ccSel.value, phone: digits, consent: true })
-      .then((res) => {
-        Store.signIn({
-          name: `Player ${digits.slice(-4)}`,
-          isGuest: false,
-          avatar: 'assets/avatar.png',
-        });
-
-        track(EVENTS.VERIFICATION_COMPLETED, {
-          method: 'phone_unverified',
-          accepted: !!res.ok,
-        });
-        if (res.ok) {
-          // The server's balance is authoritative from the moment we have it.
-          const pts = res.data?.profile?.orderPoints;
-          if (Number.isFinite(pts)) Store.setOrderPoints(pts);
-          toast(t('signin.ok'), 'ok');
-        } else if (res.kind === 'not_configured') {
-          // Expected in a build with the backend switched off.
+      .then((reg) => {
+        clearIdentity();
+        if (!reg.ok && reg.kind === 'not_configured') {
+          // Rewards switched off in this build: there is nothing to verify
+          // against, so say "practice" rather than block the player entirely.
+          Store.signIn({
+            name: `Player ${digits.slice(-4)}`,
+            isGuest: false,
+            avatar: 'assets/avatar.png',
+          });
           toast(t('signin.practice'), 'ok');
-        } else {
-          // Local play still works; the round just will not be rewardable, and
-          // play.js says so on the stake label rather than failing silently.
-          toast(t('signin.noRewards'), 'bad');
+          navigate('/play');
+          return null;
         }
-        navigate('/play');
+        return sendOtp({ cc: ccSel.value, phone: digits });
+      })
+      .then((res) => {
+        if (!res) return; // practice path already navigated
+        if (res.ok) {
+          track(EVENTS.VERIFICATION_STARTED, { method: 'phone_otp' });
+          toast(t('signin.codeSent'), 'ok');
+          showCodeStep(ccSel.value, digits);
+        } else if (res.kind === 'rate_limited') {
+          setError(t('signin.errTooSoon'));
+        } else {
+          setError(t('signin.errSendFailed'));
+        }
       })
       .catch((error) => {
-        console.error('register failed', error);
-        Store.signIn({
-          name: `Player ${digits.slice(-4)}`,
-          isGuest: false,
-          avatar: 'assets/avatar.png',
-        });
-        toast(t('signin.noRewards'), 'bad');
-        navigate('/play');
+        console.error('send code failed', error);
+        setError(t('signin.errSendFailed'));
       })
       .finally(() => {
         submitting = false;
         submit.disabled = false;
-        submit.textContent = t('signin.continue');
+        if (submit.textContent === t('signin.sending')) submit.textContent = t('signin.sendCode');
       });
   });
 

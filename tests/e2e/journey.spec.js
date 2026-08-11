@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { revealThroughWheel } from './spin-reveal.js';
 
 /* The player journey and the screens added in Stage 5: campaign entry ->
    how-to-play -> verify -> play -> one merged result -> wallet, plus terms,
@@ -146,6 +147,9 @@ test.describe('one merged result screen', () => {
       });
       window.UI.showChooser(5000, r);
     });
+    // A win reveals through the wheel first (ADR 0016); the merged Result
+    // screen is on the far side of it.
+    await revealThroughWheel(page);
     await expect(page).toHaveURL(/#\/result$/);
     const wonCard = await page.locator('.victory__card').count();
     const wonTitle = await page.locator('.victory__title').innerText();

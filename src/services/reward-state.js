@@ -31,6 +31,8 @@ import { OUTCOME } from '../game/round-rules.js';
  * @property {RewardStatus} status
  * @property {boolean} awarded      true only for a server-issued prize
  * @property {null|{key:string,label:string}} prize
+ * @property {string|null} code    the coupon code, when the server minted one
+ * @property {any[]|null} wheel    the server's authoritative segment order
  * @property {boolean} retryable    can the player meaningfully try the same action again
  * @property {number|null} orderPoints
  * @property {number|null} pointsThreshold
@@ -42,6 +44,7 @@ export const REWARD_STATUS = /** @type {const} */ ({
   ELIMINATED: 'eliminated',
   PENDING: 'pending',
   UNAVAILABLE: 'unavailable',
+  NOT_SIGNED_IN: 'not_signed_in',
   SESSION_EXPIRED: 'session_expired',
   RATE_LIMITED: 'rate_limited',
   FLAGGED: 'flagged',
@@ -54,6 +57,10 @@ function deny(status, extra = {}) {
     status,
     awarded: false,
     prize: null,
+    // A denial has no code by definition; naming it here keeps every consumer
+    // free of null-checks and makes a leak impossible to write by accident.
+    code: null,
+    wheel: extra.wheel ?? null,
     retryable: status === 'pending' || status === 'error' || status === 'rate_limited',
     orderPoints: extra.orderPoints ?? null,
     pointsThreshold: extra.pointsThreshold ?? null,
@@ -97,6 +104,14 @@ export function resolveRewardOutcome({ roundOutcome, apiResult }) {
 
   if (!apiResult.ok) {
     switch (apiResult.kind) {
+      /* A player with no identity is NOT a broken build. Both used to collapse
+         to `not_configured`, so a guest who survived a round was told "Rewards
+         are not available in this build" — which is false, blames the app, and
+         hides the one action that would fix it. They are separate now:
+         `no_identity` is a person who has not signed in; `not_configured` is a
+         build with the reward API switched off. */
+      case 'no_identity':
+        return deny(REWARD_STATUS.NOT_SIGNED_IN);
       case 'not_configured':
         return deny(REWARD_STATUS.UNAVAILABLE);
       case 'invalid_token':
@@ -119,11 +134,11 @@ export function resolveRewardOutcome({ roundOutcome, apiResult }) {
   // The server flags runs it distrusts. Never pay those out from the client,
   // even if it also said `won`.
   if (d.suspicious === true) {
-    return deny(REWARD_STATUS.FLAGGED, { orderPoints, pointsThreshold });
+    return deny(REWARD_STATUS.FLAGGED, { orderPoints, pointsThreshold, wheel: d.wheel });
   }
 
   if (d.won !== true) {
-    return deny(REWARD_STATUS.NOT_ELIGIBLE, { orderPoints, pointsThreshold });
+    return deny(REWARD_STATUS.NOT_ELIGIBLE, { orderPoints, pointsThreshold, wheel: d.wheel });
   }
 
   // `won: true` but no usable prize is a server contract violation. Fail closed:
@@ -137,6 +152,9 @@ export function resolveRewardOutcome({ roundOutcome, apiResult }) {
     status: REWARD_STATUS.AWARDED,
     awarded: true,
     prize: { key: d.prize.key, label: d.prize.label },
+    // Only ever the server's own string. Never generated, never derived.
+    code: typeof d.code === 'string' && d.code.length ? d.code : null,
+    wheel: Array.isArray(d.wheel) ? d.wheel : null,
     retryable: false,
     orderPoints,
     pointsThreshold,

@@ -776,3 +776,126 @@ insert into settings (key, value) values
   ('round_time_sec', '30'::jsonb),
   ('survival_tolerance', '0.95'::jsonb)
 on conflict (key) do nothing;
+
+-- ============================================================
+-- 2026-08-11 — coupon codes minted with the win (ADR 0016)
+--
+-- The wheel reveal shows the player a code they take to the counter. That code
+-- MUST be minted in the same row-locked transaction that recorded the win, or
+-- it becomes a value the client can request independently of an award — which
+-- is the whole class of bug ADR 0009 closed.
+--
+-- Additive and idempotent, matching this file's convention.
+-- ============================================================
+alter table wheel_wins add column if not exists code text;
+alter table wheel_wins add column if not exists expires_at timestamptz;
+-- A code is a bearer token: two players must never hold the same one.
+create unique index if not exists wheel_wins_code_uniq on wheel_wins (code) where code is not null;
+
+-- Human-readable, unambiguous coupon codes.
+-- Excludes I/O/0/1 so a code read aloud at a counter cannot be mistyped, which
+-- is a real support cost rather than a theoretical one.
+--
+-- CRYPTOGRAPHIC randomness, not `random()`. A coupon is a bearer token worth
+-- real money: anyone holding the string can claim the prize. Postgres's
+-- `random()` is a deterministic PRNG shared per session, so codes drawn from it
+-- are correlated — observing a handful of issued codes narrows the search for
+-- others, and nothing about the format stops a guesser trying. `gen_random_bytes`
+-- (pgcrypto) has no such relationship between draws.
+--
+-- The alphabet is exactly 32 characters, which is what makes `& 31` an UNBIASED
+-- selection: 32 divides 256 evenly, so every character is equally likely. Change
+-- the alphabet length and that stops being true — a modulo of a non-power-of-two
+-- would quietly favour the first characters.
+create extension if not exists pgcrypto;
+
+create or replace function mint_coupon_code(p_prefix text default 'MC')
+returns text language plpgsql as $$
+declare
+  v_alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  v_code text;
+  v_bytes bytea;
+  v_try integer := 0;
+begin
+  loop
+    v_code := p_prefix || '-';
+    v_bytes := gen_random_bytes(8);
+    for i in 1..8 loop
+      v_code := v_code || substr(v_alphabet, 1 + (get_byte(v_bytes, i - 1) & 31), 1);
+      if i = 4 then v_code := v_code || '-'; end if;
+    end loop;
+    -- The unique index is the real guarantee; this loop just avoids surfacing
+    -- a constraint violation for an ordinary collision.
+    exit when not exists (select 1 from wheel_wins w where w.code = v_code);
+    v_try := v_try + 1;
+    if v_try > 12 then
+      -- 32^8 space; a dozen collisions means something is badly wrong.
+      raise exception 'mint_coupon_code: could not find a free code';
+    end if;
+  end loop;
+  return v_code;
+end $$;
+
+drop function if exists resolve_run(uuid, integer, integer, text, integer, integer, integer, jsonb, boolean);
+create or replace function resolve_run(
+  p_token uuid, p_score integer, p_duration integer, p_device text,
+  p_points_threshold integer, p_min_ms integer, p_max_score integer, p_prizes jsonb,
+  p_survived boolean
+) returns table (ok boolean, won boolean, prize jsonb, suspicious boolean, gap integer,
+                 order_points integer, code text, expires_at timestamptz)
+language plpgsql as $$
+declare
+  v_run runs%rowtype; v_elapsed_ms numeric; v_susp boolean := false;
+  v_total numeric := 0; v_r numeric; v_acc numeric := 0; v_prize jsonb; elem jsonb;
+  v_points integer := 0; v_code text; v_expires timestamptz;
+begin
+  select * into v_run from runs where token = p_token and token_used = false for update;
+  if not found then
+    ok := false; won := false; return next; return;
+  end if;
+
+  v_elapsed_ms := extract(epoch from (now() - v_run.created_at)) * 1000;
+  if p_score > p_max_score then v_susp := true; end if;
+  if coalesce(p_duration, 0) < p_min_ms then v_susp := true; end if;
+  if v_elapsed_ms > 900000 then v_susp := true; end if;
+  if coalesce(p_survived, false) and v_elapsed_ms < coalesce(p_duration, 0) * 0.9 then
+    v_susp := true;
+  end if;
+
+  update runs set score = p_score, duration_ms = p_duration, token_used = true,
+                  suspicious = v_susp,
+                  client_meta = case when v_susp then '{"reason":"resolve_flag"}'::jsonb else null end
+   where id = v_run.id;
+
+  select p.order_points into v_points from players p where p.id = v_run.player_id for update;
+  v_points := coalesce(v_points, 0);
+
+  if coalesce(p_survived, false) and v_points >= p_points_threshold and not v_susp then
+    insert into points_ledger (player_id, delta, reason, source, note)
+    values (v_run.player_id, -p_points_threshold, 'wheel_spend', 'manual', 'wheel spin spend');
+
+    select sum((e->>'weight')::numeric) into v_total from jsonb_array_elements(p_prizes) e;
+    v_r := random() * v_total;
+    for elem in select * from jsonb_array_elements(p_prizes) loop
+      v_acc := v_acc + (elem->>'weight')::numeric;
+      if v_r <= v_acc then v_prize := elem; exit; end if;
+    end loop;
+    if v_prize is null then v_prize := p_prizes->0; end if;
+
+    -- Mint INSIDE this transaction: the code and the win are one atomic fact.
+    v_code := mint_coupon_code('MC');
+    v_expires := now() + interval '14 days';
+
+    insert into wheel_wins (player_id, device_id, prize_key, prize_label, score, code, expires_at)
+    values (v_run.player_id, p_device, v_prize->>'key', v_prize->>'label', p_score, v_code, v_expires);
+
+    select p.order_points into v_points from players p where p.id = v_run.player_id;
+    ok := true; won := true; prize := v_prize; suspicious := false; gap := 0;
+    order_points := coalesce(v_points, 0); code := v_code; expires_at := v_expires;
+  else
+    ok := true; won := false; suspicious := v_susp;
+    gap := greatest(0, p_points_threshold - v_points);
+    order_points := v_points; code := null; expires_at := null;
+  end if;
+  return next;
+end $$;

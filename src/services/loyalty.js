@@ -109,6 +109,34 @@ export async function register({ cc, phone, consent }) {
   return result;
 }
 
+/* ---- Phone verification (OTP) ------------------------------------------
+   The code is generated, held and compared SERVER-SIDE. Nothing here knows
+   the correct code, and nothing here decides whether verification passed —
+   the same rule the reward path follows, for the same reason: a check the
+   browser can answer is a check an attacker can answer.
+
+   Identity stays local until the server says the number is verified, so a
+   half-finished sign-in cannot attribute a prize to a number nobody proved
+   they hold. */
+
+/**
+ * Ask the server to send a one-time code.
+ * @returns {Promise<import('./api.js').ApiResult<any>>}
+ */
+export async function sendOtp({ cc, phone }) {
+  return postJson('/send-otp', { cc, phone });
+}
+
+/**
+ * Present a code for checking. Identity is stored only on a verified pass.
+ * @returns {Promise<import('./api.js').ApiResult<any>>}
+ */
+export async function verifyOtp({ cc, phone, code }) {
+  const result = await postJson('/verify-otp', { cc, phone, code });
+  if (result.ok && result.data?.verified === true) setIdentity(cc, phone);
+  return result;
+}
+
 /* ---- Round session ----------------------------------------------------- */
 
 /**
@@ -209,7 +237,13 @@ export async function submitRound({ score, durationMs, outcome }) {
   // "backend exists but we never got a token" (pending), because the first is
   // an expected build state and the second is a fault.
   if (!session || !session.token) {
-    const kind = session?.failure ?? (session?.granted === false ? 'not_configured' : null);
+    const kind =
+      session?.failure ??
+      (session?.denyReason === 'no_identity'
+        ? 'no_identity'
+        : session?.granted === false
+          ? 'not_configured'
+          : null);
     return resolveRewardOutcome({
       roundOutcome: outcome,
       apiResult: kind ? { ok: false, kind } : null,

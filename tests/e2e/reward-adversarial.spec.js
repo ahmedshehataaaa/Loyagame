@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { revealThroughWheel } from './spin-reveal.js';
 
 /* Adversarial pass over the reward path — actual exploit attempts against the
    running app, per CLAUDE.md's Definition of Done for reward-touching changes.
@@ -95,6 +96,9 @@ test.describe('fake wins', () => {
       window.UI.showChooser(999, r);
     });
 
+    // Through the wheel, so this asserts on the Result screen rather than
+    // passing vacuously while the overlay is still up.
+    await revealThroughWheel(page);
     await expect(page.locator('.reward-panel__prize')).toHaveCount(0);
     // The score is forwarded for the server to judge, not acted on locally.
     expect(submissions.length).toBe(1);
@@ -140,6 +144,7 @@ test.describe('fake wins', () => {
       });
     });
 
+    await revealThroughWheel(page);
     await expect(page).toHaveURL(/#\/result$/);
     // This is the one place a forged object CAN reach the screen, because
     // play.js trusts the bridge it is wired to. Documented deliberately: the
@@ -249,6 +254,13 @@ test.describe('response tampering', () => {
         });
         window.UI.showChooser(40000, r);
       });
+
+      // The reveal is now a second surface that could leak a fabricated prize,
+      // so assert there too — before passing through to the Result screen.
+      await page.locator('.spin-overlay [data-act="spin"]').click();
+      await expect(page.locator('.spin__prize')).toHaveCount(0);
+      await expect(page.locator('.spin-overlay [data-act="close"]')).toBeVisible();
+      await page.locator('.spin-overlay [data-act="close"]').click();
 
       await expect(page.locator('.reward-panel__prize')).toHaveCount(0);
       await expect(page.locator('body')).not.toContainText('Free Thing');

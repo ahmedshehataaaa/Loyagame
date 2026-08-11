@@ -87,6 +87,7 @@ export function WelcomePage(root) {
       button(t('lang.switch'), {
         variant: 'ghost',
         size: 'sm',
+        'data-act': 'lang',
         onClick: () => toggleLang(),
       }),
     ),
