@@ -15,6 +15,19 @@ globs: ['src/pages/**', 'src/components/**', 'src/styles/**']
   `src/pages/result.js` (ADR 0010); `/win` survives only as a redirect for
   links already in the wild. It reads the real recorded run, and the reward
   comes from the server via `rewardPanel`.
+- **Icons are SVG from `src/components/icons.js`, not emoji.** The glyph an
+  emoji resolves to is chosen by the platform, so medals and nav icons rendered
+  differently per OS at sizes and weights no token could control, and could not
+  match the Stitch reference's Material Symbols. `icon(name, { size })` returns
+  a `currentColor` SVG. The standings and the tab bar are converted and a test
+  asserts no `\p{Extended_Pictographic}` survives in either; other screens
+  (rewards, wallet, victory, result, campaign glyph fallbacks) still carry
+  emoji and are the remaining work.
+- **`el()` filters null children; `Node.append()` does NOT.** Raw
+  `host.append(a, b, cond ? node : null)` stringifies the falsy branch into a
+  literal "null" text node. That is exactly how the standings screen printed
+  "null" under the last row. Build the array, `.filter(n => n instanceof Node)`,
+  then spread — or compose through `el()`.
 - **The DOM is the ONLY in-round UI renderer.** The canvas HUD was deleted
   (ADR 0006). The engine pushes changed values via `UI.hud()`; there is no poll
   and no second renderer. Don't add one.

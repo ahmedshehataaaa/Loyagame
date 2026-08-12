@@ -20,61 +20,34 @@ export default defineConfig({
   },
 
   /* The brief's required viewport matrix. Gameplay must be usable on every
-     one of these, so every spec runs against all of them. */
+     one of these, so every spec runs against all of them.
+
+     The viewport audit is the exception: it drives its OWN viewports (desktop
+     1440/1920, tablet, iPhone 14/15) via test.use, so running it inside all six
+     mobile projects would repeat the same desktop assertions six times under
+     misleading project names. It is excluded here and gets one project below. */
   projects: [
-    {
-      name: 'iphone-se-320',
+    ...[
+      { name: 'iphone-se-320', width: 320, height: 568 },
+      { name: 'android-360', width: 360, height: 800 },
+      { name: 'iphone-8-375', width: 375, height: 667 },
+      { name: 'iphone-14-390', width: 390, height: 844 },
+      { name: 'pixel-412', width: 412, height: 915 },
+      { name: 'iphone-pro-max-430', width: 430, height: 932 },
+    ].map(({ name, width, height }) => ({
+      name,
+      testIgnore: /viewport-audit\.spec\.js/,
       use: {
         ...devices['Desktop Chrome'],
-        viewport: { width: 320, height: 568 },
+        viewport: { width, height },
         hasTouch: true,
         isMobile: true,
       },
-    },
+    })),
     {
-      name: 'android-360',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 360, height: 800 },
-        hasTouch: true,
-        isMobile: true,
-      },
-    },
-    {
-      name: 'iphone-8-375',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 375, height: 667 },
-        hasTouch: true,
-        isMobile: true,
-      },
-    },
-    {
-      name: 'iphone-14-390',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 390, height: 844 },
-        hasTouch: true,
-        isMobile: true,
-      },
-    },
-    {
-      name: 'pixel-412',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 412, height: 915 },
-        hasTouch: true,
-        isMobile: true,
-      },
-    },
-    {
-      name: 'iphone-pro-max-430',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 430, height: 932 },
-        hasTouch: true,
-        isMobile: true,
-      },
+      name: 'audit',
+      testMatch: /viewport-audit\.spec\.js/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],
 

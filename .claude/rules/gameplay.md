@@ -27,6 +27,19 @@ globs: ['engine/game.js', 'engine/config.js', 'engine/platform.js', 'engine/audi
   once won the hit test across the whole play field and NOTHING could be sliced.
   Check with `elementFromPoint`, not by dispatching events at the canvas —
   dispatching bypasses hit-testing and hid that bug from every test.
+- **The render box is the SHELL, not the window** (ADR 0017). `#stage` lives
+  inside `#app`, which is a phone-shaped column with `overflow: hidden`, so
+  `window.innerWidth` is the wrong number everywhere except an actual phone —
+  on desktop it is several times too wide and the shell silently clips the
+  difference. Anything computing viewport geometry must go through
+  `Platform.viewport()`. **This includes tests**: `field-bounds.spec.js` once
+  derived its own expected range from `window.innerWidth` and started failing
+  the moment the engine became correct.
+- **Anything hooking resize must tolerate running before `window.Mechanics`
+  exists.** A `ResizeObserver` delivers an initial callback on observation,
+  which in the built bundle lands before the module layer publishes Mechanics —
+  `resize()` then throws "Mechanics is not defined" and the boot dies. Dev does
+  not reproduce it; `production-build.spec.js` does.
 - Frame delta is clamped to ≤50ms — a correctness safeguard for
   tab-switches, not a performance knob; don't remove it while optimizing.
 - Verify changes by actually running a round (`npm run dev`) with REAL input,

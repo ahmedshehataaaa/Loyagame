@@ -95,6 +95,26 @@ const Game = (() => {
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 60));
 
+  /* The render box is now the app shell, not the window, and the two do not
+     always change together: `#app` is `height: 100dvh`, so mobile Safari
+     collapsing its toolbar resizes the shell without a useful window resize,
+     and a desktop window can cross the phone-frame breakpoint and change the
+     shell's width while its own width barely moves. Observe the shell itself so
+     the canvas can never disagree with the box it is clipped to. */
+  const shell = document.getElementById('app');
+  if (shell && typeof ResizeObserver === 'function') {
+    new ResizeObserver(() => {
+      /* A ResizeObserver delivers an initial callback as soon as it starts
+         observing. In the built bundle the engine script runs before the module
+         layer publishes `window.Mechanics` (ADR 0005), and `resize()` needs it
+         for the visible-field maths — so that first callback threw
+         "Mechanics is not defined" and killed the boot. The engine calls
+         resize() itself once it starts, so skipping until Mechanics exists
+         costs nothing. */
+      if (window.Mechanics) resize();
+    }).observe(shell);
+  }
+
   // Client (window) point -> virtual game coordinates. No rotation term now
   // that the stage is upright; the canvas rect is read directly so the mapping
   // stays correct regardless of where the stage sits in the page.

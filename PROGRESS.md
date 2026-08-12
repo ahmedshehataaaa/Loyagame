@@ -1,6 +1,49 @@
 # PROGRESS.md — McSlice Rush (McDonald's)
 
-## Current checkpoint — 2026-08-12 (Spin to Win + server-minted coupons)
+## Current checkpoint — 2026-08-12 (viewport, leaderboard UI, standings data)
+
+Decision record: **ADR 0017**. Branch `fix/viewport-leaderboard-ui`.
+
+**The desktop overflow was a render-box bug, not a scaling one.**
+`Platform.viewport()` returned `window.innerWidth/innerHeight`, but the canvas
+lives inside `#app` — a phone-shaped column with `overflow: hidden`. On a
+1920px display the engine sized a 1920px canvas into a 480px shell and the rest
+was clipped, so the player saw a cropped, off-centre slice. It measures the
+shell now, a `ResizeObserver` keeps the two in step, and above 700×700 the
+shell is a real centred 390:844 phone frame. Mobile is untouched — no viewport
+below the breakpoint changes at all.
+
+Three things this broke, all caught by the suite and all real:
+
+- `field-bounds.spec.js` computed its expected visible range from
+  `window.innerWidth` — the **same wrong assumption** as the bug being fixed,
+  so it disagreed with the engine the moment the engine got it right.
+- The desktop assertion in that spec ("the TOP is the cropped axis at
+  1366×768") described geometry that can no longer occur. It now covers the
+  phone frame, and the apex clamp it used to prove moved to a landscape phone,
+  where the render box genuinely is wider than the field.
+- A `ResizeObserver`'s **initial** callback fires before the module layer
+  publishes `window.Mechanics`, so the built bundle died on boot with
+  "Mechanics is not defined". Dev never showed it; `production-build.spec.js`
+  did.
+
+**The "null" on the standings screen was `Node.append(null)`.** `el()` filters
+null children; the raw `listHost.append(a, b, cond ? node : null)` does not — it
+stringifies. The ternary was falsy in the ordinary case *and* the guest case, so
+the board printed a literal "null" under the last row essentially always. Row
+shaping moved to a pure `src/game/standings.js` with the null/NaN guards proved
+directly (27 unit tests).
+
+Leaderboard rebuilt against `stitch-export/screens/leaderboard/source.html`:
+bevelled season card with the turning sunburst, per-row cards, podium icons,
+tier copy, PTS unit, rotated YOU flag. Emoji replaced with real SVG in the new
+`src/components/icons.js` — medals, tab bar, empty/error states. Seeded rivals
+are seven real first names.
+
+Audit: `tests/e2e/viewport-audit.spec.js`, own Playwright project, 16 checks
+across 1440/1920/768/390/393.
+
+## Previous checkpoint — 2026-08-12 (Spin to Win + server-minted coupons)
 
 Decision record: **ADR 0016**. The reward reveal now runs through a prize
 wheel, and a win now comes with a coupon code the player can actually present

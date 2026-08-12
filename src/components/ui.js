@@ -5,6 +5,7 @@
    ============================================================ */
 import { navigate } from '../core/router.js';
 import { t } from '../core/i18n.js';
+import { icon } from './icons.js';
 
 /**
  * Apply a style object, including CSS custom properties.
@@ -162,11 +163,12 @@ export function meter(value, max, { label, hint } = {}) {
 /* ---- Bottom navigation -------------------------------------- */
 /* Labels are resolved per render so a language switch repaints them.
    `/wallet` is in the player nav; `/assets` is dev-only and deliberately not. */
+/** @type {{ path: string, icon: import('./icons.js').IconName, key: string }[]} */
 const TABS = [
-  { path: '/', icon: '🏠', key: 'common.home' },
-  { path: '/wallet', icon: '🎁', key: 'common.wallet' },
-  { path: '/play', icon: '🎮', key: 'common.play' },
-  { path: '/leaderboard', icon: '🏆', key: 'common.ranks' },
+  { path: '/', icon: 'home', key: 'common.home' },
+  { path: '/wallet', icon: 'gift', key: 'common.wallet' },
+  { path: '/play', icon: 'gamepad', key: 'common.play' },
+  { path: '/leaderboard', icon: 'trophy', key: 'common.ranks' },
 ];
 
 export function tabbar(activePath) {
@@ -182,7 +184,7 @@ export function tabbar(activePath) {
           'aria-current': tab.path === activePath ? 'page' : null,
           onClick: () => navigate(tab.path),
         },
-        el('i', { 'aria-hidden': 'true', text: tab.icon }),
+        icon(tab.icon, { size: 22, className: 'tabbar__icon' }),
         t(tab.key),
       ),
     ),
@@ -208,7 +210,13 @@ export function emptyState(glyph, title, body, action) {
   return el(
     'div',
     { class: 'state' },
-    el('span', { class: 'state__glyph', 'aria-hidden': 'true', text: glyph }),
+    // `glyph` accepts an icon node or a plain string, so callers can migrate
+    // off emoji one screen at a time without a flag-day change here.
+    el(
+      'span',
+      { class: 'state__glyph', 'aria-hidden': 'true' },
+      glyph instanceof Node ? glyph : String(glyph),
+    ),
     el('p', { class: 'state__title', text: title }),
     body && el('p', { class: 'state__body', text: body }),
     action,

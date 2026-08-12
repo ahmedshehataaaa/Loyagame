@@ -286,28 +286,41 @@
 }
 
 /* ---- Leaderboard row --------------------------------------- */
+/* Rows are CARDS, per the Stitch reference: full-bleed ink border, hard bevel
+   lip, gap between rows rather than dividers inside a single panel. */
 .lb-list {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--sp-md);
 }
 .lb-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 11px 13px;
+  gap: var(--sp-md);
+  padding: var(--sp-md);
   background: var(--c-white);
   color: var(--c-ink);
   border: var(--border-ink-thin);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   box-shadow: var(--lip-ink-sm);
 }
 .lb-row__rank {
-  min-width: 30px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 19px;
   font-weight: var(--fw-black);
 }
+.lb-row__medal {
+  color: var(--medal, var(--c-ink));
+  filter: drop-shadow(0 2px 0 rgba(39, 37, 31, 0.35));
+}
+/* The standings rows no longer carry an avatar (the reference puts the only
+   avatar in the header), but the rewards list reuses this as its thumbnail. */
 .lb-row__avatar {
   width: 30px;
   height: 30px;
@@ -316,8 +329,14 @@
   object-fit: cover;
   flex: none;
 }
-.lb-row__name {
+.lb-row__meta {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.lb-row__name {
   font-size: var(--fs-small);
   font-weight: var(--fw-bold);
   display: flex;
@@ -330,15 +349,95 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.lb-row__score {
-  font-family: var(--font-display);
-  font-size: 17px;
+/* On the standings rows the name sits inside .lb-row__meta, which owns the
+   growth. The rewards "Redeemed" list reuses .lb-row with the name as a DIRECT
+   child and no meta wrapper, and still needs it to push the tag to the edge. */
+.lb-row > .lb-row__name {
+  flex: 1;
 }
+.lb-row__verified {
+  color: var(--c-primary);
+  flex: none;
+}
+.lb-row__tier {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-black);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(39, 37, 31, 0.6);
+}
+.lb-row__score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.05;
+  font-family: var(--font-display);
+  font-size: 19px;
+}
+.lb-row__unit {
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-black);
+  letter-spacing: 0.08em;
+  color: rgba(39, 37, 31, 0.6);
+}
+
+/* Podium: the gold surface is reserved for rank 1 and for the player. */
+.lb-row--podium:first-child {
+  background: linear-gradient(180deg, var(--c-secondary-hi) 0%, var(--c-secondary) 62%);
+  box-shadow: var(--lip-gold);
+}
+/* The field below the podium recedes, as in the reference. */
+.lb-row--field .lb-row__rank,
+.lb-row--field .lb-row__score {
+  color: rgba(39, 37, 31, 0.45);
+}
+
 .lb-row--you {
-  background: var(--c-secondary);
+  background: linear-gradient(180deg, var(--c-secondary-hi) 0%, var(--c-secondary) 62%);
   box-shadow:
     var(--glow-gold),
     0 4px 0 0 var(--c-secondary-dark);
+  /* The rotated flag hangs off the left edge and would otherwise sit on top of
+     the rank number. The reference pads the row's content for the same reason. */
+  padding-left: calc(var(--sp-md) + 18px);
+}
+.lb-row--you .lb-row__rank,
+.lb-row--you .lb-row__score {
+  color: var(--c-ink);
+}
+/* The rotated tag that pins the player's row in the reference. */
+.lb-row__flag {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%) rotate(-15deg);
+  padding: 2px 7px;
+  border: 2px solid var(--c-ink);
+  border-radius: var(--r-sm);
+  background: var(--c-ink);
+  color: var(--c-white);
+  font-size: var(--fs-micro);
+  font-style: normal;
+  font-weight: var(--fw-black);
+  letter-spacing: 0.06em;
+  box-shadow: var(--lift);
+}
+.lb-row__live {
+  padding: 0 5px;
+  border-radius: var(--r-sm);
+  background: rgba(218, 41, 28, 0.18);
+  color: var(--c-primary);
+  font-size: var(--fs-micro);
+  font-style: normal;
+  font-weight: var(--fw-black);
+  flex: none;
+}
+.lb-row--you .lb-row__tier,
+.lb-row--you .lb-row__unit {
+  color: rgba(39, 37, 31, 0.7);
 }
 .tag-you {
   padding: 1px 7px;
@@ -438,6 +537,13 @@
   font-style: normal;
   font-size: 19px;
   line-height: 1;
+}
+/* The tab glyphs are SVG now, not emoji, so they inherit the item's colour
+   (including the gold hover/current states) instead of being painted by the
+   platform's own emoji font. */
+.tabbar__icon {
+  display: block;
+  flex: none;
 }
 .tabbar__item:hover {
   color: var(--c-secondary);

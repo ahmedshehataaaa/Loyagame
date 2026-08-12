@@ -83,16 +83,21 @@ export function tierFor(points) {
 
 /** Seeded rivals so the board reads like a live season.
  *  PROTOTYPE DATA — replace with a ranked endpoint before launch.
- *  The signed-in player's real best score is merged in at render time. */
+ *  The signed-in player's real best score is merged in at render time.
+ *
+ *  Plain first names, deliberately. The board used food-pun gamertags
+ *  (McSliceKing, FryFanatic_88, ...) which read as brand-voice copy rather
+ *  than as other players — and on a campaign board that mixes seeded rows
+ *  with the player's own real row, anything that looks authored undermines
+ *  the one row that is genuinely live. A test pins this list. */
 export const RIVALS = [
-  { id: 'r1', name: 'McSliceKing', score: 942000 },
-  { id: 'r2', name: 'FryFanatic_88', score: 885200 },
-  { id: 'r3', name: 'BigMacStacker', score: 792500 },
-  { id: 'r4', name: 'SaltySlicer', score: 710900 },
-  { id: 'r5', name: 'NuggetNinja', score: 698000 },
-  { id: 'r6', name: 'QuarterPounder', score: 550400 },
-  { id: 'r7', name: 'DipSauceDan', score: 431250 },
-  { id: 'r8', name: 'ShakeShakeSam', score: 302700 },
+  { id: 'r1', name: 'Ahmed', score: 942000 },
+  { id: 'r2', name: 'Meera', score: 885200 },
+  { id: 'r3', name: 'Jana', score: 792500 },
+  { id: 'r4', name: 'Youssef', score: 710900 },
+  { id: 'r5', name: 'Laila', score: 698000 },
+  { id: 'r6', name: 'Omar', score: 550400 },
+  { id: 'r7', name: 'Nour', score: 431250 },
 ];
 
 /** Asset manifest for the /assets reference route. */
