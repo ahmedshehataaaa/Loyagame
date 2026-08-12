@@ -55,6 +55,7 @@ export const fmt = (n) => Number(n || 0).toLocaleString();
  * @property {string} [href]     renders an <a> instead of a <button>
  * @property {boolean} [disabled]
  * @property {string|Node} [icon] decorative glyph or icon node before the label
+ * @property {boolean} [glow]    marks this as the screen's single next action
  * @property {string} [type]     button type, e.g. 'submit'
  */
 
@@ -64,9 +65,11 @@ export const fmt = (n) => Number(n || 0).toLocaleString();
  */
 export function button(
   label,
-  { variant = 'primary', size, onClick, href, disabled, icon, ...rest } = {},
+  { variant = 'primary', size, onClick, href, disabled, icon, glow, ...rest } = {},
 ) {
-  const cls = ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm'].filter(Boolean).join(' ');
+  const cls = ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm', glow && 'btn--glow']
+    .filter(Boolean)
+    .join(' ');
   // An icon node goes in as-is; a string keeps the old wrapped-glyph shape so
   // callers can migrate to icons.js one screen at a time.
   const kids = [

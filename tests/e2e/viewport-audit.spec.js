@@ -446,6 +446,111 @@ test.describe('(f) Stitch reference fidelity', () => {
     await expect(glyph.locator('svg')).toHaveCount(1);
   });
 
+  test('(g) each screen has exactly one attention CTA', async ({ page }) => {
+    /* "One unmistakable focal point per screen" is the rule the whole polish
+       pass rests on, and it is the one that silently rots — every future screen
+       author wants THEIR button to glow. Pin it. */
+    await seed(page);
+    for (const [name, hash] of [
+      ['welcome', '#/'],
+      ['rewards', '#/rewards'],
+      ['wallet', '#/wallet'],
+      ['leaderboard', '#/leaderboard'],
+    ]) {
+      await page.goto(`/index.html${hash}`);
+      await page.waitForTimeout(400);
+      const glowing = await page.locator('.btn--glow:visible').count();
+      expect(glowing, `${name} should have at most one attention CTA`).toBeLessThanOrEqual(1);
+    }
+    // Welcome's IS the play CTA, and it must be the biggest button there.
+    await page.goto('/index.html#/');
+    await page.waitForTimeout(300);
+    const sizes = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.btn')).map((b) => ({
+        glow: b.classList.contains('btn--glow'),
+        area: b.getBoundingClientRect().width * b.getBoundingClientRect().height,
+      })),
+    );
+    const cta = sizes.find((b) => b.glow);
+    expect(cta, 'welcome has a glowing CTA').toBeTruthy();
+    expect(
+      Math.max(...sizes.filter((b) => !b.glow).map((b) => b.area)),
+      'the CTA is the largest button on welcome',
+    ).toBeLessThan(cta.area);
+  });
+
+  test('(g) Send Code is inert until the number is valid', async ({ page }) => {
+    await page.addInitScript((k) => localStorage.setItem(k, '1'), COACH_KEY);
+    await page.goto('/index.html#/sign-in');
+    const send = page.locator('[data-act="send-code"]');
+    await expect(send).toBeDisabled();
+
+    await page.locator('#phone').fill('123'); // too short
+    await expect(send).toBeDisabled();
+
+    await page.locator('#phone').fill('1005551234');
+    await expect(send).toBeEnabled();
+    await expect(send).toHaveClass(/btn--glow/);
+
+    // And back again — the state is derived, not one-way.
+    await page.locator('#phone').fill('12');
+    await expect(send).toBeDisabled();
+    await expect(send).not.toHaveClass(/btn--glow/);
+  });
+
+  test('(g) locked and unlocked speak the same language everywhere', async ({ page }) => {
+    await seed(page);
+    await page.goto('/index.html#/rewards');
+    await page.locator('.reward').first().waitFor();
+
+    // Locked tiles are disabled and carry a padlock; owned tiles never do.
+    const locked = page.locator('.reward--locked');
+    const lockedCount = await locked.count();
+    expect(lockedCount, 'seeded balance should leave some tiles locked').toBeGreaterThan(0);
+    for (let i = 0; i < lockedCount; i++) {
+      await expect(locked.nth(i)).toBeDisabled();
+      expect(await locked.nth(i).locator('.reward__flag svg').count()).toBe(1);
+    }
+
+    // Exactly one tile is the active focal point, and it is affordable.
+    await expect(page.locator('.reward--active')).toHaveCount(1);
+    await expect(page.locator('.reward--active')).toBeEnabled();
+    await expect(page.locator('.reward--active .reward__ribbon')).toBeVisible();
+  });
+
+  test('(g) the points balance outweighs everything else on Rewards', async ({ page }) => {
+    await seed(page);
+    await page.goto('/index.html#/rewards');
+    await page.locator('.points-head__value').waitFor();
+    const px = (loc) =>
+      loc.evaluate((n) => parseFloat(getComputedStyle(n).fontSize)).catch(() => 0);
+
+    const balance = await px(page.locator('.points-head__value'));
+    const tileName = await px(page.locator('.reward__name').first());
+    const rank = await px(page.locator('.rank-chip'));
+    expect(balance, 'balance vs tile name').toBeGreaterThan(tileName);
+    expect(balance, 'balance vs rank chip').toBeGreaterThan(rank);
+  });
+
+  test('(g) the player row is the most emphasised row on the board', async ({ page }) => {
+    await openLeaderboard(page);
+    const weights = await page.evaluate(() => {
+      const read = (sel) => {
+        const n = document.querySelector(sel);
+        if (!n) return null;
+        const s = getComputedStyle(n);
+        return { shadow: s.boxShadow, border: parseFloat(s.borderTopWidth) };
+      };
+      return { you: read('.lb-row--you'), first: read('.lb-list .lb-row') };
+    });
+    expect(weights.you, 'a YOU row is present').toBeTruthy();
+    // The gold glow is the strongest treatment in the list and only YOU has it.
+    expect(weights.you.shadow, 'YOU row carries the attention glow').toContain('255, 199, 44');
+    expect(weights.you.border, 'YOU row has the heaviest border').toBeGreaterThanOrEqual(
+      weights.first.border,
+    );
+  });
+
   test('(f) home and leaderboard capture cleanly for review', async ({ page }, testInfo) => {
     // Artifacts for human review of drift, attached to the report rather than
     // asserted: a committed pixel baseline would fail on first run and on any

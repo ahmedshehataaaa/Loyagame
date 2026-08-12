@@ -28,17 +28,85 @@
     transform var(--t-fast),
     box-shadow var(--t-fast);
 }
+/* PRESSED: the lip collapses and the face scales down, so the button travels
+   into the page instead of merely changing colour. */
 .btn:active:not(:disabled) {
-  transform: translateY(6px);
+  transform: translateY(var(--press-shift)) scale(var(--press-scale));
   box-shadow: 0 0 0 0 var(--btn-lip);
+  filter: brightness(0.93);
 }
 .btn:hover:not(:disabled) {
   filter: brightness(1.05);
 }
+/* DISABLED: desaturated, not just faded — a greyed CTA must not read as a
+   gold one behind glass. */
 .btn:disabled {
-  opacity: 0.55;
   cursor: not-allowed;
-  box-shadow: 0 6px 0 0 var(--btn-lip);
+  filter: grayscale(0.85);
+  opacity: 0.6;
+  box-shadow: var(--e2);
+}
+
+/* ATTENTION: the single next action on a screen. The pulse is a shadow
+   animation only — no layout, no repaint of the label — and tokens.css already
+   stops all looping animation under prefers-reduced-motion, where the button
+   keeps the static glow and simply stops breathing. */
+.btn--glow:not(:disabled) {
+  box-shadow:
+    0 6px 0 0 var(--btn-lip),
+    var(--glow-attention);
+  animation: cta-pulse 2.1s ease-in-out infinite;
+}
+@keyframes cta-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 6px 0 0 var(--btn-lip),
+      0 0 0 3px rgba(255, 199, 44, 0.42),
+      0 0 20px 5px rgba(255, 199, 44, 0.34);
+  }
+  50% {
+    box-shadow:
+      0 6px 0 0 var(--btn-lip),
+      0 0 0 4px rgba(255, 199, 44, 0.6),
+      0 0 32px 10px rgba(255, 199, 44, 0.5);
+  }
+}
+
+/* ---- Locked / unlocked: ONE language, everywhere -------------
+   Anything a player can or cannot have yet says so the same way, whether it
+   is a reward tile, a wallet prize or a library item: locked is desaturated
+   with a padlock, owned is full colour with a check. Divergence here is what
+   makes a catalogue feel arbitrary. */
+.is-locked {
+  filter: grayscale(0.9);
+  opacity: 0.92;
+  cursor: not-allowed;
+  box-shadow: var(--e2);
+}
+.is-owned {
+  box-shadow:
+    var(--e1),
+    0 0 0 3px var(--c-success);
+}
+/* EARNED: the shared success beat — gold glow plus a small scale-up, used
+   wherever the player gains something. */
+@keyframes earned-pop {
+  0% {
+    transform: scale(1);
+    box-shadow: var(--e1);
+  }
+  45% {
+    transform: scale(1.06);
+    box-shadow: var(--e1), var(--glow-gold);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: var(--e1), var(--glow-attention);
+  }
+}
+.is-earned {
+  animation: earned-pop 0.62s ease-out both;
 }
 
 .btn--primary {
@@ -115,12 +183,17 @@
 }
 
 /* ---- Cards ------------------------------------------------- */
+/* e1 — resting surface. The hard lip carries the structure, the soft shadow
+   the distance from the page. Cards were lip-only before, which read as a
+   sticker rather than as a raised surface. */
 .card {
   background: var(--c-surface);
   color: var(--c-ink);
   border: var(--border-ink);
   border-radius: var(--r-lg);
-  box-shadow: var(--lip-ink);
+  box-shadow:
+    var(--lip-ink),
+    0 9px 18px rgba(0, 0, 0, 0.22);
   padding: var(--sp-md);
 }
 .card--flush {
@@ -177,16 +250,35 @@
   background: linear-gradient(90deg, var(--c-secondary), #ff8c00);
   transition: width var(--t-med);
 }
+/* The leading edge of the fill glows — "you are nearly there" said with light
+   rather than with another line of copy. It sits at the fill edge, so it moves
+   as the balance grows and disappears once the tier is complete. */
 .meter__spark {
   position: absolute;
   top: 50%;
-  width: 8px;
-  height: 8px;
-  margin-top: -4px;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 8px 2px #fff;
+  box-shadow:
+    0 0 10px 3px #fff,
+    0 0 18px 6px rgba(255, 199, 44, 0.85);
   transition: left var(--t-med);
+  animation: spark-breathe 1.8s ease-in-out infinite;
+}
+@keyframes spark-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px 2px #fff,
+      0 0 14px 4px rgba(255, 199, 44, 0.7);
+  }
+  50% {
+    box-shadow:
+      0 0 12px 4px #fff,
+      0 0 24px 9px rgba(255, 199, 44, 0.95);
+  }
 }
 
 /* ---- Reward card ------------------------------------------- */
@@ -213,10 +305,29 @@
   transform: translateY(4px);
   box-shadow: 0 2px 0 0 var(--c-ink);
 }
+/* The three tile states, in the shared locked/unlocked language.
+   READY sits highest and is the only one that glows; LOCKED is desaturated and
+   sits lowest; OWNED is settled — full colour, a check, no call to action. */
+.reward--ready {
+  box-shadow: var(--lip-ink);
+  border-color: var(--c-ink);
+}
+/* The one affordable tile worth acting on. Only this one glows. */
+.reward--active {
+  box-shadow: var(--lip-ink), var(--glow-attention);
+  outline: 3px solid #fff;
+  outline-offset: -1px;
+}
+.reward--ready:active {
+  transform: translateY(var(--press-shift)) scale(var(--press-scale));
+  box-shadow: var(--e2);
+}
 .reward--locked {
   background: #8d8781;
   color: #f2efec;
   cursor: not-allowed;
+  box-shadow: var(--e2);
+  filter: grayscale(0.55);
 }
 .reward--locked .reward__art {
   filter: grayscale(0.85) brightness(0.8);
@@ -224,6 +335,7 @@
 .reward--owned {
   background: var(--c-success);
   color: #fff;
+  box-shadow: var(--e1);
 }
 .reward__art {
   height: 84px;
@@ -383,10 +495,28 @@
   color: rgba(39, 37, 31, 0.6);
 }
 
-/* Podium: the gold surface is reserved for rank 1 and for the player. */
+/* Podium depth is RANKED, not uniform: gold sits highest off the page, then
+   silver, then bronze, then the field. Depth carries the standing, so the
+   hierarchy survives in greyscale where the metal colours would not. */
 .lb-row--podium:first-child {
   background: linear-gradient(180deg, var(--c-secondary-hi) 0%, var(--c-secondary) 62%);
-  box-shadow: var(--lip-gold);
+  box-shadow:
+    0 8px 0 0 var(--c-secondary-dark),
+    0 14px 24px rgba(0, 0, 0, 0.38);
+  transform: translateY(-1px);
+}
+.lb-row--podium:nth-child(2) {
+  box-shadow:
+    0 6px 0 0 rgba(39, 37, 31, 0.42),
+    0 9px 16px rgba(0, 0, 0, 0.26);
+}
+.lb-row--podium:nth-child(3) {
+  box-shadow:
+    0 5px 0 0 rgba(39, 37, 31, 0.4),
+    0 7px 12px rgba(0, 0, 0, 0.22);
+}
+.lb-row--field {
+  box-shadow: var(--e1);
 }
 /* The field below the podium recedes, as in the reference. */
 .lb-row--field .lb-row__rank,
@@ -394,11 +524,19 @@
   color: rgba(39, 37, 31, 0.45);
 }
 
+/* The player's own row is the single most distinct element on this screen —
+   it outranks even the gold podium row, because "where am I" is the question
+   the player opened the board to answer. Declared after the podium rules so it
+   wins regardless of where the player lands in the order. */
 .lb-row--you {
   background: linear-gradient(180deg, var(--c-secondary-hi) 0%, var(--c-secondary) 62%);
+  border-color: var(--c-ink);
+  border-width: 4px;
   box-shadow:
-    var(--glow-gold),
-    0 4px 0 0 var(--c-secondary-dark);
+    0 8px 0 0 var(--c-secondary-dark),
+    var(--glow-attention),
+    0 16px 28px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
   /* The rotated flag hangs off the left edge and would otherwise sit on top of
      the rank number. The reference pads the row's content for the same reason. */
   padding-left: calc(var(--sp-md) + 18px);
@@ -483,10 +621,21 @@
   color: #a49c95;
   font-weight: var(--fw-body);
 }
+/* FOCUS: the field lifts out of the card — border colour, the inset pressure
+   released, and a ring. Colour alone was doing all the work before, which is
+   invisible to anyone who does not perceive the red/grey difference. */
 .field__input:focus {
   outline: none;
   border-color: var(--c-primary);
   background: #fff;
+  box-shadow: var(--glow-focus);
+  transform: translateY(-1px);
+}
+.field__input {
+  transition:
+    box-shadow var(--t-fast),
+    border-color var(--t-fast),
+    transform var(--t-fast);
 }
 .field__input[aria-invalid='true'] {
   border-color: var(--c-danger);
@@ -645,7 +794,7 @@
   color: var(--c-ink);
   border: var(--border-ink);
   border-radius: var(--r-xl);
-  box-shadow: var(--lip-ink), var(--lift);
+  box-shadow: var(--e3); /* e3 — floating above the scrim */
   padding: var(--sp-lg) var(--sp-md);
 }
 .modal__title {
@@ -866,7 +1015,7 @@
   color: var(--c-ink);
   border: var(--border-ink);
   border-radius: var(--r-xl);
-  box-shadow: var(--lip-ink), var(--lift);
+  box-shadow: var(--e3); /* e3 — floating above the scrim */
 }
 .coach__title {
   font-family: var(--font-display);
@@ -1403,6 +1552,9 @@
   margin-bottom: var(--sp-sm);
   flex: 0 0 auto;
 }
+/* The wheel is the hero of this overlay, so it carries the deepest shadow in
+   the app plus a gold halo — nothing else here may out-weigh it except the
+   SPIN button, which is the action it invites. */
 .wheel__disc {
   position: absolute;
   inset: 0;
@@ -1410,8 +1562,9 @@
   background: var(--c-surface);
   border: 10px solid var(--c-secondary);
   box-shadow:
-    0 0 0 3px rgba(0, 0, 0, 0.12),
-    0 10px 28px rgba(0, 0, 0, 0.28);
+    0 0 0 3px rgba(0, 0, 0, 0.18),
+    0 0 34px 10px rgba(255, 199, 44, 0.4),
+    0 18px 40px rgba(0, 0, 0, 0.5);
   transform: rotate(0deg);
   will-change: transform;
 }
@@ -1443,6 +1596,56 @@
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
+/* THE LANDED WEDGE. Scale and glow are applied to the CARD, not the segment
+   layer: the layer carries the orbit rotation, so transforming it would swing
+   the card out of position instead of enlarging it in place. The card's own
+   transform already ends in a rotate(), so the scale is appended to it. */
+.wheel__seg.is-won .wheel__card {
+  transform: translateX(-50%) rotate(calc(-1 * (var(--seg-a, 0deg) + var(--disc-rot, 0deg))))
+    scale(1.22);
+  box-shadow:
+    0 0 0 3px var(--c-secondary),
+    0 0 22px 8px rgba(255, 199, 44, 0.9);
+  z-index: 3;
+  animation: wedge-pop 0.5s ease-out;
+}
+@keyframes wedge-pop {
+  0% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(1.5);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+/* A confetti accent behind the winning card — drawn, not imaged, and purely
+   decorative so it never affects the hit test or the layout. */
+.wheel__seg.is-won .wheel__card::after {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 10px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 20%, var(--c-primary) 0 2.5px, transparent 3px),
+    radial-gradient(circle at 88% 16%, var(--c-secondary) 0 2.5px, transparent 3px),
+    radial-gradient(circle at 20% 86%, var(--c-secondary-hi) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 82% 88%, var(--c-primary) 0 2px, transparent 2.5px);
+  animation: confetti-in 0.6s ease-out both;
+}
+@keyframes confetti-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .wheel__art {
   width: 100%;
   height: auto;
@@ -1542,17 +1745,26 @@
   margin-top: var(--sp-sm);
   flex-wrap: wrap;
 }
+/* The coupon code is the thing the player walks to a counter holding, so on
+   the reveal card it is the largest, highest-contrast element — it outweighs
+   the prize name above it. */
 .spin__code-value {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  padding: 8px 12px;
-  border-radius: var(--r-sm);
+  letter-spacing: 0.14em;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
   background: var(--c-white);
   color: var(--c-ink);
   border: 3px dashed var(--c-ink);
+  box-shadow: var(--e1), var(--glow-attention);
   user-select: all; /* one tap selects the whole code if clipboard is blocked */
+}
+/* The whole reveal is a "you earned this" moment, so it uses the shared
+   success beat rather than a bespoke animation. */
+.spin__won {
+  animation: earned-pop 0.62s ease-out both;
 }
 .spin__hint,
 .spin__points {

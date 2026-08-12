@@ -27,6 +27,16 @@ export function RewardsPage(root) {
     return 'available';
   }
 
+  /* The single tile worth acting on right now: the most valuable reward the
+     balance actually covers. It carries the ribbon and the strongest glow, so
+     the screen has ONE focal point among the tiles rather than every affordable
+     tile shouting equally. Returns null when nothing is affordable yet. */
+  function activeRewardId(progress) {
+    const affordable = REWARDS.filter((r) => state(r, progress) === 'available');
+    if (!affordable.length) return null;
+    return affordable.reduce((best, r) => (r.cost > best.cost ? r : best)).id;
+  }
+
   function confirmRedeem(reward) {
     const overlay = modal({
       title: `Redeem ${reward.name}?`,
@@ -55,12 +65,15 @@ export function RewardsPage(root) {
     wrap.append(overlay);
   }
 
-  function rewardCard(reward, progress) {
+  function rewardCard(reward, progress, activeId) {
     const st = state(reward, progress);
+    const isActive = reward.id === activeId;
     const card = el(
       'button',
       {
-        class: `reward reward--${st === 'available' ? 'ready' : st}`,
+        class: `reward reward--${st === 'available' ? 'ready' : st}${
+          isActive ? ' reward--active' : ''
+        }`,
         type: 'button',
         disabled: st !== 'available',
         'aria-label': `${reward.name}, ${fmt(reward.cost)} points, ${
@@ -69,6 +82,7 @@ export function RewardsPage(root) {
         onClick: () => st === 'available' && confirmRedeem(reward),
       },
       el('span', { class: 'reward__cost', text: `${fmt(reward.cost)} PTS` }),
+      isActive && el('span', { class: 'reward__ribbon', text: 'ACTIVE TIER' }),
       st === 'owned' && el('span', { class: 'reward__flag', 'aria-hidden': 'true', text: '✓' }),
       st === 'locked' &&
         el('span', { class: 'reward__flag', 'aria-hidden': 'true' }, icon('lock', { size: 13 })),
@@ -96,6 +110,7 @@ export function RewardsPage(root) {
     const progress = Store.progress();
     const { current, next } = tierFor(progress.rewardPoints);
     const redeemed = REWARDS.filter((r) => progress.redeemedRewardIds.includes(r.id));
+    const activeId = activeRewardId(progress);
 
     listHost.innerHTML = '';
     listHost.append(
@@ -119,7 +134,7 @@ export function RewardsPage(root) {
       ),
 
       el('h2', { class: 't-kicker section-head', text: 'Rewards you can claim' }),
-      el('div', { class: 'reward-grid' }, ...REWARDS.map((r) => rewardCard(r, progress))),
+      el('div', { class: 'reward-grid' }, ...REWARDS.map((r) => rewardCard(r, progress, activeId))),
 
       el('h2', { class: 't-kicker section-head', text: 'Redeemed' }),
       redeemed.length

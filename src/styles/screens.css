@@ -63,6 +63,22 @@
   flex-direction: column;
   gap: var(--sp-sm);
 }
+/* PLAY NOW is the focal point of the screen, so it outweighs the ghost links
+   below it on size as well as colour — the glow alone would not survive a
+   greyscale check. */
+.welcome__cta > .btn--glow {
+  padding: 18px 24px;
+  font-size: 25px;
+  letter-spacing: 0.03em;
+}
+.welcome__trust {
+  margin-top: -2px;
+  text-align: center;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
+}
 .welcome__links {
   display: flex;
   gap: var(--sp-sm);
@@ -329,11 +345,16 @@
   gap: var(--sp-sm);
   margin-bottom: var(--sp-md);
 }
+/* The balance is what this screen is ABOUT, so it is the largest thing on it
+   by a clear margin — bigger than the tile names, the rank chip and the CTA.
+   Nothing else on Rewards may compete at this size. */
 .points-head__value {
   display: block;
   font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 1.05;
+  font-size: clamp(40px, 13vw, 56px);
+  line-height: 0.98;
+  letter-spacing: 0.01em;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
 }
 .points-head .t-kicker {
   color: var(--c-ink-soft);
@@ -398,6 +419,29 @@
   align-items: center;
   gap: var(--sp-sm);
   color: var(--c-primary);
+  transition: color var(--t-med);
+}
+/* Under a day: warm. Under an hour: red, and it pulses. Both also change the
+   clock text itself, so urgency is not carried by the icon's colour alone. */
+.season__time.is-soon,
+.season__time.is-soon .season__clock {
+  color: #c2410c;
+}
+.season__time.is-critical,
+.season__time.is-critical .season__clock {
+  color: var(--c-danger);
+}
+.season__time.is-critical {
+  animation: season-urgent 1.4s ease-in-out infinite;
+}
+@keyframes season-urgent {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
+  }
 }
 .season .t-kicker {
   color: var(--c-ink-soft);

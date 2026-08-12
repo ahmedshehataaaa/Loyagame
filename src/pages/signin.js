@@ -54,16 +54,35 @@ export function SignInPage(root) {
 
   const err = el('small', { class: 'field__error', id: 'phone-err', role: 'alert' });
   // Truthful again: pressing this really does send a code.
-  const submit = button(t('signin.sendCode'), { type: 'submit', 'data-act': 'send-code' });
+  const submit = button(t('signin.sendCode'), {
+    type: 'submit',
+    'data-act': 'send-code',
+    disabled: true,
+  });
 
   function setError(msg) {
     err.textContent = msg || '';
     input.setAttribute('aria-invalid', msg ? 'true' : 'false');
   }
 
+  /* The CTA reflects whether it can actually do anything. It starts inert and
+     only lights up once the number would pass `validate()` — the same check the
+     submit handler runs, so the button can never promise a send the handler
+     then refuses. Silent while typing: no error is shown for a number that is
+     merely unfinished, the button simply has not lit yet. */
+  function syncSubmitState() {
+    if (submitting) return;
+    const digits = input.value.replace(/\D/g, '');
+    const ready = validate(ccSel.value, digits) === null;
+    submit.disabled = !ready;
+    submit.classList.toggle('btn--glow', ready);
+  }
+
   input.addEventListener('input', () => {
     if (err.textContent) setError(null);
+    syncSubmitState();
   });
+  ccSel.addEventListener('change', syncSubmitState);
 
   const form = el(
     'form',
@@ -180,8 +199,10 @@ export function SignInPage(root) {
           'data-act': 'change-number',
           onClick: () => {
             codeForm.replaceWith(form);
-            submit.disabled = false;
             submit.textContent = t('signin.sendCode');
+            // Re-derive rather than force-enable: the number in the field is
+            // the only thing that may decide whether this button is live.
+            syncSubmitState();
           },
         }),
       ),
@@ -255,6 +276,9 @@ export function SignInPage(root) {
     codeInput.focus();
   }
 
+  // Reflect the initial (empty) state before the player touches anything.
+  syncSubmitState();
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (submitting) return; // guard double submit
@@ -310,8 +334,8 @@ export function SignInPage(root) {
       })
       .finally(() => {
         submitting = false;
-        submit.disabled = false;
         if (submit.textContent === t('signin.sending')) submit.textContent = t('signin.sendCode');
+        syncSubmitState();
       });
   });
 

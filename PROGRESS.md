@@ -68,8 +68,38 @@ What is deliberately still emoji: campaign manifest `glyph` values
 per-restaurant DATA a manifest supplies, not chrome — converting them would
 change the campaign schema.
 
-Audit: `tests/e2e/viewport-audit.spec.js`, own Playwright project, 16 checks
-across 1440/1920/768/390/393.
+**Visual polish pass — one design system across the screens.** Depth, type
+hierarchy, state feedback. Explicitly NOT a redesign: where the uploaded
+mockups disagreed with the built screens (a 3-block podium, BRAG TO FRIENDS,
+a standalone spin screen, a 3-tab nav), the built layout won. Two of the six
+mockups and the spin screen's "ground truth" HTML were never supplied, and the
+leaderboard mockup still showed the retired gamertags — both confirmed with
+the author before starting rather than guessed at.
+
+- **Three elevation levels** (`--e1/--e2/--e3`) and nothing else. Cards were
+  lip-only, which reads as a sticker rather than a raised surface; modal and
+  coach card float at `e3`.
+- **Button states**: pressed collapses the lip AND scales, so it travels into
+  the page; disabled is desaturated, not merely faded — a greyed CTA must not
+  read as a gold one behind glass; `.btn--glow` is the attention state and is
+  opt-in per screen.
+- **Sign In** gates Send Code on the same `validate()` the submit handler runs,
+  so the button cannot promise a send the handler then refuses. Both paths that
+  previously force-enabled it now re-derive instead.
+- **Rewards** has one focal tile — the priciest reward the balance actually
+  covers — carrying the previously-unused `.reward__ribbon`.
+- **Leaderboard** podium depth is RANKED (gold > silver > bronze > field), so
+  standing survives greyscale where the metal colours would not. The player's
+  own row outranks even gold.
+- **Spin**: the landed wedge scales on the CARD, not the segment layer — the
+  layer carries the orbit rotation, so transforming it swings the card out of
+  position instead of enlarging it in place.
+
+Audit: `tests/e2e/viewport-audit.spec.js`, own Playwright project, 23 checks
+across 1440/1920/768/390/393 — including five that pin the design system
+itself (one attention CTA per screen, the Send Code gate in both directions,
+locked/unlocked consistency, the balance outweighing everything on Rewards,
+and the YOU row carrying the strongest treatment).
 
 ## Previous checkpoint — 2026-08-12 (Spin to Win + server-minted coupons)
 

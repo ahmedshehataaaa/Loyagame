@@ -53,6 +53,7 @@ const STRINGS = {
     'welcome.profile': 'Your profile',
     'welcome.howTo': 'How to play',
     'welcome.prizeTeaser': 'Prizes from Free Fries to a free Big Mac®',
+    'welcome.trust': 'Free to play · One round takes {seconds} seconds',
 
     'howTo.title': 'How to play',
     'howTo.slice': 'Swipe across the food to slice it. Chain slices for combos.',
@@ -249,6 +250,7 @@ const STRINGS = {
     'welcome.profile': 'ملفك',
     'welcome.howTo': 'كيف تلعب',
     'welcome.prizeTeaser': 'جوائز من بطاطس مجانية إلى بيج ماك® مجاني',
+    'welcome.trust': 'اللعب مجاني · الجولة تستغرق {seconds} ثانية',
 
     'howTo.title': 'كيف تلعب',
     'howTo.slice': 'اسحب إصبعك على الطعام لتقطيعه. تابع التقطيع لتحصل على سلاسل.',

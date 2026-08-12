@@ -177,7 +177,14 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
      screenshot script — can drive the reveal in Arabic as well as English.
      The accessible name stays the visible text; this is addressing, not
      labelling. */
-  const spinBtn = button(t('spin.cta'), { onClick: () => start(), 'data-act': 'spin' });
+  /* The strongest attention treatment in the app: this overlay exists for
+     exactly one action, and the wheel above it is the only thing allowed to
+     compete for the eye. */
+  const spinBtn = button(t('spin.cta'), {
+    onClick: () => start(),
+    'data-act': 'spin',
+    glow: true,
+  });
   const actions = el('div', { class: 'spin__actions' }, spinBtn);
 
   const panel = el('div', { class: 'spin' }, title, sub, wheel, status, actions);
@@ -219,8 +226,11 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
             { class: 'spin__code' },
             el('code', { class: 'spin__code-value', text: outcome.code }),
             button(t('spin.copy'), {
-              variant: 'ghost',
+              // Primary, not ghost: copying the code is the one thing to DO on
+              // this card, and a ghost button beside a dashed code box read as
+              // a caption rather than a control.
               size: 'sm',
+              'data-act': 'copy',
               onClick: async (e) => {
                 const btn = /** @type {HTMLElement} */ (e.currentTarget ?? e.target);
                 try {
@@ -323,6 +333,14 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
     );
     const deg = rotationForIndex(index, count);
 
+    /* Mark the landed segment so it can pop. The disc's children are the
+       segments in the same order as `segments`, followed by the hub, so the
+       index maps directly — no lookup by key needed a second time. */
+    const markWinner = () => {
+      disc.querySelectorAll('.wheel__seg').forEach((n) => n.classList.remove('is-won'));
+      disc.querySelectorAll('.wheel__seg')[index]?.classList.add('is-won');
+    };
+
     status.textContent = t('spin.spinning');
 
     if (reduced) {
@@ -331,6 +349,7 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
       disc.style.transform = `rotate(${deg % 360}deg)`;
       disc.style.setProperty('--disc-rot', `${deg % 360}deg`);
       disc.classList.add('is-settled');
+      markWinner();
       showPrize(outcome);
       return;
     }
@@ -345,6 +364,7 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
       // Labels must be readable at rest, so cancel the disc's resting angle.
       disc.style.setProperty('--disc-rot', `${deg % 360}deg`);
       disc.classList.add('is-settled');
+      markWinner();
       try {
         window.Sound?.reward?.();
       } catch {

@@ -117,10 +117,15 @@ export function WelcomePage(root) {
     el(
       'div',
       { class: 'welcome__cta' },
+      /* The one action this screen exists for, so it carries the attention
+         treatment and nothing else on the screen does. */
       button(t('common.playNow'), {
-        icon: icon('play', { size: 15 }),
+        icon: icon('play', { size: 17 }),
+        glow: true,
         onClick: () => navigate(signedIn ? '/play' : '/sign-in'),
       }),
+      // Low-noise reassurance, directly under the CTA where hesitation happens.
+      el('p', { class: 'welcome__trust', text: t('welcome.trust', { seconds: ROUND_TIME }) }),
       el(
         'div',
         { class: 'welcome__links' },

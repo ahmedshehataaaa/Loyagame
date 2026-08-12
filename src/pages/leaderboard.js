@@ -29,18 +29,33 @@ function fetchStandings() {
   });
 }
 
-function seasonRemaining() {
+/** Milliseconds left in the season. */
+function seasonMsLeft() {
   const now = new Date();
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   // getTime() rather than relying on Date arithmetic coercion — the implicit
   // Date-minus-Date works at runtime but is not type-safe and hides intent.
-  let ms = Math.max(0, end.getTime() - now.getTime());
+  return Math.max(0, end.getTime() - now.getTime());
+}
+
+function seasonRemaining() {
+  let ms = seasonMsLeft();
   const d = Math.floor(ms / 86400000);
   ms -= d * 86400000;
   const h = Math.floor(ms / 3600000);
   ms -= h * 3600000;
   const m = Math.floor(ms / 60000);
   return `${d}d ${h}h ${m}m`;
+}
+
+/* Urgency, in two steps rather than a gradient: a colour that drifts
+   continuously reads as a rendering bug, one that changes at a threshold reads
+   as a deadline. Under a day the clock warms; under an hour it goes red and
+   pulses. */
+function seasonUrgency(ms = seasonMsLeft()) {
+  if (ms < 3600000) return 'is-critical';
+  if (ms < 86400000) return 'is-soon';
+  return '';
 }
 
 /* The sunburst that turns slowly behind the season card in the reference.
@@ -121,8 +136,17 @@ export function LeaderboardPage(root) {
   track(EVENTS.LEADERBOARD_VIEWED, {});
   const listHost = el('div', null, loadingState('Loading standings…'));
   const clockEl = el('b', { class: 'season__clock', text: seasonRemaining() });
+  const timeWrap = el(
+    'div',
+    { class: `season__time ${seasonUrgency()}`.trim() },
+    icon('clock', { size: 22 }),
+    clockEl,
+  );
   const tick = setInterval(() => {
     clockEl.textContent = seasonRemaining();
+    // Re-derive rather than assume: a tab left open across the threshold must
+    // reach the urgent state without a reload.
+    timeWrap.className = `season__time ${seasonUrgency()}`.trim();
   }, 30000);
 
   root.append(
@@ -138,7 +162,7 @@ export function LeaderboardPage(root) {
           'div',
           { class: 'season__body' },
           el('span', { class: 't-kicker', text: 'Season ends in' }),
-          el('div', { class: 'season__time' }, icon('clock', { size: 22 }), clockEl),
+          timeWrap,
           el('span', { class: 'season__reset', text: 'Month-end reset' }),
         ),
       ),
