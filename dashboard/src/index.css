@@ -1,0 +1,161 @@
+@import 'tailwindcss';
+
+/* shadcn/ui's dark variant is a class on <html>, not a media query, so the
+   toggle in the header can override the OS preference in both directions. */
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   Tokens.
+
+   Two palettes live here and they are NOT interchangeable:
+
+   1. BRAND (McDonald's Red #DA291C / Gold #FFC72C) dresses the CHROME only —
+      wordmark, active nav, focus ring. Red is never used as a data colour:
+      on a chart it reads as "error", and it collides with the reserved
+      `critical` status colour used for suspicious runs. The retired
+      admin.html made the same call ("wordmark only — never used as a UI
+      colour") and it was right.
+
+   2. VIZ is the validated data-visualisation palette. The single categorical
+      series (--viz-series-1) and both surfaces pass every check of the
+      dataviz validator in light AND dark:
+        light #2a78d6 on #fcfcfb · dark #3987e5 on #1a1a19
+      Status colours are the fixed reserved set and are always paired with a
+      text label, never carrying meaning by colour alone.
+
+   Re-run the validator before changing any --viz-* value.
+   ============================================================ */
+
+:root {
+  --radius: 0.625rem;
+
+  /* Surfaces / ink — the dataviz chrome ramp, so charts and cards agree. */
+  --background: #f9f9f7;
+  --foreground: #0b0b0b;
+  --card: #fcfcfb;
+  --card-foreground: #0b0b0b;
+  --popover: #fcfcfb;
+  --popover-foreground: #0b0b0b;
+  --muted: #f0efec;
+  --muted-foreground: #52514e;
+  --subtle-foreground: #898781;
+  --border: #e1e0d9;
+  --input: #e1e0d9;
+  --ring: #da291c;
+
+  /* Brand — chrome only. */
+  --brand-red: #da291c;
+  --brand-red-deep: #a81a10;
+  --brand-gold: #ffc72c;
+  --primary: #da291c;
+  --primary-foreground: #ffffff;
+  --accent: #f0efec;
+  --accent-foreground: #0b0b0b;
+
+  /* Data visualisation. */
+  --viz-series-1: #2a78d6;
+  --viz-grid: #e1e0d9;
+  --viz-axis: #c3c2b7;
+  --viz-surface: #fcfcfb;
+
+  /* Reserved status set — always shipped with a label. */
+  --status-good: #0ca30c;
+  --status-good-text: #006300;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+}
+
+.dark {
+  --background: #0d0d0d;
+  --foreground: #ffffff;
+  --card: #1a1a19;
+  --card-foreground: #ffffff;
+  --popover: #1a1a19;
+  --popover-foreground: #ffffff;
+  --muted: #232320;
+  --muted-foreground: #c3c2b7;
+  --subtle-foreground: #898781;
+  --border: #2c2c2a;
+  --input: #383835;
+  --ring: #ffc72c;
+
+  --primary: #ffc72c;
+  --primary-foreground: #27251f;
+  --accent: #232320;
+  --accent-foreground: #ffffff;
+
+  /* Stepped for the dark surface — not an automatic flip of the light value. */
+  --viz-series-1: #3987e5;
+  --viz-grid: #2c2c2a;
+  --viz-axis: #383835;
+  --viz-surface: #1a1a19;
+
+  --status-good: #0ca30c;
+  --status-good-text: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-brand-red: var(--brand-red);
+  --color-brand-red-deep: var(--brand-red-deep);
+  --color-brand-gold: var(--brand-gold);
+
+  --color-viz-series-1: var(--viz-series-1);
+  --color-viz-grid: var(--viz-grid);
+  --color-viz-axis: var(--viz-axis);
+
+  --color-status-good: var(--status-good);
+  --color-status-good-text: var(--status-good-text);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Columns of figures must align vertically; standalone stat-tile values
+     keep proportional figures. */
+  th,
+  td,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

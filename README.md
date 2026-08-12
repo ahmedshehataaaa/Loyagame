@@ -21,12 +21,28 @@ Open it on a phone, or on a desktop browser at a mobile viewport. The game is
 portrait-only by design.
 
 ```bash
-npm run verify       # format + lint + typecheck + manifests + unit tests
-npm run test:e2e     # 732 browser tests across 6 mobile viewports
-npm run build        # hashed, minified dist/
-npm run preview      # serve dist/ on :8767
-npm run perf         # measured load + frame-rate baseline (4x CPU throttle)
+npm run verify           # format + lint + typecheck + manifests + unit tests
+npm run test:e2e         # 732 browser tests across 6 mobile viewports
+npm run build            # hashed, minified dist/ (game + admin dashboard)
+npm run build:dashboard  # the admin dashboard only
+npm run preview          # serve dist/ on :8767
+npm run perf             # measured load + frame-rate baseline (4x CPU throttle)
 ```
+
+### Admin dashboard
+
+The operator dashboard is a separate React app in `dashboard/` (ADR 0017). It
+is built, not served from source:
+
+```bash
+npm run build:dashboard
+npm run dev              # then open http://localhost:8765/dist/admin.html
+```
+
+It asks for an admin key on load — the same secret the API compares against
+`ADMIN_KEY`. The dev backend defaults to `dev-admin-key`; production reads the
+real value from the environment and has no default. In production the
+dashboard is served at `/admin.html`.
 
 ## How it works
 

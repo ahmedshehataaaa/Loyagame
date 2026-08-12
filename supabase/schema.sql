@@ -899,3 +899,74 @@ begin
   end if;
   return next;
 end $$;
+
+-- ============================================================
+-- 2026-08-12 — coupon code on the redemption feed
+--
+-- The admin dashboard's Redemptions tab identifies which coupon a row is, so
+-- the code has to come back with the row. `admin_redemptions` was written
+-- before wheel_wins.code existed (added 2026-08-11, ADR 0016), so it is
+-- re-declared HERE rather than edited in place: this file is applied
+-- top-to-bottom by hand, and the original declaration sits above the
+-- `alter table ... add column code` that this body depends on.
+--
+-- ONLY THE LAST FOUR CHARACTERS ARE RETURNED, and the truncation happens
+-- HERE rather than in the browser. A coupon code is a BEARER TOKEN — anyone
+-- holding the string can claim the prize at a counter — which is a different
+-- class of value from a phone number. The dashboard only ever displays it
+-- masked, so shipping the whole code to a browser would be exposure that buys
+-- nothing: an XSS, a shared screen or a leaked devtools capture would hand
+-- over live, spendable codes. Redemption from the dashboard goes through
+-- redeem_wheel_win(win_id), which never needs the code, so nothing downstream
+-- wants the full value. If code LOOKUP is ever needed (a customer reads a code
+-- aloud), add a dedicated endpoint that takes a code and returns a win id —
+-- comparison in that direction leaks nothing.
+--
+-- Additive and idempotent, matching this file's convention. The dashboard
+-- renders a missing tail as "—", so it degrades cleanly on an instance where
+-- this section has not been applied yet.
+-- ============================================================
+create or replace function admin_redemptions(
+  p_from timestamptz default null, p_to timestamptz default null,
+  p_limit integer default 25, p_offset integer default 0
+) returns jsonb language plpgsql as $$
+declare v_total integer; v_redeemed integer;
+begin
+  select count(*) into v_total from wheel_wins w
+   where (p_from is null or w.created_at >= p_from)
+     and (p_to   is null or w.created_at <  p_to);
+  select count(*) into v_redeemed from wheel_wins w
+   where w.redeemed
+     and (p_from is null or w.created_at >= p_from)
+     and (p_to   is null or w.created_at <  p_to);
+
+  return jsonb_build_object(
+    'total', v_total,
+    'redeemed', v_redeemed,
+    'rate', case when v_total = 0 then 0 else round(v_redeemed::numeric / v_total * 100, 1) end,
+    'perDay', coalesce((select jsonb_agg(jsonb_build_object(
+                 'day', t.day, 'won', t.won, 'redeemed', t.redeemed) order by t.day)
+               from (
+                 select to_char(created_at at time zone 'Africa/Cairo', 'YYYY-MM-DD') as day,
+                        count(*) as won, count(*) filter (where redeemed) as redeemed
+                   from wheel_wins w
+                  where (p_from is null or w.created_at >= p_from)
+                    and (p_to   is null or w.created_at <  p_to)
+                  group by 1
+               ) t), '[]'::jsonb),
+    'rows', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', t.id, 'phone', t.phone, 'prize', t.prize_label, 'score', t.score,
+        'codeTail', right(t.code, 4), 'expiresAt', t.expires_at,
+        'wonAt', t.created_at, 'redeemed', t.redeemed, 'redeemedAt', t.redeemed_at, 'redeemedBy', t.redeemed_by
+      ) order by t.created_at desc)
+      from (
+        select w.id, p2.phone, w.prize_label, w.score, w.code, w.expires_at,
+               w.created_at, w.redeemed, w.redeemed_at, w.redeemed_by
+          from wheel_wins w join players p2 on p2.id = w.player_id
+         where (p_from is null or w.created_at >= p_from)
+           and (p_to   is null or w.created_at <  p_to)
+         order by w.created_at desc
+         limit p_limit offset p_offset
+      ) t), '[]'::jsonb)
+  );
+end $$;

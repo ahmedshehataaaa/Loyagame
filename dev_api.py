@@ -45,11 +45,15 @@ server-side, expiring, attempt-limited. It is ECHOED in the response only
 because this is a local dev server with no SMS gateway — see `_otp_echo`.
 """
 
+import hmac
 import json
 import os
 import secrets
 import time
 import uuid
+from datetime import datetime, timezone
+from urllib.parse import parse_qs
+from zoneinfo import ZoneInfo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -309,6 +313,9 @@ def submit_run(body):
     p = STORE.players[run["player"]]
     p["games"] += 1
     p["high_score"] = max(p["high_score"], score)
+    if not p.get("first_seen"):
+        p["first_seen"] = run["started_at"]
+    p["last_seen"] = _now()
 
     wheel = [{"key": x["key"], "label": x["label"]} for x in PRIZES]
 
@@ -320,6 +327,14 @@ def submit_run(body):
     suspicious = (
         duration_ms < SETTINGS["min_run_ms"] or score > SETTINGS["max_plausible_score"]
     )
+
+    # Recorded on the run itself so the admin dashboard's aggregates have the
+    # same facts here that `runs` carries in Postgres.
+    run["score"] = score
+    run["duration_ms"] = duration_ms
+    run["suspicious"] = suspicious
+    run["survived"] = survived
+    run["finished_at"] = _now()
 
     base = {
         "ok": True,
@@ -342,6 +357,10 @@ def submit_run(body):
     code = mint_coupon_code()
     expires_at = _now() + 7 * 24 * 3600
     STORE.coupons[code] = {
+        # A surrogate id, because the row id is exposed to the admin dashboard
+        # and the code must not be. Postgres uses wheel_wins.id here for the
+        # same reason.
+        "id": len(STORE.coupons) + 1,
         "player": run["player"],
         "prize_key": prize["key"],
         "prize_label": prize["label"],
@@ -438,6 +457,225 @@ def pos_credit(body):
     ledger[order_id] = points
     p["order_points"] += points
     return 200, {"ok": True, "credited": points, "orderPoints": p["order_points"]}
+
+
+# ---- admin dashboard (GET) -------------------------------------------------
+#
+# Mirrors the WIRE CONTRACT of api/admin-*.mjs so the React dashboard under
+# dashboard/ runs against this file unchanged. Same reasoning as the rest of
+# this module: the production aggregates live in Postgres RPCs that no laptop
+# can reach, and a dashboard that can only be developed against a deployed
+# Supabase project is a dashboard nobody will touch.
+#
+# The aggregation here is deliberately naive (Python loops over dicts). It is
+# NOT a second implementation to keep in sync semantically — schema.sql remains
+# the authority, and anything that matters is proven there, not here.
+
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "dev-admin-key")
+
+CAIRO = ZoneInfo("Africa/Cairo")
+
+
+def _iso(ts):
+    """Epoch seconds -> ISO-8601 UTC, the shape PostgREST returns."""
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts else None
+
+
+def _cairo_day(ts):
+    """Group key matching to_char(created_at at time zone 'Africa/Cairo', ...)."""
+    return datetime.fromtimestamp(ts, tz=CAIRO).strftime("%Y-%m-%d")
+
+
+def _is_admin(headers):
+    """Constant-time-ish comparison of the same header the real isAdmin() reads.
+
+    DEV ONLY. `ADMIN_KEY` defaults to a well-known string here because there is
+    no environment to read one from on a laptop — the same tradeoff DEV_OTP_ECHO
+    makes above. This file never ships: `dist/` contains no Python, vercel.json
+    never routes to it, and the production check is lib/db.mjs's isAdmin(),
+    which has no default and fails closed.
+    """
+    supplied = (headers or {}).get("x-admin-key") or ""
+    return hmac.compare_digest(str(supplied), ADMIN_KEY)
+
+
+def _finished_runs():
+    return [r for r in STORE.runs.values() if r.get("consumed")]
+
+
+def _player_rows():
+    """One row per player, with the counts the Players tab shows."""
+    rows = []
+    for e164, p in STORE.players.items():
+        runs = [r for r in STORE.runs.values() if r["player"] == e164]
+        coupons = [c for c in STORE.coupons.values() if c["player"] == e164]
+        first = min((r["started_at"] for r in runs), default=p.get("first_seen") or _now())
+        last = max((r["started_at"] for r in runs), default=first)
+        rows.append({
+            "phone": e164,
+            "firstSeen": _iso(first),
+            "lastSeen": _iso(p.get("last_seen") or last),
+            "plays": len(runs),
+            "highScore": p["high_score"],
+            "points": p["order_points"],
+            "wins": len(coupons),
+            "redeemed": len([c for c in coupons if c["redeemed_at"]]),
+            "flagged": any(r.get("suspicious") for r in runs),
+            "_sort": first,
+        })
+    rows.sort(key=lambda r: r["_sort"], reverse=True)
+    for r in rows:
+        del r["_sort"]
+    return rows
+
+
+def _paged(params, default_size=25):
+    page = max(1, int(params.get("page", ["1"])[0] or 1))
+    size = min(100, max(1, int(params.get("pageSize", ["%d" % default_size])[0] or default_size)))
+    return page, size
+
+
+def admin_stats(params, _headers):
+    runs = list(STORE.runs.values())
+    finished = _finished_runs()
+    coupons = list(STORE.coupons.values())
+    redeemed = [c for c in coupons if c["redeemed_at"]]
+    day_ago = _now() - 86400
+    scores = [r.get("score", 0) for r in finished]
+    return 200, {"ok": True, "stats": {
+        "monthKey": datetime.now(tz=CAIRO).strftime("%Y-%m"),
+        "players": {
+            "total": len(STORE.players),
+            "new7d": len(STORE.players),
+            "flagged": len([p for p in _player_rows() if p["flagged"]]),
+        },
+        "runs": {
+            "total": len(runs),
+            "last24h": len([r for r in runs if r["started_at"] > day_ago]),
+            "month": len(runs),
+            "avgScore": round(sum(scores) / len(scores)) if scores else 0,
+            "suspicious": len([r for r in runs if r.get("suspicious")]),
+        },
+        "wheel": {
+            "winsTotal": len(coupons),
+            "wins24h": len([c for c in coupons if c["issued_at"] > day_ago]),
+            "winsMonth": len(coupons),
+        },
+        "redemptions": {
+            "total": len(coupons),
+            "redeemed": len(redeemed),
+            "rate": round(len(redeemed) / len(coupons) * 100, 1) if coupons else 0,
+        },
+    }}
+
+
+def admin_players(params, _headers):
+    rows = _player_rows()
+    q = (params.get("q", [""])[0] or "").strip()
+    if q:
+        rows = [r for r in rows if q in r["phone"]]
+    page, size = _paged(params)
+    start = (page - 1) * size
+    return 200, {"ok": True, "page": page, "pageSize": size,
+                 "total": len(rows), "rows": rows[start:start + size]}
+
+
+def admin_redemptions(params, _headers):
+    items = sorted(STORE.coupons.items(), key=lambda kv: kv[1]["issued_at"], reverse=True)
+    rows = [{
+        "id": c.get("id"),
+        "phone": c["player"],
+        "prize": c["prize_label"],
+        "score": 0,
+        # Last 4 only, matching admin_redemptions(): the full bearer token
+        # never leaves the server in either implementation.
+        "codeTail": code[-4:],
+        "expiresAt": _iso(c["expires_at"]),
+        "wonAt": _iso(c["issued_at"]),
+        "redeemed": bool(c["redeemed_at"]),
+        "redeemedAt": _iso(c["redeemed_at"]),
+        "redeemedBy": "dev-counter" if c["redeemed_at"] else None,
+    } for code, c in items]
+    total = len(rows)
+    redeemed = len([r for r in rows if r["redeemed"]])
+    page, size = _paged(params)
+    start = (page - 1) * size
+    return 200, {"ok": True, "page": page, "pageSize": size, "total": total,
+                 "redeemed": redeemed,
+                 "rate": round(redeemed / total * 100, 1) if total else 0,
+                 "perDay": [], "rows": rows[start:start + size]}
+
+
+def admin_engagement(params, _headers):
+    days = min(90, max(1, int(params.get("days", ["14"])[0] or 14)))
+    since = _now() - days * 86400
+    runs = [r for r in STORE.runs.values() if r["started_at"] > since]
+
+    per_day, per_hour, dist = {}, {}, {}
+    for r in runs:
+        per_day[_cairo_day(r["started_at"])] = per_day.get(_cairo_day(r["started_at"]), 0) + 1
+        hour = datetime.fromtimestamp(r["started_at"], tz=CAIRO).hour
+        per_hour[hour] = per_hour.get(hour, 0) + 1
+        if r.get("consumed"):
+            bucket = (r.get("score", 0) // 1000) * 1000
+            dist[bucket] = dist.get(bucket, 0) + 1
+
+    return 200, {"ok": True, "days": days, "stats": {
+        "playsPerDay": [{"day": d, "n": n} for d, n in sorted(per_day.items())],
+        "peakHours": [{"hour": h, "n": n} for h, n in sorted(per_hour.items())],
+        "scoreDist": [{"bucket": b, "n": n} for b, n in sorted(dist.items())],
+        "dropOff": {
+            "started": len(runs),
+            "finished": len([r for r in runs if r.get("consumed")]),
+            # Same 15-minute token window admin_engagement() uses in Postgres.
+            "abandoned": len([r for r in runs
+                              if not r.get("consumed") and r["started_at"] < _now() - 900]),
+        },
+    }}
+
+
+def admin_fraud(params, _headers):
+    flagged = sorted(
+        [r for r in STORE.runs.values() if r.get("suspicious")],
+        key=lambda r: r["started_at"], reverse=True,
+    )
+    page, size = _paged(params)
+    start = (page - 1) * size
+    window = flagged[start:start + size + 1]
+    rows = [{
+        "id": f"{r['player']}-{r['started_at']}",
+        "phone": r["player"],
+        "score": r.get("score", 0),
+        "durationMs": r.get("duration_ms"),
+        "at": _iso(r.get("finished_at") or r["started_at"]),
+        "reason": "resolve_flag",
+        "playerFlagged": False,
+    } for r in window[:size]]
+    return 200, {"ok": True, "page": page, "pageSize": size,
+                 "hasMore": len(window) > size, "rows": rows}
+
+
+GET_ROUTES = {
+    "/api/admin-stats": admin_stats,
+    "/api/admin-players": admin_players,
+    "/api/admin-redemptions": admin_redemptions,
+    "/api/admin-engagement": admin_engagement,
+    "/api/admin-fraud": admin_fraud,
+}
+
+
+def handle_get(path, query, headers):
+    """Dispatch one GET. Returns (status, payload) or None if not an API path."""
+    fn = GET_ROUTES.get(path)
+    if not fn:
+        return None
+    if not _is_admin(headers):
+        return 401, {"ok": False, "error": "unauthorized"}
+    try:
+        return fn(parse_qs(query or ""), headers)
+    except Exception as exc:  # pragma: no cover - dev convenience
+        print(f"[dev-api] {path} failed: {exc!r}")
+        return 500, {"ok": False, "error": "server_error"}
 
 
 ROUTES = {

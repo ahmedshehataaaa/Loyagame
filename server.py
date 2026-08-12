@@ -27,6 +27,31 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
+    def _send_json(self, status, payload):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        """Serve files, except `/api/*` which the admin dashboard reads over GET.
+
+        The admin endpoints (api/admin-*.mjs) are GETs, so without this the
+        dashboard under dashboard/ could only ever be developed against a
+        deployed Supabase project.
+        """
+        path, _, query = self.path.partition("?")
+        if path.startswith("/api/"):
+            result = dev_api.handle_get(path, query, self.headers)
+            if result is None:
+                self.send_error(404, "No such endpoint")
+                return
+            self._send_json(*result)
+            return
+        super().do_GET()
+
     def do_POST(self):
         """Route `/api/*` to the dev backend; everything else is not a POST target."""
         path = self.path.split("?", 1)[0]
@@ -41,13 +66,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404, "No such endpoint")
             return
 
-        status, payload = result
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self._send_json(*result)
 
     def end_headers(self):
         # Disable caching so local edits always show on reload.

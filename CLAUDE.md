@@ -44,6 +44,9 @@ mcdonalds/
 │   ├── analytics/ #   closed event taxonomy + allow-listed redactor
 │   ├── core/      #   router, store, i18n, live rule reads
 │   └── pages/     #   one function per screen
+├── dashboard/     # admin dashboard — React + shadcn/ui, the ONE framework
+│                  #   surface in the repo (ADR 0017). Built separately to
+│                  #   dist/admin.html; never imported by the game.
 ├── api/           # Vercel Functions (start-run, submit-run, pos-credit, admin-*)
 ├── netlify/functions/  # mirror of api/ for Netlify hosting
 ├── lib/db.mjs      # Supabase/PostgREST helper, admin auth, phone normalization
@@ -161,7 +164,9 @@ Two harness facts worth knowing before writing tests:
 ## Coding conventions
 
 - No framework, no bundler in `engine/` or `src/` — keep it that way unless
-  a deliberate decision (documented as an ADR) changes it.
+  a deliberate decision (documented as an ADR) changes it. The one exception
+  is `dashboard/` (React + shadcn/ui, ADR 0017): its own build, its own lint
+  block, and it must stay out of the game's dependency graph.
 - `engine/config.js` is the single tuning/content surface — don't hardcode
   round time, lives, spawn rates, or brand colors elsewhere.
 - Comments explain _why_, not _what_ — match the existing style in

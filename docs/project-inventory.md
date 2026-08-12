@@ -134,8 +134,12 @@ vs `api` vs `supabase`) to migrate incrementally. See
 - **POS point-crediting**: `api/pos-credit.mjs`, secret-verified via
   constant-time comparison (`lib/db.mjs`'s `isPosCaller`), never
   client-writable.
-- **Admin dashboard**: `admin.html` + `admin-*` functions for stats,
-  players, redemptions, engagement.
+- **Admin dashboard**: a React + shadcn/ui app in `dashboard/`, built to
+  `dist/admin.html` (ADR 0017), reading the `admin-*` functions for stats,
+  players, redemptions, engagement and flagged runs. Gated on `ADMIN_KEY`,
+  polls every 10s. Replaced the previous root `admin.html`, which was
+  Krispy-Kreme-branded and broken — it referenced a `js/` directory that does
+  not exist in this repository, and shipped that way on every build.
 
 ## Incomplete features
 

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Internal tool: never index it, and never send the URL onward. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>ClaimLabs Dashboard — McDonald's</title>
+    <link rel="icon" href="icon.svg" />
+    <!-- Both are rewritten to hashed filenames by scripts/build-dashboard.mjs.
+         Deliberately RELATIVE: the same output is served at /admin.html in
+         production and at /dist/admin.html by the dev server. -->
+    <link rel="stylesheet" href="admin.css" />
+    <script>
+      /* Applied before first paint so a dark-mode operator never gets a white
+         flash. Mirrors the persistence in app.jsx's useTheme. */
+      (function () {
+        var saved = localStorage.getItem('claimlabs.theme');
+        var dark = saved
+          ? saved === 'dark'
+          : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.classList.add('dark');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="admin.js"></script>
+  </body>
+</html>

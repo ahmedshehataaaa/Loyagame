@@ -1,4 +1,5 @@
 import globals from 'globals';
+import react from 'eslint-plugin-react';
 
 /* The codebase is three distinct JS dialects that must not be linted alike:
    engine/ are classic browser scripts sharing implicit globals, src/ are
@@ -81,6 +82,27 @@ export default [
     // Serverless functions.
     files: ['api/**/*.mjs', 'netlify/**/*.mjs', 'lib/**/*.mjs'],
     languageOptions: { sourceType: 'module', globals: globals.node },
+  },
+
+  {
+    /* Admin dashboard — the one React surface in the repo (ADR 0017). A FOURTH
+       dialect, kept isolated from src/ on purpose: JSX needs a parser option
+       the rest of the codebase must not get, and React's component functions
+       are `no-undef`-clean only once JSX is understood. */
+    files: ['dashboard/**/*.jsx', 'dashboard/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: globals.browser,
+    },
+    plugins: { react },
+    rules: {
+      /* Without this, `no-unused-vars` cannot see that <Card /> uses the
+         imported `Card` — every component import in the tree reads as dead.
+         Enabling the one rule keeps no-unused-vars ON and honest here, which
+         is far better than switching it off for the whole directory. */
+      'react/jsx-uses-vars': 'error',
+    },
   },
 
   {
