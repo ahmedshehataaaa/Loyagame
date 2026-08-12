@@ -34,10 +34,11 @@ globs:
 - **Stitch**: connector has had tool-fetch failures — check connection
   status before relying on live access; fall back to the already-extracted
   `mcdonalds/stitch-export/` snapshot. See `claimlabs-stitch-to-code`.
-- **GitHub**: no repository exists yet in this project (see
-  `docs/project-inventory.md` "blockers") — nothing to connect to until
-  one is created, which itself requires human approval (`git init` +
-  choosing a remote).
+- **GitHub**: `github.com/ahmedshehataaaa/Loyagame` is `origin`, first
+  pushed 2026-08-12; `main` tracks `origin/main`. The repo was renamed after
+  creation, so an old `loyagame.git` URL still redirects — use the current
+  casing. `.github/workflows/verify.yml` runs on push, so CI is live now
+  rather than local-only; a red run is a real failure, not a config gap.
 - **Sentry**: not yet configured; planned for pre-commercial-launch per
   the ClaimLabs connector plan. Don't assume error tracking exists until
   it's actually wired up.

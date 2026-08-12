@@ -6,6 +6,12 @@ Decision record: **ADR 0016**. The reward reveal now runs through a prize
 wheel, and a win now comes with a coupon code the player can actually present
 at a counter.
 
+**The repo is now published** (2026-08-12): `origin` is
+`github.com/ahmedshehataaaa/Loyagame`, `main` tracks `origin/main`. Everything
+below this line was local-only until that push. Collaborators need `npm
+install` and, for the backend only, the env vars listed in README.md — none of
+which are in the tree.
+
 ### The rule that holds the whole thing up
 
 **The server mints the coupon and picks the prize BEFORE the wheel is built.**

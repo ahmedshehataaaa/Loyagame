@@ -57,9 +57,12 @@ mcdonalds/
 └── docs/, .claude/  # this system
 ```
 
-A local Git repository exists (created 2026-08-07; baseline tag
-`baseline-2026-08-07`, branch `backup/pre-production-2026-08-07`). **No remote
-is configured** — pushing anywhere is still a human decision.
+A Git repository exists (created 2026-08-07; baseline tag
+`baseline-2026-08-07`, branch `backup/pre-production-2026-08-07`). It is
+published as of 2026-08-12 to **`github.com/ahmedshehataaaa/Loyagame`**
+(`origin`), `main` tracking `origin/main`. Collaborators clone from there;
+`npm install` then `npm run dev` is the whole setup, and no secrets live in
+the tree (see Security below).
 
 ## Technology stack
 
@@ -181,7 +184,8 @@ skill.
 
 ## Operations that require human approval
 
-- `git init` / creating or pushing to a remote repository (none exists yet).
+- Creating a new remote, or force-pushing to `origin`. Ordinary
+  `git push` of `main` to the existing `Loyagame` remote is now routine.
 - Any Vercel/Netlify deploy, especially production promotion.
 - Creating a new Vercel project or changing project linkage.
 - Any change to `resolve_run`, `WHEEL`, or reward-eligibility logic that
