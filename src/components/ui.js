@@ -54,7 +54,7 @@ export const fmt = (n) => Number(n || 0).toLocaleString();
  * @property {(e:Event)=>void} [onClick]
  * @property {string} [href]     renders an <a> instead of a <button>
  * @property {boolean} [disabled]
- * @property {string} [icon]     decorative glyph placed before the label
+ * @property {string|Node} [icon] decorative glyph or icon node before the label
  * @property {string} [type]     button type, e.g. 'submit'
  */
 
@@ -67,7 +67,12 @@ export function button(
   { variant = 'primary', size, onClick, href, disabled, icon, ...rest } = {},
 ) {
   const cls = ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm'].filter(Boolean).join(' ');
-  const kids = [icon && el('span', { 'aria-hidden': 'true', text: icon }), label];
+  // An icon node goes in as-is; a string keeps the old wrapped-glyph shape so
+  // callers can migrate to icons.js one screen at a time.
+  const kids = [
+    icon instanceof Node ? icon : icon && el('span', { 'aria-hidden': 'true', text: icon }),
+    label,
+  ];
   if (href) return el('a', { class: cls, href, ...rest }, ...kids);
   return el(
     'button',
@@ -83,13 +88,17 @@ export function button(
 }
 
 /**
- * @param {string} glyph
+ * @param {string|Node} glyph
  * @param {string} label accessible name — icon buttons have no visible text
  * @param {{onClick?:(e:Event)=>void, href?:string, plain?:boolean} & Record<string, any>} [opts]
  */
 export function iconButton(glyph, label, { onClick, href, plain, ...rest } = {}) {
   const cls = `icon-btn${plain ? ' icon-btn--plain' : ''}`;
-  const kids = [el('span', { 'aria-hidden': 'true', text: glyph })];
+  /* Always wrapped in the span, node or not: callers that swap the glyph later
+     do it with `btn.querySelector('span')`, so the wrapper is load-bearing. */
+  const kids = [
+    el('span', { 'aria-hidden': 'true' }, glyph instanceof Node ? glyph : String(glyph)),
+  ];
   if (href) return el('a', { class: cls, href, 'aria-label': label, ...rest }, ...kids);
   return el(
     'button',

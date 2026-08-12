@@ -25,20 +25,48 @@ Three things this broke, all caught by the suite and all real:
 - A `ResizeObserver`'s **initial** callback fires before the module layer
   publishes `window.Mechanics`, so the built bundle died on boot with
   "Mechanics is not defined". Dev never showed it; `production-build.spec.js`
-  did.
+  did — and only under parallel load, on 2 of 6 projects, which read as flake
+  until it was traced. Guarding the observer was not enough: `resize()` is
+  reachable from the plain `window` resize listener too. The bail-out lives
+  **inside `resize()`** now, so it covers every caller. Everything above the
+  guard is pure canvas sizing and still runs; only the Mechanics-dependent
+  field maths is deferred to the next resize, which `init()` always performs.
 
 **The "null" on the standings screen was `Node.append(null)`.** `el()` filters
 null children; the raw `listHost.append(a, b, cond ? node : null)` does not — it
-stringifies. The ternary was falsy in the ordinary case *and* the guest case, so
+stringifies. The ternary was falsy in the ordinary case _and_ the guest case, so
 the board printed a literal "null" under the last row essentially always. Row
 shaping moved to a pure `src/game/standings.js` with the null/NaN guards proved
 directly (27 unit tests).
 
 Leaderboard rebuilt against `stitch-export/screens/leaderboard/source.html`:
 bevelled season card with the turning sunburst, per-row cards, podium icons,
-tier copy, PTS unit, rotated YOU flag. Emoji replaced with real SVG in the new
-`src/components/icons.js` — medals, tab bar, empty/error states. Seeded rivals
-are seven real first names.
+tier copy, PTS unit, rotated YOU flag. Seeded rivals are seven real first names.
+
+**Emoji are gone from every player-facing screen**, replaced by SVG in the new
+`src/components/icons.js`. Emoji were never a design choice — the platform
+picks the glyph, so medals, tab icons and empty states rendered differently per
+OS at sizes no token could control, and could not match the reference's
+Material Symbols. Converted: tab bar, standings, coach card, sound toggle,
+rewards (lock, art fallback, ticket), wallet, result, victory, router/asset
+error states, and every `▶` on a button. `button()`/`iconButton()` take a node
+or a string so screens could migrate one at a time. `🏆` came **out** of the
+`result.newBest` i18n string in both locales — an icon inside a translated
+string cannot be sized or coloured.
+
+Two traps worth remembering:
+
+- The sound toggle swapped glyphs with `span.textContent = on ? '🔊' : '🔇'`,
+  which against an SVG child **deletes the icon** and leaves bare text. Hence
+  `setIcon()`, and a test that toggles twice and asserts an SVG survives.
+- `\p{Extended_Pictographic}` matches **® and ™**. The first sweep flagged
+  Welcome, on "Big Mac®" — required brand copy. The screen-wide emoji test
+  strips trademark signs before matching rather than loosening the pattern.
+
+What is deliberately still emoji: campaign manifest `glyph` values
+(`campaign/loader.js`, `campaign/schema.js`, `spin-wheel.js`). Those are
+per-restaurant DATA a manifest supplies, not chrome — converting them would
+change the campaign schema.
 
 Audit: `tests/e2e/viewport-audit.spec.js`, own Playwright project, 16 checks
 across 1440/1920/768/390/393.

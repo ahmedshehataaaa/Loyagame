@@ -60,6 +60,28 @@ const SHAPES = {
   user: `
     <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/>
     <path d="M12 13.6c-4.2 0-7.6 2.1-7.6 4.8V21h15.2v-2.6c0-2.7-3.4-4.8-7.6-4.8Z"/>`,
+  play: `
+    <path d="M7 4.5 20 12 7 19.5V4.5Z"/>`,
+  lock: `
+    <path d="M12 1.8A4.7 4.7 0 0 0 7.3 6.5V9H6a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-1.3V6.5A4.7 4.7 0 0 0 12 1.8Zm2.7 7.2H9.3V6.5a2.7 2.7 0 0 1 5.4 0V9Z"/>
+    <circle cx="12" cy="15" r="1.8" fill="#fff"/>`,
+  ticket: `
+    <path d="M3 6h18v3.5a2.5 2.5 0 0 0 0 5V18H3v-3.5a2.5 2.5 0 0 0 0-5V6Z"/>
+    <path d="M9 8.5h1.5v7H9zM13.5 8.5H15v7h-1.5z" fill="#fff"/>`,
+  soundOn: `
+    <path d="M4 9h3.5L12 4.8v14.4L7.5 15H4V9Z"/>
+    <path d="M15.4 8.2a5 5 0 0 1 0 7.6l1.3 1.5a7 7 0 0 0 0-10.6l-1.3 1.5Z"/>`,
+  soundOff: `
+    <path d="M4 9h3.5L12 4.8v14.4L7.5 15H4V9Z"/>
+    <path d="m20.9 9.5-1.4-1.4-2 2-2-2-1.4 1.4 2 2-2 2 1.4 1.4 2-2 2 2 1.4-1.4-2-2 2-2Z"/>`,
+  blade: `
+    <path d="M3 15.2 15.6 2.6a1 1 0 0 1 1.5.1l2.2 2.7a1 1 0 0 1-.1 1.4L6.8 18.2 3 15.2Z"/>
+    <path d="M2.2 17.2 5.4 19.8l-2.6 1.5a.8.8 0 0 1-1.1-.9l.5-3.2Z"/>`,
+  fries: `
+    <path d="M6.5 9.5 8 3.2l1.9.5-1.4 6.1-2-.3Z"/>
+    <path d="M11 9.2V2.4h2v6.8h-2Z"/>
+    <path d="M15.5 9.8 16.9 3.7l1.9.5-1.4 6-1.9-.4Z"/>
+    <path d="M4.4 10.6h15.2l-1.5 9.1a2 2 0 0 1-2 1.7H7.9a2 2 0 0 1-2-1.7l-1.5-9.1Z"/>`,
 };
 
 /** @typedef {keyof typeof SHAPES} IconName */
@@ -100,6 +122,21 @@ export function icon(name, opts = {}) {
 
   svg.insertAdjacentHTML('beforeend', shape);
   return svg;
+}
+
+/**
+ * Swap the icon inside a host element.
+ *
+ * Toggles used to do `span.textContent = on ? '🔊' : '🔇'`, which with an SVG
+ * child would delete the icon and leave a bare text node. Replace the children
+ * instead.
+ *
+ * @param {Element|null} host
+ * @param {IconName} name
+ * @param {{ size?: number, className?: string, title?: string }} [opts]
+ */
+export function setIcon(host, name, opts) {
+  if (host) host.replaceChildren(icon(name, opts));
 }
 
 /** The three podium icons, by rank. Rank 1 gets the cup, 2 and 3 a medal.

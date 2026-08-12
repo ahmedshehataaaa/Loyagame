@@ -56,6 +56,20 @@ const Game = (() => {
     canvas.style.width = SW + 'px';
     canvas.style.height = SH + 'px';
 
+    /* Everything above is pure canvas sizing. Everything below needs
+       `window.Mechanics`, which the ES-module layer publishes separately
+       (ADR 0005) and which the engine script can therefore outrun: in the
+       built bundle both load together, and a resize landing in that window —
+       a ResizeObserver's initial callback, or the viewport being set before
+       first paint — threw "Mechanics is not defined" and killed the boot on
+       the welcome screen. Intermittent, and only under load, so it read as
+       flake until it was traced.
+
+       Bailing here is safe rather than merely quiet: the canvas is already
+       correctly sized, and the field maths is recomputed on the next resize,
+       which `init()` performs before a round can start. */
+    if (!window.Mechanics) return;
+
     /* COVER scaling means the virtual field is WIDER than a tall viewport, so a
        strip down each side is off screen. Recompute which slice is actually
        visible so spawns can be kept inside it — items used to launch into the
@@ -103,16 +117,10 @@ const Game = (() => {
      the canvas can never disagree with the box it is clipped to. */
   const shell = document.getElementById('app');
   if (shell && typeof ResizeObserver === 'function') {
-    new ResizeObserver(() => {
-      /* A ResizeObserver delivers an initial callback as soon as it starts
-         observing. In the built bundle the engine script runs before the module
-         layer publishes `window.Mechanics` (ADR 0005), and `resize()` needs it
-         for the visible-field maths — so that first callback threw
-         "Mechanics is not defined" and killed the boot. The engine calls
-         resize() itself once it starts, so skipping until Mechanics exists
-         costs nothing. */
-      if (window.Mechanics) resize();
-    }).observe(shell);
+    /* This fires an initial callback the moment it starts observing, which is
+       before the module layer has published window.Mechanics. `resize()`
+       guards that itself, for every caller — see the bail-out inside it. */
+    new ResizeObserver(() => resize()).observe(shell);
   }
 
   // Client (window) point -> virtual game coordinates. No rotation term now

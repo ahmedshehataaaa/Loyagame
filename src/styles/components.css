@@ -889,9 +889,23 @@
   font-size: var(--fs-body);
   text-align: start;
 }
+/* Holds an SVG now, not an emoji, so it needs a box rather than a font-size —
+   and its own colour, since currentColor here would otherwise inherit the
+   panel's body text. */
 .coach__glyph {
-  font-size: 26px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
   line-height: 1;
+  color: var(--c-primary);
+}
+/* The empty/error glyph is an SVG too; sizing comes from the icon() call. */
+.state__glyph {
+  display: grid;
+  place-items: center;
+  color: var(--c-secondary);
 }
 
 /* ---- Offline banner ------------------------------------------

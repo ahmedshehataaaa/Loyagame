@@ -146,7 +146,10 @@ export function LeaderboardPage(root) {
       el(
         'div',
         { style: { marginTop: 'auto', paddingTop: '18px' } },
-        button('▶ Play a round', { onClick: () => navigate('/play') }),
+        button('Play a round', {
+          icon: icon('play', { size: 15 }),
+          onClick: () => navigate('/play'),
+        }),
       ),
     ),
     tabbar('/leaderboard'),

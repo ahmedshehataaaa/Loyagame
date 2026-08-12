@@ -14,6 +14,7 @@
    it doubles as a preview of the gameplay.
    ============================================================ */
 import { el, button, iconButton, tabbar, toast } from '../components/ui.js';
+import { icon, setIcon } from '../components/icons.js';
 import { coachCard, markCoachSeen } from '../components/coach.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
@@ -56,15 +57,19 @@ export function WelcomePage(root) {
   const signedIn = Store.isSignedIn();
   const { soundEnabled } = Store.settings();
 
-  const soundBtn = iconButton(soundEnabled ? '🔊' : '🔇', t('common.toggleSound'), {
-    plain: true,
-    onClick: () => {
-      const on = Store.toggleSound();
-      soundBtn.querySelector('span').textContent = on ? '🔊' : '🔇';
-      soundBtn.setAttribute('aria-pressed', String(on));
-      toast(on ? t('common.soundOn') : t('common.soundOff'));
+  const soundBtn = iconButton(
+    icon(soundEnabled ? 'soundOn' : 'soundOff'),
+    t('common.toggleSound'),
+    {
+      plain: true,
+      onClick: () => {
+        const on = Store.toggleSound();
+        setIcon(soundBtn.querySelector('span'), on ? 'soundOn' : 'soundOff');
+        soundBtn.setAttribute('aria-pressed', String(on));
+        toast(on ? t('common.soundOn') : t('common.soundOff'));
+      },
     },
-  });
+  );
   soundBtn.setAttribute('aria-pressed', String(soundEnabled));
 
   const screen = el(
@@ -113,7 +118,7 @@ export function WelcomePage(root) {
       'div',
       { class: 'welcome__cta' },
       button(t('common.playNow'), {
-        icon: '▶',
+        icon: icon('play', { size: 15 }),
         onClick: () => navigate(signedIn ? '/play' : '/sign-in'),
       }),
       el(

@@ -254,7 +254,11 @@
   line-height: 1.05;
 }
 .victory__badge {
-  display: inline-block;
+  /* Was inline-block around a text-with-emoji string. The trophy is an SVG
+     sibling of the label now, so the badge lays them out. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-top: var(--sp-sm);
   padding: 5px 13px;
   border-radius: var(--r-full);

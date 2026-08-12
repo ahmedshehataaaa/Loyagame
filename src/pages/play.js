@@ -5,6 +5,7 @@
    this page owns lifecycle: mount, pause, and hard teardown so no
    loop or listener survives a route change. */
 import { el, button, iconButton, modal } from '../components/ui.js';
+import { icon, setIcon } from '../components/icons.js';
 import { GameEvents, applySoundSetting } from '../adapters/engine-bridge.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
@@ -53,12 +54,12 @@ export function PlayPage(root) {
 
   const pauseBtn = iconButton('❚❚', t('play.pause'), { onClick: () => togglePause(true) });
   const soundBtn = iconButton(
-    Store.settings().soundEnabled ? '🔊' : '🔇',
+    icon(Store.settings().soundEnabled ? 'soundOn' : 'soundOff'),
     t('common.toggleSound'),
     {
       onClick: () => {
         const on = Store.toggleSound();
-        soundBtn.querySelector('span').textContent = on ? '🔊' : '🔇';
+        setIcon(soundBtn.querySelector('span'), on ? 'soundOn' : 'soundOff');
         applySoundSetting();
       },
     },
@@ -186,7 +187,7 @@ export function PlayPage(root) {
       el(
         'div',
         { class: 'state' },
-        el('span', { class: 'state__glyph', text: '⚠️' }),
+        el('span', { class: 'state__glyph' }, icon('alert', { size: 40 })),
         el('p', { class: 'state__title', text: t('play.failed') }),
         button(t('err.back'), { onClick: () => navigate('/') }),
       ),

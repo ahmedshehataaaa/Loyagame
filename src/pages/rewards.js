@@ -12,6 +12,7 @@ import {
   modal,
   emptyState,
 } from '../components/ui.js';
+import { icon } from '../components/icons.js';
 import { REWARDS, tierFor } from '../data/catalog.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
@@ -69,7 +70,8 @@ export function RewardsPage(root) {
       },
       el('span', { class: 'reward__cost', text: `${fmt(reward.cost)} PTS` }),
       st === 'owned' && el('span', { class: 'reward__flag', 'aria-hidden': 'true', text: '✓' }),
-      st === 'locked' && el('span', { class: 'reward__flag', 'aria-hidden': 'true', text: '🔒' }),
+      st === 'locked' &&
+        el('span', { class: 'reward__flag', 'aria-hidden': 'true' }, icon('lock', { size: 13 })),
       el(
         'span',
         { class: 'reward__art' },
@@ -80,7 +82,7 @@ export function RewardsPage(root) {
           width: '84',
           height: '84',
           onError: (e) => {
-            e.target.replaceWith(el('span', { text: '🍔', style: { fontSize: '38px' } }));
+            e.target.replaceWith(icon('gift', { size: 38 }));
           },
         }),
       ),
@@ -135,7 +137,7 @@ export function RewardsPage(root) {
             ),
           )
         : emptyState(
-            '🎟️',
+            icon('ticket', { size: 40 }),
             'Nothing redeemed yet',
             'Win rounds to bank points, then claim a reward here.',
           ),
@@ -148,7 +150,10 @@ export function RewardsPage(root) {
     el(
       'div',
       { style: { marginTop: 'auto', paddingTop: '18px' } },
-      button('▶ Play a round', { onClick: () => navigate('/play') }),
+      button('Play a round', {
+        icon: icon('play', { size: 15 }),
+        onClick: () => navigate('/play'),
+      }),
     ),
   );
   paint();

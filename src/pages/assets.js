@@ -3,6 +3,7 @@
    filename and intrinsic dimensions read off the decoded image.
    Deliberately absent from the player tab bar. */
 import { el, topbar, emptyState } from '../components/ui.js';
+import { icon } from '../components/icons.js';
 import { ASSET_GROUPS } from '../data/catalog.js';
 
 export function AssetLibraryPage(root) {
@@ -16,7 +17,7 @@ export function AssetLibraryPage(root) {
         dims.textContent = `${e.target.naturalWidth}×${e.target.naturalHeight}`;
       },
       onError: (e) => {
-        e.target.replaceWith(el('span', { class: 'asset__missing', text: '⚠️' }));
+        e.target.replaceWith(el('span', { class: 'asset__missing' }, icon('alert', { size: 20 })));
         dims.textContent = 'missing';
         dims.classList.add('is-bad');
       },

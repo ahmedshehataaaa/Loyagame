@@ -410,6 +410,42 @@ test.describe('(f) Stitch reference fidelity', () => {
     expect(await page.locator('.lb-row__medal').count(), 'podium icons are SVG').toBe(3);
   });
 
+  test('(f) no emoji survives on any player-facing screen', async ({ page }) => {
+    await seed(page);
+    /* `\p{Extended_Pictographic}` also matches ® and ™, which are required
+       brand copy ("Big Mac®"), not emoji — strip them before testing rather
+       than loosening the pattern and letting a real emoji back through. */
+    const TRADEMARK = /[®™℗]/g;
+    const emoji = /\p{Extended_Pictographic}/u;
+
+    for (const [name, hash] of [
+      ['welcome', '#/'],
+      ['rewards', '#/rewards'],
+      ['wallet', '#/wallet'],
+      ['leaderboard', '#/leaderboard'],
+    ]) {
+      await page.goto(`/index.html${hash}`);
+      await page.waitForTimeout(500);
+      const text = (await page.locator('body').innerText()).replace(TRADEMARK, '');
+      expect(text, `${name} still renders emoji`).not.toMatch(emoji);
+      // And the icons that replaced them actually rendered.
+      expect(await page.locator('.tabbar svg').count(), `${name} tab bar icons`).toBe(4);
+    }
+  });
+
+  test('(f) the sound toggle swaps its icon instead of erasing it', async ({ page }) => {
+    // `span.textContent = '🔊'` would have deleted the SVG child; setIcon()
+    // replaces it. Assert an SVG survives the toggle in both directions.
+    await seed(page);
+    await page.goto('/index.html#/');
+    const glyph = page.locator('.welcome__bar .icon-btn span').first();
+    await expect(glyph.locator('svg')).toHaveCount(1);
+    await page.locator('.welcome__bar .icon-btn').first().click();
+    await expect(glyph.locator('svg')).toHaveCount(1);
+    await page.locator('.welcome__bar .icon-btn').first().click();
+    await expect(glyph.locator('svg')).toHaveCount(1);
+  });
+
   test('(f) home and leaderboard capture cleanly for review', async ({ page }, testInfo) => {
     // Artifacts for human review of drift, attached to the report rather than
     // asserted: a committed pixel baseline would fail on first run and on any
