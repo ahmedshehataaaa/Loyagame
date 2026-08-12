@@ -87,10 +87,25 @@
   box-shadow: 0 0 0 0 var(--c-secondary-dark);
 }
 
-/* The mockup's PLAY NOW carries no glyph. The span is left in the markup —
-   it is `aria-hidden` decoration either way — and simply not drawn. */
-.welcome__cta .btn > span[aria-hidden='true'] {
+/* The mockup's PLAY NOW carries no glyph. The decoration is left in the markup
+   — it is `aria-hidden` either way — and simply not drawn. The `svg` arm was
+   added when button icons became SVG nodes rather than glyph spans: without
+   it, a play triangle reappeared on this screen and quietly undid this
+   decision. */
+.welcome__cta .btn > span[aria-hidden='true'],
+.welcome__cta .btn > svg {
   display: none;
+}
+
+/* The screen's focal point, so it outweighs the ghost row below it on SIZE as
+   well as colour — a glow alone would not survive a greyscale check. Held back
+   at 320px, where the links stack into a column and the fold budget is already
+   spent; there the pill is still the largest control on the screen. */
+@media (min-width: 360px) {
+  .welcome__cta .btn--glow {
+    font-size: 23px;
+    padding: 19px 24px;
+  }
 }
 
 /* The secondary row is subordinate in the mockup's hierarchy: quiet,

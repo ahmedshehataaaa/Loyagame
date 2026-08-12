@@ -63,14 +63,9 @@
   flex-direction: column;
   gap: var(--sp-sm);
 }
-/* PLAY NOW is the focal point of the screen, so it outweighs the ghost links
-   below it on size as well as colour — the glow alone would not survive a
-   greyscale check. */
-.welcome__cta > .btn--glow {
-  padding: 18px 24px;
-  font-size: 25px;
-  letter-spacing: 0.03em;
-}
+/* NOTE: the welcome CTA's size lives in reference.css, which loads after this
+   file and owns that pill (`.welcome__cta .btn`). Sizing it here silently lost
+   to that rule. See reference.css for the size bump. */
 .welcome__trust {
   margin-top: -2px;
   text-align: center;
@@ -587,5 +582,18 @@
   }
   .welcome__links {
     flex-direction: column;
+  }
+  /* 320x568 has no spare vertical budget: the links stack into a column here,
+     and the added trust line pushed the welcome screen past the fold — the
+     exact failure the Terms text-link was introduced to avoid. Tighten the
+     stack rather than drop the line. The CTA itself is NOT enlarged at this
+     size (see reference.css). */
+  .welcome__cta {
+    gap: 4px;
+  }
+  .welcome__trust {
+    font-size: var(--fs-micro);
+    line-height: 1.15;
+    margin-top: -3px;
   }
 }
