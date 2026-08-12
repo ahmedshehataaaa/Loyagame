@@ -585,6 +585,16 @@ begin
     'peakHours', coalesce((select jsonb_agg(jsonb_build_object('hour', t.hour, 'n', t.n) order by t.hour)
                    from (select extract(hour from created_at at time zone 'Africa/Cairo')::int as hour, count(*) as n
                          from runs where created_at > v_since group by 1) t), '[]'::jsonb),
+    -- Wins and redemptions on the SAME daily axis as playsPerDay, so the
+    -- brand dashboard can plot all three series against one date range.
+    -- Additive: a dashboard reading an older database simply sees these
+    -- keys absent and degrades to plays-only rather than breaking.
+    'winsPerDay', coalesce((select jsonb_agg(jsonb_build_object('day', t.day, 'n', t.n) order by t.day)
+                   from (select to_char(created_at at time zone 'Africa/Cairo', 'YYYY-MM-DD') as day, count(*) as n
+                         from wheel_wins where created_at > v_since group by 1) t), '[]'::jsonb),
+    'redemptionsPerDay', coalesce((select jsonb_agg(jsonb_build_object('day', t.day, 'n', t.n) order by t.day)
+                   from (select to_char(redeemed_at at time zone 'Africa/Cairo', 'YYYY-MM-DD') as day, count(*) as n
+                         from wheel_wins where redeemed and redeemed_at > v_since group by 1) t), '[]'::jsonb),
     'dropOff', jsonb_build_object(
       'started',   (select count(*) from runs where created_at > v_since),
       'finished',  (select count(*) from runs where created_at > v_since and token_used),
