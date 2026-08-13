@@ -1,26 +1,15 @@
-/* Sign In — two steps, matching 02_signin_screen.png: enter a number, then
-   enter the code that number receives.
-
-   THE NUMBER IS VERIFIED NOW. It previously was not: the button said "Continue"
-   precisely because "Send Code" had promised a verification step that did not
-   exist, and the honest thing at the time was to stop promising it. The step
-   exists now — `/send-otp` and `/verify-otp` — so the reference's "Send Code"
-   is truthful again, and `setIdentity()` runs only after the SERVER reports
-   `verified: true`.
-
-   Nothing here knows the correct code, and nothing here decides whether
-   verification passed. A check the browser can answer is a check an attacker
-   can answer — the same rule that governs the reward path. */
+/* Sign In — phone number is trusted as entered (July 2026 design decision).
+   OTP verification is planned for a future release once an SMS provider is
+   wired up; until then, register() creates/updates the player row and the
+   user goes straight to the game. */
 import { el, button, toast } from '../components/ui.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
-import { register, clearIdentity, sendOtp, verifyOtp } from '../services/loyalty.js';
+import { register, clearIdentity, setIdentity } from '../services/loyalty.js';
 import { t } from '../core/i18n.js';
 import { track, EVENTS } from '../analytics/index.js';
 
-const RESEND_COOLDOWN_SEC = 30;
-
-const CODES = ['+20', '+1', '+44', '+62', '+971', '+966'];
+const CODES = ['+62', '+20', '+1', '+44', '+971', '+966'];
 
 /** Digits only, 6–13 long — matches the engine's old phone rule. */
 function validate(cc, digits) {
@@ -81,9 +70,19 @@ export function SignInPage(root) {
 
     submit,
 
-    el('p', { class: 'signin__legal' }, t('signin.legal')),
-
-    el('p', { class: 'signin__legal', text: t('signin.unverified') }),
+    el(
+      'p',
+      { class: 'signin__legal' },
+      ...t('signin.legal')
+        .split(/(\{terms\}|\{privacy\})/)
+        .map((chunk) => {
+          if (chunk === '{terms}')
+            return el('a', { class: 'text-link', href: '#/terms', text: t('signin.legalTerms') });
+          if (chunk === '{privacy}')
+            return el('a', { class: 'text-link', href: '#/terms', text: t('signin.legalPrivacy') });
+          return document.createTextNode(chunk);
+        }),
+    ),
 
     el(
       'div',
@@ -105,156 +104,6 @@ export function SignInPage(root) {
     ),
   );
 
-  /* ---- Step 2: the code -----------------------------------------------
-     Swapped into the same card rather than pushed as a route, so Back still
-     means "leave sign-in" and a reload cannot strand a player on a code screen
-     waiting for a code that is no longer valid. */
-  function showCodeStep(cc, digits) {
-    const codeInput = el('input', {
-      class: 'field__input field__input--code',
-      id: 'otp',
-      type: 'text',
-      inputmode: 'numeric',
-      autocomplete: 'one-time-code',
-      maxlength: '6',
-      placeholder: '● ● ● ● ● ●',
-      'aria-describedby': 'otp-err',
-    });
-    const codeErr = el('small', { class: 'field__error', id: 'otp-err', role: 'alert' });
-    const verifyBtn = button(t('signin.verify'), { type: 'submit', 'data-act': 'verify' });
-    const resendBtn = button(t('signin.resend'), {
-      variant: 'ghost',
-      size: 'sm',
-      'data-act': 'resend',
-    });
-
-    let cooling = 0;
-    const tick = () => {
-      if (cooling <= 0) {
-        resendBtn.disabled = false;
-        resendBtn.textContent = t('signin.resend');
-        return;
-      }
-      resendBtn.disabled = true;
-      resendBtn.textContent = t('signin.resendIn', { sec: cooling });
-      cooling -= 1;
-      setTimeout(tick, 1000);
-    };
-    const startCooldown = () => {
-      cooling = RESEND_COOLDOWN_SEC;
-      tick();
-    };
-
-    const setCodeError = (msg) => {
-      codeErr.textContent = msg || '';
-      codeInput.setAttribute('aria-invalid', msg ? 'true' : 'false');
-    };
-    codeInput.addEventListener('input', () => {
-      // Digits only, so a pasted "123 456" still verifies.
-      const cleaned = codeInput.value.replace(/\D/g, '').slice(0, 6);
-      if (cleaned !== codeInput.value) codeInput.value = cleaned;
-      if (codeErr.textContent) setCodeError(null);
-    });
-
-    let checking = false;
-    const codeForm = el(
-      'form',
-      { class: 'signin__card card', novalidate: true },
-      el('h1', { class: 'signin__title', text: t('signin.codeTitle') }),
-      el('p', { class: 'signin__sub', text: t('signin.codeSub', { phone: `${cc} ${digits}` }) }),
-      el(
-        'div',
-        { class: 'field' },
-        el('label', { class: 'field__label', for: 'otp', text: t('signin.codeLabel') }),
-        codeInput,
-        codeErr,
-      ),
-      verifyBtn,
-      el('div', { class: 'signin__alt' }, resendBtn),
-      el(
-        'div',
-        { class: 'signin__alt' },
-        button(t('signin.changeNumber'), {
-          variant: 'ghost',
-          size: 'sm',
-          'data-act': 'change-number',
-          onClick: () => {
-            codeForm.replaceWith(form);
-            submit.disabled = false;
-            submit.textContent = t('signin.sendCode');
-          },
-        }),
-      ),
-    );
-
-    resendBtn.addEventListener('click', async () => {
-      setCodeError(null);
-      const res = await sendOtp({ cc, phone: digits });
-      if (res.ok) {
-        toast(t('signin.codeSent'), 'ok');
-        startCooldown();
-      } else if (res.kind === 'rate_limited') {
-        setCodeError(t('signin.errTooSoon'));
-        startCooldown();
-      } else {
-        setCodeError(t('signin.errSendFailed'));
-      }
-    });
-
-    codeForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (checking) return;
-      const code = codeInput.value.replace(/\D/g, '');
-      if (code.length !== 6) {
-        setCodeError(t('signin.errCodeLen'));
-        codeInput.focus();
-        return;
-      }
-
-      checking = true;
-      verifyBtn.disabled = true;
-      verifyBtn.textContent = t('signin.verifying');
-
-      const res = await verifyOtp({ cc, phone: digits, code });
-
-      checking = false;
-      verifyBtn.disabled = false;
-      verifyBtn.textContent = t('signin.verify');
-
-      /* The SERVER decides. `verifyOtp` stores the identity only on a genuine
-         `verified: true`, so no error shape here can sign anyone in. */
-      if (res.ok && res.data?.verified === true) {
-        Store.signIn({
-          name: `Player ${digits.slice(-4)}`,
-          isGuest: false,
-          avatar: 'assets/avatar.png',
-        });
-        const pts = res.data?.profile?.orderPoints;
-        if (Number.isFinite(pts)) Store.setOrderPoints(pts);
-        track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_otp', accepted: true });
-        toast(t('signin.verified'), 'ok');
-        navigate('/play');
-        return;
-      }
-
-      track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_otp', accepted: false });
-      const detail = res.ok ? res.data?.error : res.detail;
-      const left = res.ok ? res.data?.attemptsLeft : res.body?.attemptsLeft;
-      if (detail === 'code_expired') setCodeError(t('signin.errCodeExpired'));
-      else if (detail === 'too_many_attempts' || res.kind === 'rate_limited')
-        setCodeError(t('signin.errCodeMany'));
-      else if (Number.isFinite(left)) setCodeError(t('signin.errCodeWrong', { left }));
-      // Never guess the count: "0 tries left" next to a working input is worse
-      // than not saying, and that is exactly what a missing value produced.
-      else setCodeError(t('signin.errCodeWrongPlain'));
-      codeInput.select();
-    });
-
-    form.replaceWith(codeForm);
-    startCooldown();
-    codeInput.focus();
-  }
-
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (submitting) return; // guard double submit
@@ -271,16 +120,10 @@ export function SignInPage(root) {
     submit.disabled = true;
     submit.textContent = t('signin.sending');
 
-    /* Register so the player row exists, then ask for a code. Identity is NOT
-       kept at this point — `register()` sets it, so it is cleared again here
-       and only re-established by a verified `verifyOtp()`. A number nobody has
-       proved they hold must never be able to collect a prize. */
     register({ cc: ccSel.value, phone: digits, consent: true })
       .then((reg) => {
         clearIdentity();
         if (!reg.ok && reg.kind === 'not_configured') {
-          // Rewards switched off in this build: there is nothing to verify
-          // against, so say "practice" rather than block the player entirely.
           Store.signIn({
             name: `Player ${digits.slice(-4)}`,
             isGuest: false,
@@ -288,24 +131,27 @@ export function SignInPage(root) {
           });
           toast(t('signin.practice'), 'ok');
           navigate('/play');
-          return null;
+          return;
         }
-        return sendOtp({ cc: ccSel.value, phone: digits });
-      })
-      .then((res) => {
-        if (!res) return; // practice path already navigated
-        if (res.ok) {
-          track(EVENTS.VERIFICATION_STARTED, { method: 'phone_otp' });
-          toast(t('signin.codeSent'), 'ok');
-          showCodeStep(ccSel.value, digits);
-        } else if (res.kind === 'rate_limited') {
-          setError(t('signin.errTooSoon'));
-        } else {
+        if (!reg.ok) {
           setError(t('signin.errSendFailed'));
+          return;
         }
+        // OTP not yet configured — phone number is trusted as entered.
+        setIdentity(ccSel.value, digits);
+        Store.signIn({
+          name: `Player ${digits.slice(-4)}`,
+          isGuest: false,
+          avatar: 'assets/avatar.png',
+        });
+        const pts = reg.data?.profile?.orderPoints;
+        if (Number.isFinite(pts)) Store.setOrderPoints(pts);
+        track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_direct', accepted: true });
+        toast(t('signin.verified'), 'ok');
+        navigate('/play');
       })
       .catch((error) => {
-        console.error('send code failed', error);
+        console.error('sign in failed', error);
         setError(t('signin.errSendFailed'));
       })
       .finally(() => {

@@ -6,7 +6,6 @@ import {
   button,
   topbar,
   meter,
-  tabbar,
   toast,
   fmt,
   modal,
@@ -152,5 +151,5 @@ export function RewardsPage(root) {
     ),
   );
   paint();
-  root.append(wrap, tabbar('/rewards'));
+  root.append(wrap);
 }

@@ -2,7 +2,7 @@
    Season countdown, medal ranks, and the signed-in player merged in
    and highlighted. Rival rows are seeded prototype data (see
    data/catalog.js); the player's row is their real best score. */
-import { el, button, topbar, tabbar, fmt, emptyState, loadingState } from '../components/ui.js';
+import { el, button, topbar, fmt, emptyState, loadingState } from '../components/ui.js';
 import { RIVALS } from '../data/catalog.js';
 import { Store } from '../core/store.js';
 import { track, EVENTS } from '../analytics/index.js';
@@ -63,7 +63,6 @@ export function LeaderboardPage(root) {
         button('▶ Play a round', { onClick: () => navigate('/play') }),
       ),
     ),
-    tabbar('/leaderboard'),
   );
 
   fetchStandings()

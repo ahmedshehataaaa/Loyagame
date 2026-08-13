@@ -13,46 +13,30 @@
    branding with assets this build owns rather than waiting on new art, and
    it doubles as a preview of the gameplay.
    ============================================================ */
-import { el, button, iconButton, tabbar, toast } from '../components/ui.js';
+import { el, button, iconButton, toast } from '../components/ui.js';
 import { coachCard, markCoachSeen } from '../components/coach.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, toggleLang } from '../core/i18n.js';
-import { roundSeconds } from '../core/rules.js';
-
-/* The airborne items, as [sprite, class] pairs. Positioned in CSS so the
-   composition survives a locale/direction flip without JS. */
-const HERO_ITEMS = [
-  ['assets/items/bigmac.png', 'is-hero'],
-  ['assets/items/fries.png', 'is-left'],
-  ['assets/items/mcflurry.png', 'is-right'],
-  ['assets/items/nuggets.png', 'is-low'],
-];
 
 function heroArt() {
-  const stage = el('div', { class: 'hero', 'aria-hidden': 'true' });
-  for (const [src, cls] of HERO_ITEMS) {
-    stage.append(
-      el('img', {
-        class: `hero__item ${cls}`,
-        src,
-        alt: '',
-        loading: 'eager',
-        decoding: 'async',
-        onError: (e) => {
-          // Missing art must not leave a broken-image glyph in the hero.
-          e.target.style.display = 'none';
-        },
-      }),
-    );
-  }
-  // The slice: a single diagonal stroke, drawn not imaged.
-  stage.append(el('span', { class: 'hero__slash' }));
-  return stage;
+  return el(
+    'div',
+    { class: 'welcome__hero', 'aria-hidden': 'true' },
+    el('img', {
+      class: 'welcome__mascot',
+      src: 'assets/Mac character.png',
+      alt: '',
+      loading: 'eager',
+      decoding: 'async',
+      onError: (e) => {
+        e.target.style.display = 'none';
+      },
+    }),
+  );
 }
 
 export function WelcomePage(root) {
-  const ROUND_TIME = roundSeconds();
   const signedIn = Store.isSignedIn();
   const { soundEnabled } = Store.settings();
 
@@ -100,7 +84,7 @@ export function WelcomePage(root) {
       'div',
       { class: 'welcome__copy' },
       el('h1', { class: 't-display', html: t('welcome.title') }),
-      el('p', { class: 'welcome__sub', text: t('welcome.sub', { seconds: ROUND_TIME }) }),
+      el('p', { class: 'welcome__sub', text: t('welcome.sub') }),
       el('p', { class: 'welcome__prize', text: t('welcome.prizeTeaser') }),
       signedIn &&
         el('p', {
@@ -114,7 +98,7 @@ export function WelcomePage(root) {
       { class: 'welcome__cta' },
       button(t('common.playNow'), {
         icon: '▶',
-        onClick: () => navigate(signedIn ? '/play' : '/sign-in'),
+        onClick: () => navigate('/sign-in'),
       }),
       el(
         'div',
@@ -160,5 +144,5 @@ export function WelcomePage(root) {
     ),
   );
 
-  root.append(screen, tabbar('/'));
+  root.append(screen);
 }

@@ -15,7 +15,7 @@
    a weighted random draw (ADR 0008) with an open compliance question; see
    docs/security/reward-wheel-compliance.md.
    ============================================================ */
-import { el, topbar, tabbar } from '../components/ui.js';
+import { el, topbar } from '../components/ui.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives, pointsThreshold, prizes } from '../core/rules.js';
 
@@ -60,5 +60,5 @@ export function TermsPage(root) {
     ),
   );
 
-  root.append(wrap, tabbar('/'));
+  root.append(wrap);
 }

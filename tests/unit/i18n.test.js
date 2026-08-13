@@ -47,7 +47,7 @@ describe('locale completeness', () => {
 
 describe('interpolation', () => {
   it('substitutes named variables', () => {
-    expect(t('welcome.sub', { seconds: 30 })).toContain('30');
+    expect(t('welcome.greet', { name: 'Ali' })).toContain('Ali');
   });
 
   it('replaces every occurrence, not just the first', () => {
