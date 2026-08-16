@@ -156,7 +156,8 @@ export function PlayPage(root) {
 
   /* First-run instruction, over the play screen rather than as a route the
      player taps past before it can help. */
-  if (!hasSeenCoach()) {
+  const needsCoach = !hasSeenCoach();
+  if (needsCoach) {
     track(EVENTS.INSTRUCTIONS_VIEWED, { trigger: 'first_run' });
     const card = coachCard({
       onStart: () => {
@@ -167,32 +168,33 @@ export function PlayPage(root) {
       },
     });
     screen.append(card);
-    // Pause behind the card so the round does not drain while it is read.
-    setTimeout(() => {
-      try {
-        window.Game.pauseGame();
-      } catch {}
-    }, 0);
   }
 
   /* ---- Engine lifecycle ------------------------------------ */
   applySoundSetting();
-  try {
-    window.Game.init();
-    window.Game.startGame();
-  } catch (err) {
-    console.error('engine failed to start', err);
-    screen.append(
-      el(
-        'div',
-        { class: 'state' },
-        el('span', { class: 'state__glyph', text: '⚠️' }),
-        el('p', { class: 'state__title', text: t('play.failed') }),
-        button(t('err.back'), { onClick: () => navigate('/') }),
-      ),
-    );
-    return () => {};
-  }
+  // Defer one frame so the browser finishes laying out the stage before
+  // resize() reads window.innerWidth/innerHeight into the canvas dimensions.
+  // If the coach card is showing, pause immediately after startGame so the
+  // round timer doesn't drain while the player reads the instructions.
+  let initRaf = requestAnimationFrame(() => {
+    initRaf = null;
+    try {
+      window.Game.init();
+      window.Game.startGame();
+      if (needsCoach) window.Game.pauseGame();
+    } catch (err) {
+      console.error('engine failed to start', err);
+      screen.append(
+        el(
+          'div',
+          { class: 'state' },
+          el('span', { class: 'state__glyph', text: '⚠️' }),
+          el('p', { class: 'state__title', text: t('play.failed') }),
+          button(t('err.back'), { onClick: () => navigate('/') }),
+        ),
+      );
+    }
+  });
 
   /* ---- HUD updates -----------------------------------------
      Event-driven: the engine calls UI.hud() only when a displayed value
@@ -379,6 +381,7 @@ export function PlayPage(root) {
 
   /* ---- Teardown -------------------------------------------- */
   return () => {
+    if (initRaf) cancelAnimationFrame(initRaf);
     // Drop the round session so a stale token can never be submitted later.
     endRound();
     offs.forEach((off) => {
