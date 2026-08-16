@@ -542,11 +542,8 @@
 }
 
 .wheel__hub {
-  background: var(--c-white);
-  border: 4px solid var(--c-secondary);
-}
-.wheel__hub::after {
-  background: #e0231b;
+  background: var(--c-secondary);
+  border: 4px solid var(--c-white);
 }
 
 /* Flat gold slab, dark text, roman weight — not a bevelled arcade button. */

@@ -75,19 +75,23 @@ describe('wheelSegments — the server owns the segment order', () => {
     expect(wheelSegments([]).length).toBeGreaterThanOrEqual(0);
   });
 
-  it('gives every segment a glyph so a missing sprite still renders', () => {
-    const segs = wheelSegments([{ key: 'mystery', label: 'Mystery Prize' }]);
-    expect(segs[0].glyph.length).toBeGreaterThan(0);
+  it('extracts a discount percentage for off* keys', () => {
+    // All current prizes are discount codes (off5, off10, …). The pct field
+    // drives the large % number on the wheel card; non-discount keys get null.
+    const segs = wheelSegments([
+      { key: 'off10', label: '10% off' },
+      { key: 'mystery', label: 'Mystery Prize' },
+    ]);
+    expect(segs[0].pct).toBe('10%');
+    expect(segs[1].pct).toBeNull();
   });
 
-  it('maps known prize keys to real product art', () => {
+  it('maps off* keys to their percentage string', () => {
     const segs = wheelSegments([
-      { key: 'fries', label: 'Free Fries' },
-      { key: 'unknown-key', label: 'Something' },
+      { key: 'off5', label: '5% off' },
+      { key: 'off7', label: '7% off' },
     ]);
-    expect(segs[0].art).toContain('fries');
-    // An unknown key gets no art and falls back to its glyph — never a broken
-    // image in the middle of the reward reveal.
-    expect(segs[1].art).toBeNull();
+    expect(segs[0].pct).toBe('5%');
+    expect(segs[1].pct).toBe('7%');
   });
 });

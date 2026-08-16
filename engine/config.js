@@ -62,16 +62,12 @@ const CONFIG = {
     enabled: true,
     pointsThreshold: 4000, // ORDER-POINTS needed to spin (a spin spends this); server-authoritative, this is the offline mirror
     prizes: [
-      { key: 'off5', glyph: '🎟️', label: '5% off your order', weight: 28 },
-      { key: 'fries', glyph: '🍟', label: 'Free Fries', weight: 20 },
-      { key: 'off10', glyph: '🎟️', label: '10% off your order', weight: 18 },
-      { key: 'hashbrown', glyph: '🥔', label: 'Free Hash Brown', weight: 12 },
-      { key: 'nuggets', glyph: '🍗', label: 'Free 6pc Nuggets', weight: 9 },
-      { key: 'off15', glyph: '🎟️', label: '15% off your order', weight: 6 },
-      { key: 'mcflurry', glyph: '🍦', label: 'Free McFlurry®', weight: 4 },
-      { key: 'off20', glyph: '🎟️', label: '20% off your order', weight: 2 },
-      { key: 'bigmac', glyph: '🍔', label: 'Free Big Mac®', weight: 0.8 },
-      { key: 'off25', glyph: '💥', label: '25% off your order', weight: 0.2 },
+      { key: 'off5',  label: '5% off',  weight: 35 },
+      { key: 'off6',  label: '6% off',  weight: 20 },
+      { key: 'off7',  label: '7% off',  weight: 18 },
+      { key: 'off8',  label: '8% off',  weight: 13 },
+      { key: 'off9',  label: '9% off',  weight: 9  },
+      { key: 'off10', label: '10% off', weight: 5  },
     ],
   },
 
