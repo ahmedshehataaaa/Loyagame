@@ -90,10 +90,16 @@ export function PlayPage(root) {
   );
 
   /* The engine binds #game once at load, so the canvas lives in the app
-     shell permanently. This route reveals it and parks it behind the HUD. */
+     shell permanently. This route reveals it and parks it behind the HUD.
+     #route sits above #stage in the stacking order; with overflow-y:auto and
+     -webkit-overflow-scrolling:touch it intercepts every swipe on mobile even
+     though the game-screen overlay inside it is pointer-events:none. Setting
+     pointer-events:none on #route itself lets events fall through to the canvas. */
   const stage = document.getElementById('stage');
   const canvas = document.getElementById('game');
+  const routeEl = root; // root IS #route
   stage.classList.add('is-playing');
+  routeEl.style.pointerEvents = 'none';
 
   const hint = el('p', {
     class: 'game-hint',
@@ -394,6 +400,7 @@ export function PlayPage(root) {
       window.Game.idle();
     } catch {} // stops spawning; engine goes idle
     stage.classList.remove('is-playing'); // hide the shared canvas again
+    routeEl.style.pointerEvents = ''; // restore so other routes scroll normally
     pauseOverlay?.remove();
   };
 }
