@@ -63,6 +63,17 @@
   flex-direction: column;
   gap: var(--sp-sm);
 }
+/* NOTE: the welcome CTA's size lives in reference.css, which loads after this
+   file and owns that pill (`.welcome__cta .btn`). Sizing it here silently lost
+   to that rule. See reference.css for the size bump. */
+.welcome__trust {
+  margin-top: -2px;
+  text-align: center;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
+}
 .welcome__links {
   display: flex;
   gap: var(--sp-sm);
@@ -258,7 +269,11 @@
   line-height: 1.05;
 }
 .victory__badge {
-  display: inline-block;
+  /* Was inline-block around a text-with-emoji string. The trophy is an SVG
+     sibling of the label now, so the badge lays them out. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-top: var(--sp-sm);
   padding: 5px 13px;
   border-radius: var(--r-full);
@@ -329,11 +344,16 @@
   gap: var(--sp-sm);
   margin-bottom: var(--sp-md);
 }
+/* The balance is what this screen is ABOUT, so it is the largest thing on it
+   by a clear margin — bigger than the tile names, the rank chip and the CTA.
+   Nothing else on Rewards may compete at this size. */
 .points-head__value {
   display: block;
   font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 1.05;
+  font-size: clamp(40px, 13vw, 56px);
+  line-height: 0.98;
+  letter-spacing: 0.01em;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
 }
 .points-head .t-kicker {
   color: var(--c-ink-soft);
@@ -353,12 +373,74 @@
 }
 
 /* ---- Leaderboard ---------------------------------------------- */
+/* Season card: bevelled gold surface with the slow sunburst behind it, per
+   the Stitch reference's `glossy-top bevel-yellow game-border arcade-shadow`. */
 .season {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   text-align: center;
+  background: linear-gradient(180deg, var(--c-secondary-hi) 0%, var(--c-secondary) 62%);
+  border: var(--border-ink);
+  border-radius: var(--r-xl);
+  box-shadow: var(--lip-gold), var(--lift);
+}
+.season__rays {
+  position: absolute;
+  inset: 0;
+  opacity: 0.1;
+  color: var(--c-ink);
+  pointer-events: none;
+}
+.season__rays svg {
+  width: 100%;
+  height: 100%;
+  animation: season-spin 20s linear infinite;
+}
+@keyframes season-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.season__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.season__time {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  color: var(--c-primary);
+  transition: color var(--t-med);
+}
+/* Under a day: warm. Under an hour: red, and it pulses. Both also change the
+   clock text itself, so urgency is not carried by the icon's colour alone. */
+.season__time.is-soon,
+.season__time.is-soon .season__clock {
+  color: #c2410c;
+}
+.season__time.is-critical,
+.season__time.is-critical .season__clock {
+  color: var(--c-danger);
+}
+.season__time.is-critical {
+  animation: season-urgent 1.4s ease-in-out infinite;
+}
+@keyframes season-urgent {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
+  }
 }
 .season .t-kicker {
   color: var(--c-ink-soft);
@@ -367,6 +449,20 @@
   font-family: var(--font-display);
   font-size: 27px;
   color: var(--c-ink);
+}
+.season__reset {
+  margin-top: var(--sp-sm);
+  padding: 4px var(--sp-lg);
+  border: var(--border-ink-thin);
+  border-radius: var(--r-full);
+  background: linear-gradient(180deg, #e8503f 0%, var(--c-primary) 100%);
+  box-shadow: var(--lip-red);
+  color: var(--c-white);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-black);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
 }
 .lb-head {
   display: flex;
@@ -490,5 +586,18 @@
   }
   .welcome__links {
     flex-direction: column;
+  }
+  /* 320x568 has no spare vertical budget: the links stack into a column here,
+     and the added trust line pushed the welcome screen past the fold — the
+     exact failure the Terms text-link was introduced to avoid. Tighten the
+     stack rather than drop the line. The CTA itself is NOT enlarged at this
+     size (see reference.css). */
+  .welcome__cta {
+    gap: 4px;
+  }
+  .welcome__trust {
+    font-size: var(--fs-micro);
+    line-height: 1.15;
+    margin-top: -3px;
   }
 }

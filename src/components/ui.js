@@ -5,6 +5,7 @@
    ============================================================ */
 import { navigate } from '../core/router.js';
 import { t } from '../core/i18n.js';
+import { icon } from './icons.js';
 
 /**
  * Apply a style object, including CSS custom properties.
@@ -53,7 +54,8 @@ export const fmt = (n) => Number(n || 0).toLocaleString();
  * @property {(e:Event)=>void} [onClick]
  * @property {string} [href]     renders an <a> instead of a <button>
  * @property {boolean} [disabled]
- * @property {string} [icon]     decorative glyph placed before the label
+ * @property {string|Node} [icon] decorative glyph or icon node before the label
+ * @property {boolean} [glow]    marks this as the screen's single next action
  * @property {string} [type]     button type, e.g. 'submit'
  */
 
@@ -63,10 +65,17 @@ export const fmt = (n) => Number(n || 0).toLocaleString();
  */
 export function button(
   label,
-  { variant = 'primary', size, onClick, href, disabled, icon, ...rest } = {},
+  { variant = 'primary', size, onClick, href, disabled, icon, glow, ...rest } = {},
 ) {
-  const cls = ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm'].filter(Boolean).join(' ');
-  const kids = [icon && el('span', { 'aria-hidden': 'true', text: icon }), label];
+  const cls = ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm', glow && 'btn--glow']
+    .filter(Boolean)
+    .join(' ');
+  // An icon node goes in as-is; a string keeps the old wrapped-glyph shape so
+  // callers can migrate to icons.js one screen at a time.
+  const kids = [
+    icon instanceof Node ? icon : icon && el('span', { 'aria-hidden': 'true', text: icon }),
+    label,
+  ];
   if (href) return el('a', { class: cls, href, ...rest }, ...kids);
   return el(
     'button',
@@ -82,13 +91,17 @@ export function button(
 }
 
 /**
- * @param {string} glyph
+ * @param {string|Node} glyph
  * @param {string} label accessible name — icon buttons have no visible text
  * @param {{onClick?:(e:Event)=>void, href?:string, plain?:boolean} & Record<string, any>} [opts]
  */
 export function iconButton(glyph, label, { onClick, href, plain, ...rest } = {}) {
   const cls = `icon-btn${plain ? ' icon-btn--plain' : ''}`;
-  const kids = [el('span', { 'aria-hidden': 'true', text: glyph })];
+  /* Always wrapped in the span, node or not: callers that swap the glyph later
+     do it with `btn.querySelector('span')`, so the wrapper is load-bearing. */
+  const kids = [
+    el('span', { 'aria-hidden': 'true' }, glyph instanceof Node ? glyph : String(glyph)),
+  ];
   if (href) return el('a', { class: cls, href, 'aria-label': label, ...rest }, ...kids);
   return el(
     'button',
@@ -162,11 +175,12 @@ export function meter(value, max, { label, hint } = {}) {
 /* ---- Bottom navigation -------------------------------------- */
 /* Labels are resolved per render so a language switch repaints them.
    `/wallet` is in the player nav; `/assets` is dev-only and deliberately not. */
+/** @type {{ path: string, icon: import('./icons.js').IconName, key: string }[]} */
 const TABS = [
-  { path: '/', icon: '🏠', key: 'common.home' },
-  { path: '/wallet', icon: '🎁', key: 'common.wallet' },
-  { path: '/play', icon: '🎮', key: 'common.play' },
-  { path: '/leaderboard', icon: '🏆', key: 'common.ranks' },
+  { path: '/', icon: 'home', key: 'common.home' },
+  { path: '/wallet', icon: 'gift', key: 'common.wallet' },
+  { path: '/play', icon: 'gamepad', key: 'common.play' },
+  { path: '/leaderboard', icon: 'trophy', key: 'common.ranks' },
 ];
 
 export function tabbar(activePath) {
@@ -182,7 +196,7 @@ export function tabbar(activePath) {
           'aria-current': tab.path === activePath ? 'page' : null,
           onClick: () => navigate(tab.path),
         },
-        el('i', { 'aria-hidden': 'true', text: tab.icon }),
+        icon(tab.icon, { size: 22, className: 'tabbar__icon' }),
         t(tab.key),
       ),
     ),
@@ -208,7 +222,13 @@ export function emptyState(glyph, title, body, action) {
   return el(
     'div',
     { class: 'state' },
-    el('span', { class: 'state__glyph', 'aria-hidden': 'true', text: glyph }),
+    // `glyph` accepts an icon node or a plain string, so callers can migrate
+    // off emoji one screen at a time without a flag-day change here.
+    el(
+      'span',
+      { class: 'state__glyph', 'aria-hidden': 'true' },
+      glyph instanceof Node ? glyph : String(glyph),
+    ),
     el('p', { class: 'state__title', text: title }),
     body && el('p', { class: 'state__body', text: body }),
     action,

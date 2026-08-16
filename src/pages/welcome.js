@@ -14,10 +14,12 @@
    it doubles as a preview of the gameplay.
    ============================================================ */
 import { el, button, iconButton, toast } from '../components/ui.js';
+import { icon, setIcon } from '../components/icons.js';
 import { coachCard, markCoachSeen } from '../components/coach.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, toggleLang } from '../core/i18n.js';
+import { roundSeconds } from '../core/rules.js';
 
 function heroArt() {
   return el(
@@ -37,18 +39,23 @@ function heroArt() {
 }
 
 export function WelcomePage(root) {
+  const ROUND_TIME = roundSeconds();
   const signedIn = Store.isSignedIn();
   const { soundEnabled } = Store.settings();
 
-  const soundBtn = iconButton(soundEnabled ? '🔊' : '🔇', t('common.toggleSound'), {
-    plain: true,
-    onClick: () => {
-      const on = Store.toggleSound();
-      soundBtn.querySelector('span').textContent = on ? '🔊' : '🔇';
-      soundBtn.setAttribute('aria-pressed', String(on));
-      toast(on ? t('common.soundOn') : t('common.soundOff'));
+  const soundBtn = iconButton(
+    icon(soundEnabled ? 'soundOn' : 'soundOff'),
+    t('common.toggleSound'),
+    {
+      plain: true,
+      onClick: () => {
+        const on = Store.toggleSound();
+        setIcon(soundBtn.querySelector('span'), on ? 'soundOn' : 'soundOff');
+        soundBtn.setAttribute('aria-pressed', String(on));
+        toast(on ? t('common.soundOn') : t('common.soundOff'));
+      },
     },
-  });
+  );
   soundBtn.setAttribute('aria-pressed', String(soundEnabled));
 
   const screen = el(
@@ -96,10 +103,15 @@ export function WelcomePage(root) {
     el(
       'div',
       { class: 'welcome__cta' },
+      /* The one action this screen exists for, so it carries the attention
+         treatment and nothing else on the screen does. */
       button(t('common.playNow'), {
-        icon: '▶',
-        onClick: () => navigate('/sign-in'),
+        icon: icon('play', { size: 17 }),
+        glow: true,
+        onClick: () => navigate(signedIn ? '/play' : '/sign-in'),
       }),
+      // Low-noise reassurance, directly under the CTA where hesitation happens.
+      el('p', { class: 'welcome__trust', text: t('welcome.trust', { seconds: ROUND_TIME }) }),
       el(
         'div',
         { class: 'welcome__links' },

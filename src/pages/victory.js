@@ -6,6 +6,7 @@
    rewardPanel from whatever the server actually returned. Surviving does not
    entitle the screen to show a prize. */
 import { el, button, fmt, emptyState } from '../components/ui.js';
+import { icon } from '../components/icons.js';
 import { rewardPanel } from '../components/reward-panel.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
@@ -20,7 +21,7 @@ export function VictoryPage(root) {
         'div',
         { class: 'screen bg-burst' },
         emptyState(
-          '🎮',
+          icon('gamepad', { size: 40 }),
           'No round to show',
           'Play a round first — your results will land here.',
           el(
@@ -75,7 +76,13 @@ export function VictoryPage(root) {
         { class: 'card victory__card' },
         el('span', { class: 't-kicker', text: 'Final score' }),
         el('b', { class: 'victory__score', text: fmt(run.score) }),
-        run.isBest && el('span', { class: 'victory__badge', text: '🏆 NEW PERSONAL BEST' }),
+        run.isBest &&
+          el(
+            'span',
+            { class: 'victory__badge' },
+            icon('trophy', { size: 16 }),
+            el('span', { text: 'NEW PERSONAL BEST' }),
+          ),
 
         el(
           'div',
@@ -114,7 +121,10 @@ export function VictoryPage(root) {
       el(
         'div',
         { class: 'victory__actions' },
-        button('Play Again', { icon: '▶', onClick: () => navigate('/play') }),
+        button('Play Again', {
+          icon: icon('play', { size: 15 }),
+          onClick: () => navigate('/play'),
+        }),
         button('View Rewards', { variant: 'ghost', onClick: () => navigate('/rewards') }),
         el(
           'div',

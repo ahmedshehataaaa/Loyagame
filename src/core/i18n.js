@@ -53,6 +53,7 @@ const STRINGS = {
     'welcome.profile': 'Your profile',
     'welcome.howTo': 'How to play',
     'welcome.prizeTeaser': 'Prizes from Free Fries to a free Big Mac®',
+    'welcome.trust': 'Free to play · One round takes {seconds} seconds',
 
     'howTo.title': 'How to play',
     'howTo.slice': 'Swipe across the food to slice it. Chain slices for combos.',
@@ -124,7 +125,7 @@ const STRINGS = {
     'result.lostSub': 'You hit {lives} burnt batches.',
     'result.lostHint': 'Last the full {seconds} seconds to win the round.',
     'result.finalScore': 'Final score',
-    'result.newBest': '🏆 NEW PERSONAL BEST',
+    'result.newBest': 'NEW PERSONAL BEST',
     'result.slices': 'SLICES',
     'result.best': 'YOUR BEST',
     'result.empty': 'No round to show',
@@ -250,6 +251,7 @@ const STRINGS = {
     'welcome.profile': 'ملفك',
     'welcome.howTo': 'كيف تلعب',
     'welcome.prizeTeaser': 'جوائز من بطاطس مجانية إلى بيج ماك® مجاني',
+    'welcome.trust': 'اللعب مجاني · الجولة تستغرق {seconds} ثانية',
 
     'howTo.title': 'كيف تلعب',
     'howTo.slice': 'اسحب إصبعك على الطعام لتقطيعه. تابع التقطيع لتحصل على سلاسل.',
@@ -321,7 +323,7 @@ const STRINGS = {
     'result.lostSub': 'قطعت {lives} من البطاطس المحروقة.',
     'result.lostHint': 'اصمد {seconds} ثانية كاملة لتفوز بالدور.',
     'result.finalScore': 'النتيجة النهائية',
-    'result.newBest': '🏆 أفضل نتيجة شخصية',
+    'result.newBest': 'أفضل نتيجة شخصية',
     'result.slices': 'التقطيعات',
     'result.best': 'أفضل نتيجة لك',
     'result.empty': 'لا يوجد دور لعرضه',

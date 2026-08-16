@@ -73,9 +73,16 @@ async function measure(page) {
       H = C.HEIGHT,
       g = C.GRAVITY;
     const t = /** @type {any} */ (window).__waveTuning;
+    /* Must be the box the ENGINE renders into, not the window. This helper used
+       to read window.innerWidth/innerHeight, which was the same assumption that
+       caused the bug ADR 0017 fixed: the canvas lives inside the phone-shaped
+       shell, so on desktop the two differ by a factor of four. Reading the
+       window here made the test compute a visible range the engine never used,
+       and every spawn looked like it crossed an edge. */
+    const box = window.Platform.viewport();
     const vis = M.visibleVirtualRange({
-      viewportW: window.innerWidth,
-      viewportH: window.innerHeight,
+      viewportW: box.w,
+      viewportH: box.h,
       fieldW: W,
       fieldH: H,
     });
@@ -123,15 +130,41 @@ test.describe('items stay inside the visible play field', () => {
     expect(r, 'a spawn crossed an edge').toMatchObject({ left: 0, right: 0, top: 0 });
   });
 
-  test('at a desktop window — the TOP is the cropped axis, and apex is clamped', async ({
+  test('at a desktop window — the phone frame puts the crop back on the SIDES', async ({
     page,
   }) => {
-    /* `?play` opens the game on desktop, where the viewport is WIDER than the
-       field: cover scaling then overflows the field top and bottom, and the
-       configured apex of 0.74 throws items clean through the top edge.
-       Measured before the clamp at 1366x577: 76% of spawns escaped, by up to
-       294px. */
+    /* This test used to assert the opposite here, and it was right at the time:
+       the engine sized the canvas to the WINDOW, so at 1366x768 the render box
+       really was wider than the field, cover scaling overflowed it top and
+       bottom, and the configured apex of 0.74 threw items clean through the top
+       edge (measured at 1366x577: 76% of spawns escaped, by up to 294px).
+
+       ADR 0017 changed the render box to the phone-shaped shell, which above
+       the 700x700 breakpoint is a 390:844 frame — NARROWER than the field. So
+       the cropped axis here is the sides, exactly as on a phone, and there is
+       no top overflow left for the apex clamp to correct. The clamp is still
+       load-bearing and is still covered, in the test below, at a window shape
+       that genuinely is wider than the field. */
     await page.setViewportSize({ width: 1366, height: 768 });
+    const t = await engineTuning(page);
+    expect(t.bounds, 'engine passed no spawn bounds to the planner').toBeTruthy();
+
+    const r = await measure(page);
+    expect(r.checked).toBeGreaterThan(100);
+    expect(r, 'a spawn crossed an edge').toMatchObject({ left: 0, right: 0, top: 0 });
+  });
+
+  test('on a landscape phone — the TOP is the cropped axis, and apex is clamped', async ({
+    page,
+  }) => {
+    /* A rotated phone. `--app-max` goes to 100% under
+       `(max-height: 480px) and (orientation: landscape)`, so the render box is
+       the full 844x390 — an aspect of 2.16 against the field's 0.5625. Cover
+       scaling crops the top and bottom hard, and the configured apex of 0.74
+       would throw items clean through the top edge. This is the case the clamp
+       exists for, and the one the old 1366x768 desktop assertion used to cover
+       before the shell became a phone frame there. */
+    await page.setViewportSize({ width: 844, height: 390 });
     const t = await engineTuning(page);
 
     expect(t.apexMax, 'apex was not clamped to the visible field').toBeLessThan(0.74);

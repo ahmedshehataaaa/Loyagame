@@ -12,6 +12,7 @@
    rewardPanel. This screen never decides either.
    ============================================================ */
 import { el, button, emptyState } from '../components/ui.js';
+import { icon } from '../components/icons.js';
 import { rewardPanel } from '../components/reward-panel.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
@@ -31,7 +32,7 @@ export function ResultPage(root) {
         'div',
         { class: 'screen bg-burst' },
         emptyState(
-          '🎮',
+          icon('gamepad', { size: 40 }),
           t('result.empty'),
           t('result.emptyBody'),
           el(
@@ -91,7 +92,13 @@ export function ResultPage(root) {
     { class: 'card victory__card' },
     el('span', { class: 't-kicker', text: t('result.finalScore') }),
     el('b', { class: 'victory__score', text: num(run.score) }),
-    run.isBest && el('span', { class: 'victory__badge', text: t('result.newBest') }),
+    run.isBest &&
+      el(
+        'span',
+        { class: 'victory__badge' },
+        icon('trophy', { size: 16 }),
+        el('span', { text: t('result.newBest') }),
+      ),
 
     el(
       'div',
@@ -120,7 +127,10 @@ export function ResultPage(root) {
   const actions = el(
     'div',
     { class: 'victory__actions' },
-    button(t('common.playAgain'), { icon: '▶', onClick: () => navigate('/play') }),
+    button(t('common.playAgain'), {
+      icon: icon('play', { size: 15 }),
+      onClick: () => navigate('/play'),
+    }),
     button(t('common.wallet'), { variant: 'ghost', onClick: () => navigate('/wallet') }),
     el(
       'div',

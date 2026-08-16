@@ -11,6 +11,7 @@
    screen, so it is never a wall and never lost.
    ============================================================ */
 import { el, button } from './ui.js';
+import { icon } from './icons.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives } from '../core/rules.js';
 
@@ -33,11 +34,11 @@ export function markCoachSeen() {
   }
 }
 
-const rule = (glyph, text) =>
+const rule = (name, text) =>
   el(
     'li',
     { class: 'coach__rule' },
-    el('span', { class: 'coach__glyph', 'aria-hidden': 'true', text: glyph }),
+    el('span', { class: 'coach__glyph', 'aria-hidden': 'true' }, icon(name, { size: 26 })),
     el('span', { text }),
   );
 
@@ -59,10 +60,10 @@ export function coachCard({ onStart, dismissible = true }) {
       'ul',
       { class: 'coach__rules' },
       // Order matters: what to do, what kills you, how you win, what you get.
-      rule('🔪', t('howTo.slice')),
-      rule('🥔', t('howTo.avoid', { lives: num(lives) })),
-      rule('⏱️', t('howTo.survive', { seconds })),
-      rule('🎁', t('howTo.reward')),
+      rule('blade', t('howTo.slice')),
+      rule('fries', t('howTo.avoid', { lives: num(lives) })),
+      rule('clock', t('howTo.survive', { seconds })),
+      rule('gift', t('howTo.reward')),
     ),
 
     button(t('howTo.start'), {

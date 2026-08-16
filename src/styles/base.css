@@ -65,6 +65,61 @@ ul {
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
 }
 
+/* ---- desktop: an actual phone frame, not a full-height column ----
+   The shell used to stretch to the full window height on desktop, so a 1920x1080
+   display got a 480x1080 column — an 0.44 aspect nothing like a phone, against a
+   0.5625 play field. COVER scaling then cropped the field hard on both sides.
+   Lock the shell to the canonical 390x844 frame, scale it to the height that is
+   actually available, and centre it in both axes.
+
+   Phones and tablets never satisfy BOTH conditions, so every one of the six
+   supported viewports keeps the untouched full-bleed mobile layout. */
+@media (min-width: 700px) and (min-height: 700px) {
+  :root {
+    --frame-h: min(100dvh, 940px);
+    --frame-w: calc(var(--frame-h) * 390 / 844);
+    --frame-gap: calc((100dvh - var(--frame-h)) / 2);
+  }
+  body {
+    display: grid;
+    place-items: center;
+    background: #2a0806;
+  }
+  #app {
+    width: var(--frame-w);
+    max-width: none;
+    height: var(--frame-h);
+    border-radius: var(--r-lg, 24px);
+  }
+
+  /* These are appended to <body>, not to #app, so `position: fixed` anchors
+     them to the WINDOW — outside the frame once the frame stops filling it.
+     `.offline-bar` spanned the full desktop width and `.spin-overlay` painted
+     its solid red over the entire screen. `.toast` and `.coach` already centre
+     themselves, but the toast caps at --app-max (480px), which is wider than
+     the frame on a short window, so it needs the frame's width too. */
+  .toast {
+    max-width: calc(var(--frame-w) - 40px);
+  }
+  .offline-bar {
+    inset-inline: auto;
+    left: 50%;
+    width: var(--frame-w);
+    transform: translateX(-50%);
+    bottom: var(--frame-gap);
+    border-radius: 0 0 var(--r-lg, 24px) var(--r-lg, 24px);
+  }
+  .spin-overlay {
+    inset: auto;
+    top: var(--frame-gap);
+    left: 50%;
+    transform: translateX(-50%);
+    width: var(--frame-w);
+    height: var(--frame-h);
+    border-radius: var(--r-lg, 24px);
+  }
+}
+
 /* Each route renders into this; it owns the scrolling. */
 #route {
   flex: 1 1 auto;

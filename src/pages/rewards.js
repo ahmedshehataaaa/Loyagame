@@ -11,6 +11,7 @@ import {
   modal,
   emptyState,
 } from '../components/ui.js';
+import { icon } from '../components/icons.js';
 import { REWARDS, tierFor } from '../data/catalog.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
@@ -23,6 +24,16 @@ export function RewardsPage(root) {
     if (progress.redeemedRewardIds.includes(reward.id)) return 'owned';
     if (progress.rewardPoints < reward.cost) return 'locked';
     return 'available';
+  }
+
+  /* The single tile worth acting on right now: the most valuable reward the
+     balance actually covers. It carries the ribbon and the strongest glow, so
+     the screen has ONE focal point among the tiles rather than every affordable
+     tile shouting equally. Returns null when nothing is affordable yet. */
+  function activeRewardId(progress) {
+    const affordable = REWARDS.filter((r) => state(r, progress) === 'available');
+    if (!affordable.length) return null;
+    return affordable.reduce((best, r) => (r.cost > best.cost ? r : best)).id;
   }
 
   function confirmRedeem(reward) {
@@ -53,12 +64,15 @@ export function RewardsPage(root) {
     wrap.append(overlay);
   }
 
-  function rewardCard(reward, progress) {
+  function rewardCard(reward, progress, activeId) {
     const st = state(reward, progress);
+    const isActive = reward.id === activeId;
     const card = el(
       'button',
       {
-        class: `reward reward--${st === 'available' ? 'ready' : st}`,
+        class: `reward reward--${st === 'available' ? 'ready' : st}${
+          isActive ? ' reward--active' : ''
+        }`,
         type: 'button',
         disabled: st !== 'available',
         'aria-label': `${reward.name}, ${fmt(reward.cost)} points, ${
@@ -67,8 +81,10 @@ export function RewardsPage(root) {
         onClick: () => st === 'available' && confirmRedeem(reward),
       },
       el('span', { class: 'reward__cost', text: `${fmt(reward.cost)} PTS` }),
+      isActive && el('span', { class: 'reward__ribbon', text: 'ACTIVE TIER' }),
       st === 'owned' && el('span', { class: 'reward__flag', 'aria-hidden': 'true', text: '✓' }),
-      st === 'locked' && el('span', { class: 'reward__flag', 'aria-hidden': 'true', text: '🔒' }),
+      st === 'locked' &&
+        el('span', { class: 'reward__flag', 'aria-hidden': 'true' }, icon('lock', { size: 13 })),
       el(
         'span',
         { class: 'reward__art' },
@@ -79,7 +95,7 @@ export function RewardsPage(root) {
           width: '84',
           height: '84',
           onError: (e) => {
-            e.target.replaceWith(el('span', { text: '🍔', style: { fontSize: '38px' } }));
+            e.target.replaceWith(icon('gift', { size: 38 }));
           },
         }),
       ),
@@ -93,6 +109,7 @@ export function RewardsPage(root) {
     const progress = Store.progress();
     const { current, next } = tierFor(progress.rewardPoints);
     const redeemed = REWARDS.filter((r) => progress.redeemedRewardIds.includes(r.id));
+    const activeId = activeRewardId(progress);
 
     listHost.innerHTML = '';
     listHost.append(
@@ -116,7 +133,7 @@ export function RewardsPage(root) {
       ),
 
       el('h2', { class: 't-kicker section-head', text: 'Rewards you can claim' }),
-      el('div', { class: 'reward-grid' }, ...REWARDS.map((r) => rewardCard(r, progress))),
+      el('div', { class: 'reward-grid' }, ...REWARDS.map((r) => rewardCard(r, progress, activeId))),
 
       el('h2', { class: 't-kicker section-head', text: 'Redeemed' }),
       redeemed.length
@@ -134,7 +151,7 @@ export function RewardsPage(root) {
             ),
           )
         : emptyState(
-            '🎟️',
+            icon('ticket', { size: 40 }),
             'Nothing redeemed yet',
             'Win rounds to bank points, then claim a reward here.',
           ),
@@ -147,7 +164,10 @@ export function RewardsPage(root) {
     el(
       'div',
       { style: { marginTop: 'auto', paddingTop: '18px' } },
-      button('▶ Play a round', { onClick: () => navigate('/play') }),
+      button('Play a round', {
+        icon: icon('play', { size: 15 }),
+        onClick: () => navigate('/play'),
+      }),
     ),
   );
   paint();

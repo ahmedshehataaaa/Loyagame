@@ -6,6 +6,8 @@
    so deep links must survive a refresh with no server rewrite.
    ============================================================ */
 
+import { icon } from '../components/icons.js';
+
 const routes = new Map();
 let notFoundRedirect = '/';
 let current = null; // { path, cleanup }
@@ -64,7 +66,7 @@ async function render() {
     const glyph = document.createElement('span');
     glyph.className = 'state__glyph';
     glyph.setAttribute('aria-hidden', 'true');
-    glyph.textContent = '⚠️';
+    glyph.append(icon('alert', { size: 40 }));
     const title = document.createElement('p');
     title.className = 'state__title';
     title.textContent = copy.title;

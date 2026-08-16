@@ -13,6 +13,7 @@
    that was never issued to them.
    ============================================================ */
 import { el, button, topbar, emptyState, toast } from '../components/ui.js';
+import { icon } from '../components/icons.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, num } from '../core/i18n.js';
@@ -100,7 +101,7 @@ export function WalletPage(root) {
   } else {
     body.append(
       emptyState(
-        '🎁',
+        icon('gift', { size: 40 }),
         t('wallet.empty'),
         t('wallet.emptyBody'),
         el(
