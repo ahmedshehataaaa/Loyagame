@@ -135,49 +135,20 @@ export function SignInPage(root) {
       return;
     }
 
-    submitting = true;
-    submit.disabled = true;
-    submit.textContent = t('signin.sending');
+    // Sign in immediately with the entered number — no OTP step.
+    setIdentity(ccSel.value, digits);
+    Store.signIn({ name: `Player ${digits.slice(-4)}`, isGuest: false, avatar: 'assets/avatar.png' });
+    track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_direct', accepted: true });
+    navigate('/play');
 
+    // Fire-and-forget: create the player record server-side if possible.
+    // Never block navigation or show an error if this fails.
     register({ cc: ccSel.value, phone: digits, consent: true })
       .then((reg) => {
-        clearIdentity();
-        if (!reg.ok && reg.kind === 'not_configured') {
-          Store.signIn({
-            name: `Player ${digits.slice(-4)}`,
-            isGuest: false,
-            avatar: 'assets/avatar.png',
-          });
-          toast(t('signin.practice'), 'ok');
-          navigate('/play');
-          return;
-        }
-        if (!reg.ok) {
-          setError(t('signin.errSendFailed'));
-          return;
-        }
-        // OTP not yet configured — phone number is trusted as entered.
-        setIdentity(ccSel.value, digits);
-        Store.signIn({
-          name: `Player ${digits.slice(-4)}`,
-          isGuest: false,
-          avatar: 'assets/avatar.png',
-        });
-        const pts = reg.data?.profile?.orderPoints;
+        const pts = reg?.data?.profile?.orderPoints;
         if (Number.isFinite(pts)) Store.setOrderPoints(pts);
-        track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_direct', accepted: true });
-        toast(t('signin.verified'), 'ok');
-        navigate('/play');
       })
-      .catch((error) => {
-        console.error('sign in failed', error);
-        setError(t('signin.errSendFailed'));
-      })
-      .finally(() => {
-        submitting = false;
-        if (submit.textContent === t('signin.sending')) submit.textContent = t('signin.sendCode');
-        syncSubmitState();
-      });
+      .catch(() => {});
   });
 
   root.append(
