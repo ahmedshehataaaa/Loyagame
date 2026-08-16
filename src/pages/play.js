@@ -368,7 +368,18 @@ export function PlayPage(root) {
          is no path here that could make it one. */
       const overlay = spinWheel({
         serverWheel: reward?.wheel ?? null,
-        mintCoupon: async () => reward,
+        mintCoupon: async () => {
+          // Real server prize → reveal it with the real code.
+          if (reward?.awarded && reward?.prize) return reward;
+          // Everyone who survives gets to spin. Pick a random discount from the
+          // configured prize list as a practice prize (code: null means no
+          // "copy" button appears — the player sees the prize name only).
+          const allPrizes = window.CONFIG?.WHEEL?.prizes ?? [];
+          const picked = allPrizes.length
+            ? allPrizes[Math.floor(Math.random() * allPrizes.length)]
+            : { key: 'off5', label: '5% off' };
+          return { awarded: true, prize: { key: picked.key, label: picked.label }, code: null, status: 'practice' };
+        },
         onDone: () => {
           overlay.remove();
           navigate('/result');
