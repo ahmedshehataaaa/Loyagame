@@ -28,6 +28,8 @@ interface SliceRushConfig {
   WHEEL: {
     enabled: boolean;
     pointsThreshold: number;
+    /** Round score needed to reach the wheel; 0 lets every survivor spin. */
+    minRoundScore?: number;
     prizes: Array<{ key: string; glyph: string; label: string; weight: number }>;
   };
   LIMITS: { maxPlays: number; windowHrs: number; winLockoutHrs: number };

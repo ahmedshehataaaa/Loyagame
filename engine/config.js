@@ -61,6 +61,13 @@ const CONFIG = {
   WHEEL: {
     enabled: true,
     pointsThreshold: 4000, // ORDER-POINTS needed to spin (a spin spends this); server-authoritative, this is the offline mirror
+    /* ROUND SCORE needed to reach the wheel at all — a skill gate, and a
+       different thing from pointsThreshold above (which is the player's real
+       order-points balance and is what a spin SPENDS). Surviving still wins the
+       round either way; below this the round ends on the result screen instead
+       of the wheel. A base item is FOODS[].points (500), so this is roughly ten
+       clean items. Set to 0 to let every survivor spin. */
+    minRoundScore: 5000,
     prizes: [
       { key: 'off5',  label: '5% off',  weight: 35 },
       { key: 'off6',  label: '6% off',  weight: 20 },
