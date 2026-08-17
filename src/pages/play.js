@@ -13,7 +13,7 @@ import { startRound, endRound } from '../services/loyalty.js';
 import { coachCard, hasSeenCoach, markCoachSeen } from '../components/coach.js';
 import { spinWheel } from '../components/spin-wheel.js';
 import { t, num } from '../core/i18n.js';
-import { roundSeconds, startLives, minRoundScoreForWheel } from '../core/rules.js';
+import { roundSeconds, startLives } from '../core/rules.js';
 import { track, EVENTS } from '../analytics/index.js';
 
 /* Round shape comes from the engine config, never from a literal here — these
@@ -372,19 +372,11 @@ export function PlayPage(root) {
         return;
       }
 
-      /* SCORE GATE: surviving wins the round (ADR 0004 — score does not decide
-         that, and this does not change it), but the wheel is a skill reward and
-         needs a real round behind it. Under the bar the win still lands on the
-         Result screen, just without a spin. Kept here, at the same branch that
-         already decides wheel-vs-result, rather than folded into
-         resolveOutcome(): that function answers "did they survive", and the
-         2026-08-07 audit finding was precisely that a score test had been
-         allowed to masquerade as the win condition. */
-      const minScore = minRoundScoreForWheel();
-      if (minScore > 0 && (Number(result.score) || 0) < minScore) {
-        navigate('/result');
-        return;
-      }
+      /* No score check here any more. The bar moved INTO the win condition
+         itself (CONFIG.SPIN_WHEEL_MIN_SCORE, applied in resolveOutcome), so a
+         round below it is already `won: false` and took the branch above. A
+         second gate here would be a rule in two places and a way for them to
+         disagree. */
 
       /* WIN: reveal through the Spin to Win wheel (ADR 0016).
 

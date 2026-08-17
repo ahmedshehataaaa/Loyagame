@@ -29,6 +29,14 @@ const CONFIG = {
   },
 
   START_LIVES: 2, // Slice Rush spec: lose after 2 bombs
+
+  /* THE WIN BAR. Reaching this score is what wins the round and opens Spin to
+     Win; surviving the clock is necessary but no longer sufficient. Deliberately
+     low — it exists to separate "played" from "stood still", not to be a target.
+     The cheapest item is 150 points (FOODS below), so ONE slice of anything
+     clears it. Tune here and nowhere else; no game logic needs to change. */
+  SPIN_WHEEL_MIN_SCORE: 150,
+
   COMBO_WINDOW: 0.45, // seconds; slices within this window chain a combo
   HIT_TOLERANCE: 1.08, // slice hitbox vs sprite radius; >1 = forgiving on touch
 
@@ -61,13 +69,6 @@ const CONFIG = {
   WHEEL: {
     enabled: true,
     pointsThreshold: 4000, // ORDER-POINTS needed to spin (a spin spends this); server-authoritative, this is the offline mirror
-    /* ROUND SCORE needed to reach the wheel at all — a skill gate, and a
-       different thing from pointsThreshold above (which is the player's real
-       order-points balance and is what a spin SPENDS). Surviving still wins the
-       round either way; below this the round ends on the result screen instead
-       of the wheel. A base item is FOODS[].points (500), so this is roughly ten
-       clean items. Set to 0 to let every survivor spin. */
-    minRoundScore: 5000,
     prizes: [
       { key: 'off5',  label: '5% off',  weight: 35 },
       { key: 'off6',  label: '6% off',  weight: 20 },

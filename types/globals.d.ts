@@ -15,6 +15,8 @@ interface SliceRushConfig {
   GRAVITY: number;
   ROUND_TIME: number;
   START_LIVES: number;
+  /** The win bar: score needed to win the round and open Spin to Win. */
+  SPIN_WHEEL_MIN_SCORE: number;
   COMBO_WINDOW: number;
   HIT_TOLERANCE: number;
   RAMP_FRACTION: number;
