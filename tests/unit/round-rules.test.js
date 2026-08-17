@@ -8,9 +8,13 @@ import {
 } from '../../src/game/round-rules.js';
 
 describe('resolveOutcome — the two-bomb loss rule', () => {
-  it('surviving the full round wins', () => {
-    expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0 })).toBe(OUTCOME.SURVIVED);
-    expect(resolveOutcome({ livesRemaining: 1, timeLeftSec: 0 })).toBe(OUTCOME.SURVIVED);
+  it('surviving the full round wins — provided something was sliced', () => {
+    expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, itemsSliced: 1 })).toBe(
+      OUTCOME.SURVIVED,
+    );
+    expect(resolveOutcome({ livesRemaining: 1, timeLeftSec: 0, itemsSliced: 7 })).toBe(
+      OUTCOME.SURVIVED,
+    );
   });
 
   it('running out of lives loses, even mid-round', () => {
@@ -29,6 +33,37 @@ describe('resolveOutcome — the two-bomb loss rule', () => {
 
   it('quitting mid-round with lives intact is not a survival', () => {
     expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 18 })).toBe(OUTCOME.ELIMINATED);
+  });
+
+  /* The round must be PLAYED, not waited out: idling to the buzzer used to
+     satisfy the win condition on its own and opened the Spin to Win flow. */
+  it('surviving with zero slices is NOT a win', () => {
+    expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, itemsSliced: 0 })).toBe(
+      OUTCOME.ELIMINATED,
+    );
+    expect(isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, itemsSliced: 0 }))).toBe(false);
+  });
+
+  it('one slice is enough to clear the minimum', () => {
+    expect(isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, itemsSliced: 1 }))).toBe(true);
+  });
+
+  it('an absent or unusable slice count is treated as zero, never as a win', () => {
+    // Defaulting the other way would hand a prize to any caller that forgot the
+    // field — the failure mode this rule exists to prevent.
+    expect(isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0 }))).toBe(false);
+    expect(isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, itemsSliced: NaN }))).toBe(
+      false,
+    );
+    expect(isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, itemsSliced: -3 }))).toBe(
+      false,
+    );
+  });
+
+  it('slicing does not rescue a run that lost every life', () => {
+    expect(resolveOutcome({ livesRemaining: 0, timeLeftSec: 0, itemsSliced: 40 })).toBe(
+      OUTCOME.ELIMINATED,
+    );
   });
 });
 
@@ -50,9 +85,13 @@ describe('applyHazardHit — exactly two bombs ends it', () => {
   it('a full 2-life round survives one bomb and loses to two', () => {
     let lives = 2;
     ({ livesRemaining: lives } = applyHazardHit(lives));
-    expect(isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0 }))).toBe(true);
+    expect(isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0, itemsSliced: 3 }))).toBe(
+      true,
+    );
     ({ livesRemaining: lives } = applyHazardHit(lives));
-    expect(isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0 }))).toBe(false);
+    expect(isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0, itemsSliced: 3 }))).toBe(
+      false,
+    );
   });
 });
 

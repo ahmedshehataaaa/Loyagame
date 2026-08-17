@@ -20,18 +20,36 @@ export const OUTCOME = /** @type {const} */ ({
   ELIMINATED: 'eliminated',
 });
 
+/** A round must be PLAYED, not merely waited out. */
+export const MIN_SLICES_TO_WIN = 1;
+
 /**
  * Resolve how a round ended.
+ *
+ * Both win conditions are checked together, here, deliberately: surviving the
+ * clock AND landing at least one slice. Splitting them across two call sites is
+ * how "won" drifted out of sync with the real round state once already (ADR
+ * 0004).
+ *
  * @param {object} o
  * @param {number} o.livesRemaining
  * @param {number} o.timeLeftSec
+ * @param {number} [o.itemsSliced]  non-bomb items sliced this round; absent
+ *   counts as zero, so a caller that forgets it cannot accidentally win
  * @returns {Outcome}
  */
-export function resolveOutcome({ livesRemaining, timeLeftSec }) {
+export function resolveOutcome({ livesRemaining, timeLeftSec, itemsSliced = 0 }) {
   // Losing every life ends the round immediately and always loses, even if
   // the clock happens to hit zero on the same frame — the hazard wins ties.
   if (livesRemaining <= 0) return OUTCOME.ELIMINATED;
-  if (timeLeftSec <= 0) return OUTCOME.SURVIVED;
+  if (timeLeftSec <= 0) {
+    /* Idling to the buzzer used to satisfy the win condition on its own, so a
+       player who never touched the screen still reached Spin to Win and a real
+       prize. Surviving is necessary but no longer sufficient. */
+    const sliced = Number(itemsSliced);
+    if (!Number.isFinite(sliced) || sliced < MIN_SLICES_TO_WIN) return OUTCOME.ELIMINATED;
+    return OUTCOME.SURVIVED;
+  }
   // Round ended early with lives intact (quit / teardown): not a survival.
   return OUTCOME.ELIMINATED;
 }

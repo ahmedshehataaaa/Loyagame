@@ -1033,6 +1033,9 @@ const Game = (() => {
     const outcome = Mechanics.resolveOutcome({
       livesRemaining: lives,
       timeLeftSec: timeLeft,
+      // Non-bomb slices only (see sliceFood): surviving without landing one is
+      // not a win, so a player cannot idle their way into the reward flow.
+      itemsSliced: totalSlices,
     });
     const survived = Mechanics.isWin(outcome);
 

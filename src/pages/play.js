@@ -10,7 +10,7 @@ import { GameEvents, applySoundSetting } from '../adapters/engine-bridge.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { startRound, endRound } from '../services/loyalty.js';
-import { coachCard, hasSeenCoach } from '../components/coach.js';
+import { coachCard, hasSeenCoach, markCoachSeen } from '../components/coach.js';
 import { spinWheel } from '../components/spin-wheel.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives } from '../core/rules.js';
@@ -166,14 +166,27 @@ export function PlayPage(root) {
   const needsCoach = !hasSeenCoach();
   if (needsCoach) {
     track(EVENTS.INSTRUCTIONS_VIEWED, { trigger: 'first_run' });
-    const card = coachCard({
-      onStart: () => {
-        card.remove();
-        try {
-          window.Game.resumeGame();
-        } catch {}
-      },
-    });
+    let started = false;
+    const startPlaying = () => {
+      if (started) return; // pointerdown and the button's click can both arrive
+      started = true;
+      markCoachSeen();
+      card.remove();
+      try {
+        window.Game.resumeGame();
+      } catch {}
+    };
+    const card = coachCard({ onStart: startPlaying });
+    /* ANY tap on the card starts the round, not just the "start" button.
+       The button is a ~303x69 target inside a full-screen panel, and the card
+       only listened on the button itself plus the backdrop STRICTLY outside the
+       panel (`e.target !== overlay` bails). A tap that landed on the rules list
+       — measurably where a centre-of-button tap actually lands — matched
+       neither, so the card stayed up. That matters far more than a missed tap:
+       the engine is PAUSED while the card is shown, and `handleMove()` returns
+       immediately when `scene !== SCENE.PLAYING`, so every swipe was silently
+       discarded and the game looked like slicing was broken. */
+    card.addEventListener('pointerdown', startPlaying);
     screen.append(card);
   }
 
