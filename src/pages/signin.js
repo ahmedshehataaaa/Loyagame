@@ -8,6 +8,12 @@ import { navigate } from '../core/router.js';
 import { setIdentity } from '../services/loyalty.js';
 import { track, EVENTS } from '../analytics/index.js';
 
+/* Dialling code paired with the local numbers this campaign captures. Matches
+   normalizeLoosePhone() in lib/db.mjs, which maps POS numbers to +20 — the two
+   MUST agree or a player's rounds and their orders resolve to different people.
+   Change both together if this campaign ever runs outside Egypt. */
+const COUNTRY_CODE = '+20';
+
 export function SignInPage(root) {
   // Already have a number — skip straight to the game.
   if (Store.isSignedIn()) {
@@ -38,7 +44,17 @@ export function SignInPage(root) {
   function submit() {
     const num = input.value.trim();
     if (!num) { input.focus(); return; }
-    setIdentity('', num);
+    /* The country code is what makes this an E.164 identity, and it was empty.
+       That is why no coupon could ever be minted: /start-run rejected every
+       session with 400 invalid_phone (the backend requires a leading "+"), so
+       the client never held a token and the round degraded to a practice round.
+       In production the same empty code stored a number with no country prefix,
+       which could never match the +20… identities normalizeLoosePhone() writes
+       from the POS webhook, so order points would not have credited either.
+       Numbers are entered in local 0-prefixed form; drop that zero, exactly as
+       normalizeLoosePhone() does. */
+    const local = num.replace(/\D/g, '').replace(/^0+/, '');
+    setIdentity(COUNTRY_CODE, local);
     Store.signIn({ name: `Player ${num.slice(-4)}`, isGuest: false, avatar: 'assets/avatar.png' });
     track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_direct', accepted: true });
     navigate('/play');

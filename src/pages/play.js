@@ -395,18 +395,14 @@ export function PlayPage(root) {
          is no path here that could make it one. */
       const overlay = spinWheel({
         serverWheel: reward?.wheel ?? null,
-        mintCoupon: async () => {
-          // Real server prize → reveal it with the real code.
-          if (reward?.awarded && reward?.prize) return reward;
-          // Everyone who survives gets to spin. Pick a random discount from the
-          // configured prize list as a practice prize (code: null means no
-          // "copy" button appears — the player sees the prize name only).
-          const allPrizes = window.CONFIG?.WHEEL?.prizes ?? [];
-          const picked = allPrizes.length
-            ? allPrizes[Math.floor(Math.random() * allPrizes.length)]
-            : { key: 'off5', label: '5% off' };
-          return { awarded: true, prize: { key: picked.key, label: picked.label }, code: null, status: 'practice' };
-        },
+        /* Reveal ONLY what the server minted. This briefly picked a prize here
+           with Math.random() and a null code when the server had not awarded
+           one — a prize invented by the client, shown as if it were real, with
+           nothing to redeem. That is the exact failure the server-authoritative
+           rule exists to prevent (CLAUDE.md; ADR 0009). If the mint did not
+           happen, the wheel shows its own error state and offers a retry; it
+           never dresses a failure up as a win. */
+        mintCoupon: async () => reward,
         onDone: () => {
           overlay.remove();
           navigate('/result');

@@ -133,6 +133,8 @@ const STRINGS = {
 
     'reward.label': 'REWARD',
     'reward.yours': 'YOUR PRIZE',
+    // In-store only: the code is read out at the till, never entered online.
+    'reward.redeemAtCashier': 'Show this code to the cashier to redeem — in store only.',
     'reward.savedHint': 'Saved to My Rewards. Show it at the counter to claim.',
     'reward.pointsLabel': 'ORDER POINTS',
     'reward.pointsShort': '{short} more to unlock a prize — earned by ordering.',
@@ -331,6 +333,7 @@ const STRINGS = {
 
     'reward.label': 'الجائزة',
     'reward.yours': 'جائزتك',
+    'reward.redeemAtCashier': 'أظهر هذا الكود للكاشير للاستلام — داخل الفرع فقط.',
     'reward.savedHint': 'محفوظة في جوائزي. اعرضها عند الكاشير لاستلامها.',
     'reward.pointsLabel': 'نقاط الطلبات',
     'reward.pointsShort': 'تحتاج {short} نقطة أخرى لفتح جائزة — تُكتسب بالطلب.',

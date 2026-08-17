@@ -239,6 +239,11 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
             }),
           )
         : null,
+      /* Directly under the code, because this is an IN-STORE code and players
+         reliably assume anything code-shaped is an online promo. Sits above the
+         "saved to My Rewards" line: what to do with it now matters more than
+         where it was filed. */
+      outcome.code ? el('p', { class: 'spin__redeem', text: t('reward.redeemAtCashier') }) : null,
       el('p', { class: 'spin__hint', text: t('reward.savedHint') }),
     );
 
