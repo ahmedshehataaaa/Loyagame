@@ -43,7 +43,8 @@ export default async (req) => {
 
     const path = `${body.tenantId}/${body.kind}/${randomUUID()}.${ext}`;
     const base = `${process.env.SUPABASE_URL}/storage/v1`;
-    const key = process.env.SUPABASE_SERVICE_KEY;
+    // The Vercel Supabase integration names it SUPABASE_SERVICE_ROLE_KEY.
+    const key = process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!process.env.SUPABASE_URL || !key) throw new Error('storage is not configured');
 
     const res = await fetch(`${base}/object/upload/sign/${BUCKET}/${path}`, {
