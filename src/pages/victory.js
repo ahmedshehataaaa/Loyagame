@@ -5,7 +5,7 @@
    also receive a PRIZE is a separate, server-decided question, rendered by
    rewardPanel from whatever the server actually returned. Surviving does not
    entitle the screen to show a prize. */
-import { el, button, tabbar, fmt, emptyState } from '../components/ui.js';
+import { el, button, fmt, emptyState } from '../components/ui.js';
 import { icon } from '../components/icons.js';
 import { rewardPanel } from '../components/reward-panel.js';
 import { Store } from '../core/store.js';
@@ -31,7 +31,6 @@ export function VictoryPage(root) {
           ),
         ),
       ),
-      tabbar('/'),
     );
     return;
   }
@@ -139,6 +138,5 @@ export function VictoryPage(root) {
         ),
       ),
     ),
-    tabbar('/'),
   );
 }

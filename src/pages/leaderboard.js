@@ -8,7 +8,7 @@
    a stack of row CARDS (not a plain list), the podium three carrying an icon
    instead of a number, and the player's row lifted onto the gold surface with
    a rotated YOU tag. */
-import { el, button, topbar, tabbar, fmt, emptyState, loadingState } from '../components/ui.js';
+import { el, button, topbar, fmt, emptyState, loadingState } from '../components/ui.js';
 import { icon, RANK_ICONS, RANK_TINTS } from '../components/icons.js';
 import { normalizeRow, rankStandings, tierFor } from '../game/standings.js';
 import { RIVALS } from '../data/catalog.js';
@@ -176,7 +176,6 @@ export function LeaderboardPage(root) {
         }),
       ),
     ),
-    tabbar('/leaderboard'),
   );
 
   fetchStandings()

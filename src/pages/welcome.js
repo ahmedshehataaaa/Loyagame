@@ -13,41 +13,38 @@
    branding with assets this build owns rather than waiting on new art, and
    it doubles as a preview of the gameplay.
    ============================================================ */
-import { el, button, iconButton, tabbar, toast } from '../components/ui.js';
+import { el, button, iconButton, toast } from '../components/ui.js';
 import { icon, setIcon } from '../components/icons.js';
 import { coachCard, markCoachSeen } from '../components/coach.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, toggleLang } from '../core/i18n.js';
 import { roundSeconds } from '../core/rules.js';
-import { brandLogo, brandSlogan, prizeTeaser, heroSprites } from '../campaign/brand-copy.js';
+import {
+  brandLogo,
+  brandSlogan,
+  prizeTeaser,
+  heroImage,
+  welcomeTitleHtml,
+} from '../campaign/brand-copy.js';
 
-/* Classes for the airborne items, in order. Positioned in CSS so the
-   composition survives a locale/direction flip without JS. The sprites come
-   from the brand (campaign/brand-copy.js), so a tenant page shows its own menu. */
-const HERO_SLOTS = ['is-hero', 'is-left', 'is-right', 'is-low'];
-
+/* The hero image: the McDonald's mascot at the site root, the tenant's own hero
+   item on a tenant page (campaign/brand-copy.js) — never another brand's art. */
 function heroArt() {
-  const stage = el('div', { class: 'hero', 'aria-hidden': 'true' });
-  for (const [i, src] of heroSprites().entries()) {
-    const cls = HERO_SLOTS[i];
-    stage.append(
-      el('img', {
-        class: `hero__item ${cls}`,
-        src,
-        alt: '',
-        loading: 'eager',
-        decoding: 'async',
-        onError: (e) => {
-          // Missing art must not leave a broken-image glyph in the hero.
-          e.target.style.display = 'none';
-        },
-      }),
-    );
-  }
-  // The slice: a single diagonal stroke, drawn not imaged.
-  stage.append(el('span', { class: 'hero__slash' }));
-  return stage;
+  return el(
+    'div',
+    { class: 'welcome__hero', 'aria-hidden': 'true' },
+    el('img', {
+      class: 'welcome__mascot',
+      src: heroImage(),
+      alt: '',
+      loading: 'eager',
+      decoding: 'async',
+      onError: (e) => {
+        e.target.style.display = 'none';
+      },
+    }),
+  );
 }
 
 export function WelcomePage(root) {
@@ -102,8 +99,8 @@ export function WelcomePage(root) {
     el(
       'div',
       { class: 'welcome__copy' },
-      el('h1', { class: 't-display', html: t('welcome.title') }),
-      el('p', { class: 'welcome__sub', text: t('welcome.sub', { seconds: ROUND_TIME }) }),
+      el('h1', { class: 't-display', html: welcomeTitleHtml() }),
+      el('p', { class: 'welcome__sub', text: t('welcome.sub') }),
       el('p', { class: 'welcome__prize', text: prizeTeaser() }),
       signedIn &&
         el('p', {
@@ -168,5 +165,5 @@ export function WelcomePage(root) {
     ),
   );
 
-  root.append(screen, tabbar('/'));
+  root.append(screen);
 }

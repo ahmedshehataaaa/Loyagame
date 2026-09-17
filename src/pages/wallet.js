@@ -12,7 +12,7 @@
    later visit is exactly how a player ends up at a till holding something
    that was never issued to them.
    ============================================================ */
-import { el, button, topbar, tabbar, emptyState, toast } from '../components/ui.js';
+import { el, button, topbar, emptyState, toast } from '../components/ui.js';
 import { icon } from '../components/icons.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
@@ -129,5 +129,5 @@ export function WalletPage(root) {
   );
 
   wrap.append(topbar(t('wallet.title'), { back: '/' }), body);
-  root.append(wrap, tabbar('/wallet'));
+  root.append(wrap);
 }

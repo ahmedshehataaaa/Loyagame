@@ -37,16 +37,11 @@ const REWARD_STATUS_NOT_SIGNED_IN = 'not_signed_in';
  * with any of these — each needs a different action, or none. */
 const DENIALS = new Set(['not_eligible', 'eliminated', REWARD_STATUS_NOT_SIGNED_IN, 'unavailable']);
 
-/** Segment art: match a prize key to a sprite, falling back to its glyph. */
-const PRIZE_ART = {
-  fries: 'assets/items/fries.png',
-  bigmac: 'assets/items/bigmac.png',
-  nuggets: 'assets/items/nuggets.png',
-  mcflurry: 'assets/items/mcflurry.png',
-  hashbrown: 'assets/items/hashbrown.png',
-  applepie: 'assets/items/applepie.png',
-  filetofish: 'assets/items/filetofish.png',
-};
+/** Extract a display percentage from a discount key like 'off10' → '10%'. */
+function discountPct(key) {
+  const m = key && key.match(/^off(\d+)$/);
+  return m ? `${m[1]}%` : null;
+}
 
 /**
  * The wheel's segment order.
@@ -61,8 +56,7 @@ export function wheelSegments(serverWheel) {
   return source.map((p) => ({
     key: p.key,
     label: p.label,
-    glyph: p.glyph ?? '🎁',
-    art: PRIZE_ART[p.key] ?? null,
+    pct: discountPct(p.key),
   }));
 }
 
@@ -94,33 +88,18 @@ export function rotationForIndex(index, count, turns = 5) {
  */
 function segmentCard(seg, i, count) {
   const angle = (360 / count) * i;
-  const card = el(
+  return el(
     'div',
     { class: 'wheel__seg', style: { transform: `rotate(${angle}deg)` } },
     el(
       'div',
-      {
-        class: 'wheel__card',
-        /* Counters its own segment angle AND, once settled, the disc's final
-           rotation — so labels are readable at rest. During the spin the cards
-           turn with the wheel, which is what a real wheel does. */
-        style: { '--seg-a': `${angle}deg` },
-      },
-      seg.art
-        ? el('img', {
-            class: 'wheel__art',
-            src: seg.art,
-            alt: '',
-            loading: 'eager',
-            onError: (e) => {
-              e.target.replaceWith(el('span', { class: 'wheel__glyph', text: seg.glyph }));
-            },
-          })
-        : el('span', { class: 'wheel__glyph', text: seg.glyph }),
-      el('span', { class: 'wheel__label', text: seg.label }),
+      { class: 'wheel__card', style: { '--seg-a': `${angle}deg` } },
+      seg.pct
+        ? el('span', { class: 'wheel__pct', text: seg.pct })
+        : el('span', { class: 'wheel__glyph', text: '🎁' }),
+      el('span', { class: 'wheel__label', text: 'OFF' }),
     ),
   );
-  return card;
 }
 
 /**
@@ -143,7 +122,16 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
     'div',
     { class: 'wheel__disc' },
     ...segments.map((s, i) => segmentCard(s, i, count)),
-    el('span', { class: 'wheel__hub' }),
+    el(
+      'div',
+      { class: 'wheel__hub' },
+      el('img', {
+        class: 'wheel__hub-logo',
+        src: 'assets/brand-logo.png',
+        alt: "McDonald's",
+        'aria-hidden': 'true',
+      }),
+    ),
   );
 
   /* Card width is derived from the segment COUNT, not fixed.
@@ -251,6 +239,11 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
             }),
           )
         : null,
+      /* Directly under the code, because this is an IN-STORE code and players
+         reliably assume anything code-shaped is an online promo. Sits above the
+         "saved to My Rewards" line: what to do with it now matters more than
+         where it was filed. */
+      outcome.code ? el('p', { class: 'spin__redeem', text: t('reward.redeemAtCashier') }) : null,
       el('p', { class: 'spin__hint', text: t('reward.savedHint') }),
     );
 

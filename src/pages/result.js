@@ -11,7 +11,7 @@
    Figures come from the recorded run; the reward comes from the server via
    rewardPanel. This screen never decides either.
    ============================================================ */
-import { el, button, tabbar, emptyState } from '../components/ui.js';
+import { el, button, emptyState } from '../components/ui.js';
 import { icon } from '../components/icons.js';
 import { rewardPanel } from '../components/reward-panel.js';
 import { Store } from '../core/store.js';
@@ -42,7 +42,6 @@ export function ResultPage(root) {
           ),
         ),
       ),
-      tabbar('/'),
     );
     return;
   }
@@ -156,6 +155,5 @@ export function ResultPage(root) {
       rewardPanel(Store.lastReward(), { onWallet: () => navigate('/wallet') }),
       actions,
     ),
-    tabbar('/'),
   );
 }

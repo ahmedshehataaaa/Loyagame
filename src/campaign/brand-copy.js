@@ -11,12 +11,7 @@ import { appliedCampaign } from './loader.js';
 import { tenantSlug } from '../core/tenant.js';
 import { t } from '../core/i18n.js';
 
-const ROOT_HERO = [
-  'assets/items/bigmac.png',
-  'assets/items/fries.png',
-  'assets/items/mcflurry.png',
-  'assets/items/nuggets.png',
-];
+const ROOT_HERO = 'assets/Mac character.png';
 
 /** The applied manifest when this is a tenant page, else null. */
 function tenantManifest() {
@@ -28,6 +23,15 @@ export function brandLogo() {
   return m
     ? { src: m.brand.logo || 'assets/brand-logo.png', alt: m.brand.name }
     : { src: 'assets/brand-logo.png', alt: "McDonald's" };
+}
+
+const escapeHtml = (v) =>
+  String(v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/** Welcome headline, as HTML (it carries a line break). The game name is data. */
+export function welcomeTitleHtml() {
+  const m = tenantManifest();
+  return m ? t('welcome.titleBrand', { game: escapeHtml(m.brand.gameName) }) : t('welcome.title');
 }
 
 export function brandSlogan() {
@@ -47,10 +51,9 @@ export function prizeTeaser() {
     : t('welcome.prizeTeaserRange', { from: labels[0], to: labels[labels.length - 1] });
 }
 
-/** Up to four sprites for the welcome hero, hero item first. */
-export function heroSprites() {
+/** The welcome hero: the root mascot, or the tenant's hero item (else its first). */
+export function heroImage() {
   const m = tenantManifest();
   if (!m) return ROOT_HERO;
-  const items = [...m.items].sort((a, b) => Number(!!b.hero) - Number(!!a.hero));
-  return items.slice(0, 4).map((i) => i.img);
+  return (m.items.find((i) => i.hero) ?? m.items[0])?.img ?? m.brand.logo;
 }

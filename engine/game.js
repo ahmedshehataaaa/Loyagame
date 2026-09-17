@@ -163,6 +163,18 @@ const Game = (() => {
   let shake = 0;
   let pointerDown = false;
   let lastSlicePos = null;
+  /* A MOUSE slices on movement alone — no button required. A mouse is only ever
+     "over" the field deliberately, so requiring a held button just made the
+     game feel dead to anyone playing on a desktop. Touch and pen are unchanged:
+     a finger is over the field only while it is ON it, so contact still gates
+     the blade there. Set from the pointer's own type on every move. */
+  let hoverSlice = false;
+  /* Cap on how far one segment may reach. A cursor re-entering the canvas, or
+     the first move after the tab regains focus, arrives as a single enormous
+     step from wherever the blade was last seen — without this it would sweep
+     one line across the entire board and slice everything on it. */
+  const MAX_SLICE_STEP = Math.hypot(W, H) * 0.35;
+  const MAX_SLICE_STEP_SQ = MAX_SLICE_STEP * MAX_SLICE_STEP;
 
   // Short haptic buzz (mobile). Patterns: slice tick, bomb thud.
   function buzz(p) {
@@ -506,17 +518,23 @@ const Game = (() => {
       lastSlicePos = p;
       return;
     }
-    if (!pointerDown) {
+    // Mouse: movement alone cuts. Touch/pen: only while in contact.
+    if (!pointerDown && !hoverSlice) {
       lastSlicePos = p;
       return;
     }
 
     if (lastSlicePos) {
-      const ang = Math.atan2(p.y - lastSlicePos.y, p.x - lastSlicePos.x);
-      // Test every live item against this blade segment.
-      for (const f of [...foods]) {
-        if (segmentHitsFood(lastSlicePos.x, lastSlicePos.y, p.x, p.y, f)) {
-          sliceFood(f, ang);
+      const dx = p.x - lastSlicePos.x;
+      const dy = p.y - lastSlicePos.y;
+      // Ignore teleport-sized steps rather than slicing everything between.
+      if (dx * dx + dy * dy <= MAX_SLICE_STEP_SQ) {
+        const ang = Math.atan2(dy, dx);
+        // Test every live item against this blade segment.
+        for (const f of [...foods]) {
+          if (segmentHitsFood(lastSlicePos.x, lastSlicePos.y, p.x, p.y, f)) {
+            sliceFood(f, ang);
+          }
         }
       }
     }
@@ -567,11 +585,21 @@ const Game = (() => {
 
     canvas.addEventListener('pointermove', (e) => {
       if (pointerDown) e.preventDefault();
+      hoverSlice = e.pointerType === 'mouse';
       const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null;
       if (events && events.length > 1) {
         for (const c of events) handleMove(c.clientX, c.clientY);
       } else {
         handleMove(e.clientX, e.clientY);
+      }
+    });
+
+    /* Leaving the canvas ends the stroke: without this the last position stays
+       parked at the edge and the next re-entry is measured from it. */
+    canvas.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') {
+        hoverSlice = false;
+        lastSlicePos = null;
       }
     });
 
@@ -593,12 +621,19 @@ const Game = (() => {
        it exists so the game degrades rather than dies, not as a second
        first-class path. */
     canvas.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
-    window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => {
+      hoverSlice = true; // this path is only ever a mouse
+      handleMove(e.clientX, e.clientY);
+    });
     window.addEventListener('mouseup', onUp);
     canvas.addEventListener(
       'touchstart',
       (e) => {
         e.preventDefault();
+        /* A touch browser also emits compatibility MOUSE events, and the
+           mousemove binding above turns hover-slicing on. Without this, a
+           finger merely resting near an item would cut it. */
+        hoverSlice = false;
         const t = e.changedTouches[0];
         onDown(t.clientX, t.clientY);
       },
@@ -1033,6 +1068,10 @@ const Game = (() => {
     const outcome = Mechanics.resolveOutcome({
       livesRemaining: lives,
       timeLeftSec: timeLeft,
+      // The win bar. Surviving without reaching it is not a win, so a player
+      // cannot idle their way into the reward flow.
+      score,
+      minScore: CONFIG.SPIN_WHEEL_MIN_SCORE,
     });
     const survived = Mechanics.isWin(outcome);
 

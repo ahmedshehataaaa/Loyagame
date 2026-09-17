@@ -138,20 +138,21 @@ test.describe('two tenants at once', () => {
     const demo = await context.newPage();
     await demo.goto(`/play/${DEMO}/#/`);
     await demo.getByRole('button', { name: /play now/i }).click();
-    if (/#\/sign-in$/.test(demo.url())) {
-      await demo.getByRole('button', { name: /continue as guest/i }).click();
-    }
+    // The root page's stored number must not sign this tenant's page in.
+    await expect(demo).toHaveURL(/#\/sign-in$/);
+    await demo.locator('.signin__phone-input').fill('01007770000');
+    await demo.getByRole('button', { name: /^play$/i }).click();
     await expect(demo).toHaveURL(/#\/play$/);
 
     const storage = await demo.evaluate(() =>
       Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)])),
     );
     // The tenant page wrote only its own keys…
-    expect(storage[`mcslice.v1@${DEMO}`]).toContain('"isGuest":true');
-    expect(storage['mcslice.v1'] ?? '').not.toContain('"isGuest":true');
-    // …never saw the root page's player, and did not clear it going in as a guest.
-    expect(storage[`mcslice.identity.v1@${DEMO}`]).toBeUndefined();
+    expect(storage[`mcslice.identity.v1@${DEMO}`]).toContain('1007770000');
+    expect(storage[`mcslice.v1@${DEMO}`]).toContain('Player 0000');
+    // …and left the root page's player exactly as it was.
     expect(storage['mcslice.identity.v1']).toContain('1005550000');
+    expect(storage['mcslice.identity.v1']).not.toContain('1007770000');
 
     expect(await root.evaluate(() => window.BRAND.name)).toBe("McDonald's");
     expect(await demo.evaluate(() => window.BRAND.name)).toBe('Demo Diner');

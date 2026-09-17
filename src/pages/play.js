@@ -10,7 +10,7 @@ import { GameEvents, applySoundSetting } from '../adapters/engine-bridge.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { startRound, endRound } from '../services/loyalty.js';
-import { coachCard, hasSeenCoach } from '../components/coach.js';
+import { coachCard, hasSeenCoach, markCoachSeen } from '../components/coach.js';
 import { spinWheel } from '../components/spin-wheel.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives } from '../core/rules.js';
@@ -90,10 +90,16 @@ export function PlayPage(root) {
   );
 
   /* The engine binds #game once at load, so the canvas lives in the app
-     shell permanently. This route reveals it and parks it behind the HUD. */
+     shell permanently. This route reveals it and parks it behind the HUD.
+     #route sits above #stage in the stacking order; with overflow-y:auto and
+     -webkit-overflow-scrolling:touch it intercepts every swipe on mobile even
+     though the game-screen overlay inside it is pointer-events:none. Setting
+     pointer-events:none on #route itself lets events fall through to the canvas. */
   const stage = document.getElementById('stage');
   const canvas = document.getElementById('game');
+  const routeEl = root; // root IS #route
   stage.classList.add('is-playing');
+  routeEl.style.pointerEvents = 'none';
 
   const hint = el('p', {
     class: 'game-hint',
@@ -157,43 +163,58 @@ export function PlayPage(root) {
 
   /* First-run instruction, over the play screen rather than as a route the
      player taps past before it can help. */
-  if (!hasSeenCoach()) {
+  const needsCoach = !hasSeenCoach();
+  if (needsCoach) {
     track(EVENTS.INSTRUCTIONS_VIEWED, { trigger: 'first_run' });
-    const card = coachCard({
-      onStart: () => {
-        card.remove();
-        try {
-          window.Game.resumeGame();
-        } catch {}
-      },
-    });
-    screen.append(card);
-    // Pause behind the card so the round does not drain while it is read.
-    setTimeout(() => {
+    let started = false;
+    const startPlaying = () => {
+      if (started) return; // pointerdown and the button's click can both arrive
+      started = true;
+      markCoachSeen();
+      card.remove();
       try {
-        window.Game.pauseGame();
+        window.Game.resumeGame();
       } catch {}
-    }, 0);
+    };
+    const card = coachCard({ onStart: startPlaying });
+    /* ANY tap on the card starts the round, not just the "start" button.
+       The button is a ~303x69 target inside a full-screen panel, and the card
+       only listened on the button itself plus the backdrop STRICTLY outside the
+       panel (`e.target !== overlay` bails). A tap that landed on the rules list
+       — measurably where a centre-of-button tap actually lands — matched
+       neither, so the card stayed up. That matters far more than a missed tap:
+       the engine is PAUSED while the card is shown, and `handleMove()` returns
+       immediately when `scene !== SCENE.PLAYING`, so every swipe was silently
+       discarded and the game looked like slicing was broken. */
+    card.addEventListener('pointerdown', startPlaying);
+    screen.append(card);
   }
 
   /* ---- Engine lifecycle ------------------------------------ */
   applySoundSetting();
-  try {
-    window.Game.init();
-    window.Game.startGame();
-  } catch (err) {
-    console.error('engine failed to start', err);
-    screen.append(
-      el(
-        'div',
-        { class: 'state' },
-        el('span', { class: 'state__glyph' }, icon('alert', { size: 40 })),
-        el('p', { class: 'state__title', text: t('play.failed') }),
-        button(t('err.back'), { onClick: () => navigate('/') }),
-      ),
-    );
-    return () => {};
-  }
+  // Defer one frame so the browser finishes laying out the stage before
+  // resize() reads window.innerWidth/innerHeight into the canvas dimensions.
+  // If the coach card is showing, pause immediately after startGame so the
+  // round timer doesn't drain while the player reads the instructions.
+  let initRaf = requestAnimationFrame(() => {
+    initRaf = null;
+    try {
+      window.Game.init();
+      window.Game.startGame();
+      if (needsCoach) window.Game.pauseGame();
+    } catch (err) {
+      console.error('engine failed to start', err);
+      screen.append(
+        el(
+          'div',
+          { class: 'state' },
+          el('span', { class: 'state__glyph' }, icon('alert', { size: 40 })),
+          el('p', { class: 'state__title', text: t('play.failed') }),
+          button(t('err.back'), { onClick: () => navigate('/') }),
+        ),
+      );
+    }
+  });
 
   /* ---- HUD updates -----------------------------------------
      Event-driven: the engine calls UI.hud() only when a displayed value
@@ -351,6 +372,12 @@ export function PlayPage(root) {
         return;
       }
 
+      /* No score check here any more. The bar moved INTO the win condition
+         itself (CONFIG.SPIN_WHEEL_MIN_SCORE, applied in resolveOutcome), so a
+         round below it is already `won: false` and took the branch above. A
+         second gate here would be a rule in two places and a way for them to
+         disagree. */
+
       /* WIN: reveal through the Spin to Win wheel (ADR 0016).
 
          The server has ALREADY minted the coupon and chosen the prize by this
@@ -360,6 +387,13 @@ export function PlayPage(root) {
          is no path here that could make it one. */
       const overlay = spinWheel({
         serverWheel: reward?.wheel ?? null,
+        /* Reveal ONLY what the server minted. This briefly picked a prize here
+           with Math.random() and a null code when the server had not awarded
+           one — a prize invented by the client, shown as if it were real, with
+           nothing to redeem. That is the exact failure the server-authoritative
+           rule exists to prevent (CLAUDE.md; ADR 0009). If the mint did not
+           happen, the wheel shows its own error state and offers a retry; it
+           never dresses a failure up as a win. */
         mintCoupon: async () => reward,
         onDone: () => {
           overlay.remove();
@@ -380,6 +414,7 @@ export function PlayPage(root) {
 
   /* ---- Teardown -------------------------------------------- */
   return () => {
+    if (initRaf) cancelAnimationFrame(initRaf);
     // Drop the round session so a stale token can never be submitted later.
     endRound();
     offs.forEach((off) => {
@@ -391,6 +426,7 @@ export function PlayPage(root) {
       window.Game.idle();
     } catch {} // stops spawning; engine goes idle
     stage.classList.remove('is-playing'); // hide the shared canvas again
+    routeEl.style.pointerEvents = ''; // restore so other routes scroll normally
     pauseOverlay?.remove();
   };
 }

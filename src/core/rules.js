@@ -35,6 +35,8 @@ function brand() {
 export const roundSeconds = () => cfg()?.ROUND_TIME ?? 30;
 export const startLives = () => cfg()?.START_LIVES ?? 2;
 export const pointsThreshold = () => cfg()?.WHEEL?.pointsThreshold ?? 4000;
+/** The win bar: score needed to win the round and open the wheel. */
+export const spinWheelMinScore = () => cfg()?.SPIN_WHEEL_MIN_SCORE ?? 150;
 export const wheelEnabled = () => cfg()?.WHEEL?.enabled !== false;
 export const prizes = () => cfg()?.WHEEL?.prizes ?? [];
 export const gameName = () => brand()?.gameName ?? 'Slice Rush';

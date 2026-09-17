@@ -15,6 +15,8 @@ interface SliceRushConfig {
   GRAVITY: number;
   ROUND_TIME: number;
   START_LIVES: number;
+  /** The win bar: score needed to win the round and open Spin to Win. */
+  SPIN_WHEEL_MIN_SCORE: number;
   COMBO_WINDOW: number;
   HIT_TOLERANCE: number;
   RAMP_FRACTION: number;
@@ -28,6 +30,8 @@ interface SliceRushConfig {
   WHEEL: {
     enabled: boolean;
     pointsThreshold: number;
+    /** Round score needed to reach the wheel; 0 lets every survivor spin. */
+    minRoundScore?: number;
     prizes: Array<{ key: string; glyph: string; label: string; weight: number }>;
   };
   LIMITS: { maxPlays: number; windowHrs: number; winLockoutHrs: number };

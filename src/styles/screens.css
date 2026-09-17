@@ -116,6 +116,10 @@
   color: var(--c-ink-soft);
   line-height: 1.5;
 }
+.signin__legal .text-link {
+  color: var(--c-ink-soft);
+  text-decoration: underline;
+}
 .signin__alt {
   margin-top: var(--sp-md);
   padding-top: var(--sp-md);

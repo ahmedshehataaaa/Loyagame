@@ -21,8 +21,15 @@ import os
 import re
 import socketserver
 import sys
+import mimetypes
+mimetypes.init()
+mimetypes.add_type("application/javascript", ".js", True)
+mimetypes.add_type("application/javascript", ".mjs", True)
 
 import dev_api
+import mimetypes
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("application/javascript", ".mjs")
 
 PORT = int(os.environ.get("PORT", "8765"))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))

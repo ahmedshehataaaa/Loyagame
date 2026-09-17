@@ -1,19 +1,18 @@
 /* Rewards Catalog — Stitch "McSlice Rush - Rewards Catalog".
-   Points header + rank tier + progress to next tier, a card grid
+   Points header + progress to the next reward you can afford, a card grid
    built from typed data, and a redeemed-history list. */
 import {
   el,
   button,
   topbar,
   meter,
-  tabbar,
   toast,
   fmt,
   modal,
   emptyState,
 } from '../components/ui.js';
 import { icon } from '../components/icons.js';
-import { REWARDS, tierFor } from '../data/catalog.js';
+import { REWARDS } from '../data/catalog.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 
@@ -82,7 +81,9 @@ export function RewardsPage(root) {
         onClick: () => st === 'available' && confirmRedeem(reward),
       },
       el('span', { class: 'reward__cost', text: `${fmt(reward.cost)} PTS` }),
-      isActive && el('span', { class: 'reward__ribbon', text: 'ACTIVE TIER' }),
+      // "ACTIVE", not "ACTIVE TIER" — it marks the reward currently in use, and
+      // there are no tiers to belong to.
+      isActive && el('span', { class: 'reward__ribbon', text: 'ACTIVE' }),
       st === 'owned' && el('span', { class: 'reward__flag', 'aria-hidden': 'true', text: '✓' }),
       st === 'locked' &&
         el('span', { class: 'reward__flag', 'aria-hidden': 'true' }, icon('lock', { size: 13 })),
@@ -108,7 +109,14 @@ export function RewardsPage(root) {
 
   function paint() {
     const progress = Store.progress();
-    const { current, next } = tierFor(progress.rewardPoints);
+    /* Progress runs to the next REWARD the player cannot afford yet, not to a
+       membership tier. This screen used to announce a rank ("RANK: PRO SLICER")
+       and count down to the "next tier", which framed a game as a loyalty
+       scheme the player had joined. The points and the rewards are real and
+       stay; only the ladder of titles is gone. */
+    const nextReward = REWARDS.filter((r) => r.cost > progress.rewardPoints).sort(
+      (a, b) => a.cost - b.cost,
+    )[0];
     const redeemed = REWARDS.filter((r) => progress.redeemedRewardIds.includes(r.id));
     const activeId = activeRewardId(progress);
 
@@ -123,14 +131,19 @@ export function RewardsPage(root) {
           el(
             'div',
             null,
-            el('span', { class: 't-kicker', text: 'Total points' }),
+            el('span', { class: 't-kicker', text: 'Points earned' }),
             el('b', { class: 'points-head__value', text: fmt(progress.rewardPoints) }),
           ),
-          el('span', { class: 'rank-chip', text: `RANK: ${current.name.toUpperCase()}` }),
         ),
-        meter(progress.rewardPoints, next ? next.min : Math.max(progress.rewardPoints, 1), {
-          hint: next ? `NEXT TIER: ${fmt(next.min)}` : 'MAX TIER REACHED',
-        }),
+        meter(
+          progress.rewardPoints,
+          nextReward ? nextReward.cost : Math.max(progress.rewardPoints, 1),
+          {
+            hint: nextReward
+              ? `${nextReward.name.toUpperCase()} UNLOCKED AT ${fmt(nextReward.cost)} POINTS`
+              : 'EVERY REWARD UNLOCKED',
+          },
+        ),
       ),
 
       el('h2', { class: 't-kicker section-head', text: 'Rewards you can claim' }),
@@ -172,5 +185,5 @@ export function RewardsPage(root) {
     ),
   );
   paint();
-  root.append(wrap, tabbar('/rewards'));
+  root.append(wrap);
 }

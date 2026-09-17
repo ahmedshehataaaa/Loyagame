@@ -1,6 +1,6 @@
 /* ============================================================
-   Static content: reward catalog, rank tiers, asset manifest,
-   and the seeded leaderboard rivals.
+   Static content: reward catalog, asset manifest, and the seeded
+   leaderboard rivals.
 
    No rewards API exists for this client build, so the catalog is
    local typed data and redemption state lives in the Store.
@@ -60,26 +60,13 @@ export const REWARDS = /** @type {Reward[]} */ ([
   },
 ]);
 
-/** Rank titles by lifetime reward points, richest last. */
-export const TIERS = [
-  { min: 0, name: 'Rookie Slicer' },
-  { min: 500, name: 'Line Cook' },
-  { min: 1500, name: 'Pro Slicer' },
-  { min: 2500, name: 'Head Chef' },
-  { min: 5000, name: 'Legend' },
-];
-
-export function tierFor(points) {
-  let cur = TIERS[0],
-    next = null;
-  for (let i = 0; i < TIERS.length; i++) {
-    if (points >= TIERS[i].min) {
-      cur = TIERS[i];
-      next = TIERS[i + 1] || null;
-    }
-  }
-  return { current: cur, next };
-}
+/* The membership ladder (Rookie Slicer → Line Cook → Pro Slicer → Head Chef →
+   Legend) and its tierFor() lookup were removed: they gave the player a RANK
+   and a "next tier" to climb, which framed a game as a loyalty scheme they had
+   joined. Points and rewards are unaffected — progress is now measured against
+   the next reward's own cost, which is a thing the player can actually spend on.
+   Note src/game/standings.js exports its own unrelated TIERS: those are
+   LEADERBOARD podium labels, and are still in use. */
 
 /** Seeded rivals so the board reads like a live season.
  *  PROTOTYPE DATA — replace with a ranked endpoint before launch.

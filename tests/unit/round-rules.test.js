@@ -8,9 +8,13 @@ import {
 } from '../../src/game/round-rules.js';
 
 describe('resolveOutcome — the two-bomb loss rule', () => {
-  it('surviving the full round wins', () => {
-    expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0 })).toBe(OUTCOME.SURVIVED);
-    expect(resolveOutcome({ livesRemaining: 1, timeLeftSec: 0 })).toBe(OUTCOME.SURVIVED);
+  it('reaching the score bar and surviving wins', () => {
+    expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, score: 150, minScore: 150 })).toBe(
+      OUTCOME.SURVIVED,
+    );
+    expect(resolveOutcome({ livesRemaining: 1, timeLeftSec: 0, score: 9999, minScore: 150 })).toBe(
+      OUTCOME.SURVIVED,
+    );
   });
 
   it('running out of lives loses, even mid-round', () => {
@@ -29,6 +33,44 @@ describe('resolveOutcome — the two-bomb loss rule', () => {
 
   it('quitting mid-round with lives intact is not a survival', () => {
     expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 18 })).toBe(OUTCOME.ELIMINATED);
+  });
+
+  /* The round must be PLAYED, not waited out: idling to the buzzer used to
+     satisfy the win condition on its own and opened the Spin to Win flow. */
+  it('surviving BELOW the score bar is NOT a win', () => {
+    expect(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, score: 149, minScore: 150 })).toBe(
+      OUTCOME.ELIMINATED,
+    );
+    expect(
+      isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, score: 0, minScore: 150 })),
+    ).toBe(false);
+  });
+
+  it('exactly the bar clears it — the check is inclusive', () => {
+    expect(
+      isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, score: 150, minScore: 150 })),
+    ).toBe(true);
+  });
+
+  it('an absent or unusable score is treated as zero, never as a win', () => {
+    // Defaulting the other way would hand a prize to any caller that forgot the
+    // field — the failure mode this rule exists to prevent.
+    expect(isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0 }))).toBe(false);
+    expect(
+      isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, score: NaN, minScore: 150 })),
+    ).toBe(false);
+  });
+
+  it('a zero bar lets any survivor win, so the rule can be switched off', () => {
+    expect(
+      isWin(resolveOutcome({ livesRemaining: 2, timeLeftSec: 0, score: 0, minScore: 0 })),
+    ).toBe(true);
+  });
+
+  it('a big score does not rescue a run that lost every life', () => {
+    expect(resolveOutcome({ livesRemaining: 0, timeLeftSec: 0, score: 99999, minScore: 150 })).toBe(
+      OUTCOME.ELIMINATED,
+    );
   });
 });
 
@@ -50,9 +92,14 @@ describe('applyHazardHit — exactly two bombs ends it', () => {
   it('a full 2-life round survives one bomb and loses to two', () => {
     let lives = 2;
     ({ livesRemaining: lives } = applyHazardHit(lives));
-    expect(isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0 }))).toBe(true);
+    expect(
+      isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0, score: 900, minScore: 150 })),
+    ).toBe(true);
     ({ livesRemaining: lives } = applyHazardHit(lives));
-    expect(isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0 }))).toBe(false);
+    // Same score, second bomb: the hazard still ends it regardless of points.
+    expect(
+      isWin(resolveOutcome({ livesRemaining: lives, timeLeftSec: 0, score: 900, minScore: 150 })),
+    ).toBe(false);
   });
 });
 
