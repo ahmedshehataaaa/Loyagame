@@ -1,9 +1,21 @@
 /* POST { cc, phone, consent } → { ok, playerId, deviceToken, profile }
-   Identity is UNVERIFIED by design (user decision July 2026): the
-   number is trusted as typed. Re-claiming a phone that already has
-   points or games appends a fraud flag for the dashboard instead of
-   blocking — review happens at prize payout. */
-import { sb, ok, bad, normalizePhone, playerByPhone, readBody } from './_lib/db.mjs';
+   Identity is UNVERIFIED by design (user decision July 2026, reconfirmed
+   2026-09-15 for multi-tenancy): the number is trusted as typed.
+   Re-claiming a phone that already has points or games appends a fraud
+   flag for the dashboard instead of blocking — review happens at prize
+   payout.
+   Scoped to the tenant named by X-Tenant (ADR 0018): the same phone at
+   two brands is two separate players. */
+import {
+  sb,
+  ok,
+  bad,
+  normalizePhone,
+  playerByPhone,
+  readBody,
+  tenantContext,
+  dbFailure,
+} from './_lib/db.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('method_not_allowed', 405);
@@ -16,7 +28,10 @@ export default async (req) => {
   if (!valid) return bad('invalid_phone');
 
   try {
-    let player = await playerByPhone(e164);
+    const { ctx, error } = await tenantContext(req, { live: true });
+    if (error) return error;
+
+    let player = await playerByPhone(e164, ctx);
 
     if (player) {
       const patch = { consent: true, country_code: cc, last_seen_at: new Date().toISOString() };
@@ -31,18 +46,23 @@ export default async (req) => {
           },
         ];
       }
-      const rows = await sb(`/players?id=eq.${player.id}`, {
-        method: 'PATCH',
-        body: patch,
-        headers: { Prefer: 'return=representation' },
-      });
+      const rows = await sb(
+        `/players?id=eq.${player.id}`,
+        { method: 'PATCH', body: patch, headers: { Prefer: 'return=representation' } },
+        ctx,
+      );
       player = rows[0];
     } else {
-      const rows = await sb('/players', {
-        method: 'POST',
-        body: { phone: e164, country_code: cc, consent: true },
-        headers: { Prefer: 'return=representation' },
-      });
+      // tenant_id is not sent: the column defaults to the token's tenant.
+      const rows = await sb(
+        '/players',
+        {
+          method: 'POST',
+          body: { phone: e164, country_code: cc, consent: true },
+          headers: { Prefer: 'return=representation' },
+        },
+        ctx,
+      );
       player = rows[0];
     }
 
@@ -56,7 +76,6 @@ export default async (req) => {
       },
     });
   } catch (e) {
-    console.error('register:', e.message);
-    return bad('server_error', 500);
+    return dbFailure('register', e);
   }
 };

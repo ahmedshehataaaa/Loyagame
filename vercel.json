@@ -2,6 +2,19 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/play/:slug([a-z0-9][a-z0-9-]{1,39})",
+      "destination": "/play/:slug/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/play/:slug([a-z0-9][a-z0-9-]{1,39})/:path*",
+      "destination": "/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

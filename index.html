@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#DA291C" />
     <title>McSlice Rush</title>
+    <script>
+      /* A tenant page (/play/<slug>/, ADR 0018) shares this file with the
+         McDonald's build. Blank the McDonald's title and boot mark before first
+         paint; src/main.js sets the tenant's own once its manifest applies. */
+      if (/^\/play\/[a-z0-9]/.test(location.pathname)) {
+        document.title = '';
+        document.documentElement.classList.add('is-tenant');
+      }
+    </script>
 
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="icon.svg" />
@@ -74,6 +83,12 @@
           animation: none;
           width: 100%;
         }
+      }
+      .is-tenant #boot img {
+        display: none;
+      }
+      .is-tenant #boot {
+        background: #1c1917;
       }
     </style>
 

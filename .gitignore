@@ -12,5 +12,7 @@ playwright-report/
 !.env.example
 dist/
 __pycache__/
+# Test binaries fetched on demand (scripts/fetch-postgrest.mjs).
+.cache/
 
 .vercel

@@ -26,6 +26,15 @@ It is NOT the production backend and must never become it:
 `dist/` never contains it, `vercel.json` never routes to it, and it is only
 ever imported by `server.py`, which is the dev server.
 
+TENANTS (ADR 0018)
+------------------
+Every manifest in `campaigns/` is a tenant here, keyed by its `brand.id`, with
+its OWN in-memory store, prize table, round length and coupon prefix. A request
+names its tenant with `X-Tenant`, exactly as the real API expects; no header
+means McDonald's, as it always did. So two tenants genuinely run side by side
+locally, and a phone that plays both is two separate players. The database-level
+isolation of the real API is proved in tests/integration/, not here.
+
 WHAT IT KEEPS HONEST
 --------------------
 The security properties that the client depends on are real here, because a
@@ -47,8 +56,10 @@ because this is a local dev server with no SMS gateway — see `_otp_echo`.
 
 import json
 import os
+import re
 import secrets
 import time
+import urllib.parse
 import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -57,9 +68,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # mint_coupon_code() in supabase/schema.sql so codes look identical in dev.
 COUPON_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
-# Mirrors the `settings` table the real endpoints read.
+# The tenant a request with no X-Tenant header belongs to — the pre-tenancy build.
+DEFAULT_TENANT = "mcdonalds"
+# Same slug rule as tenants.slug and src/core/tenant.js.
+SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,39}$")
+
+# Mirrors the `settings` table the real endpoints read. Round length is per
+# tenant (it comes from the manifest) — see Tenant.round_time_sec.
 SETTINGS = {
-    "round_time_sec": 30,
     "survival_tolerance": 0.95,
     "min_run_ms": 5000,
     "max_plausible_score": 2_000_000,
@@ -67,30 +83,11 @@ SETTINGS = {
     "otp_max_attempts": 5,
 }
 
-
-def _load_prizes():
-    """Prize table + threshold from the campaign manifest — one source of truth.
-
-    The manifest is what CI validates and what the real `submit-run` reads, so
-    a prize added there shows up here without a code change.
-    """
-    path = os.path.join(HERE, "campaigns", "mcdonalds.json")
-    try:
-        with open(path, encoding="utf-8") as fh:
-            rewards = json.load(fh).get("rewards", {})
-        prizes = rewards.get("prizes") or []
-        if prizes:
-            return prizes, int(rewards.get("pointsThreshold", 4000))
-    except (OSError, ValueError) as exc:  # pragma: no cover - dev convenience
-        print(f"[dev-api] could not read campaign manifest ({exc}); using fallback")
-    return [{"key": "fries", "label": "Free Fries", "weight": 1}], 4000
-
-
-PRIZES, POINTS_THRESHOLD = _load_prizes()
+FALLBACK_PRIZES = [{"key": "fries", "label": "Free Fries", "weight": 1}]
 
 
 class Store:
-    """Everything the dev backend remembers. In memory, on purpose."""
+    """Everything one tenant's dev backend remembers. In memory, on purpose."""
 
     def __init__(self):
         self.players = {}       # e164 -> player dict
@@ -99,7 +96,54 @@ class Store:
         self.otps = {}          # e164  -> otp dict
 
 
-STORE = Store()
+def _prefix_for(slug):
+    """Initials of the slug's words: demo-diner -> DD. Always 2-4 letters."""
+    letters = "".join(part[0] for part in slug.split("-") if part).upper()
+    return (letters + "XX")[: max(2, min(4, len(letters)))]
+
+
+class Tenant:
+    """One restaurant: its manifest, its prize table, and its own memory."""
+
+    def __init__(self, slug, manifest):
+        rewards = manifest.get("rewards") or {}
+        rules = manifest.get("rules") or {}
+        self.slug = slug
+        self.manifest = manifest
+        self.prizes = rewards.get("prizes") or FALLBACK_PRIZES
+        self.points_threshold = int(rewards.get("pointsThreshold", 4000))
+        self.round_time_sec = int(rules.get("roundSeconds", 30))
+        self.coupon_prefix = "MC" if slug == DEFAULT_TENANT else _prefix_for(slug)
+        self.store = Store()
+
+
+def _load_tenants():
+    """Every manifest in campaigns/, keyed by brand.id — one source of truth.
+
+    The manifest is what CI validates and what the real API serves, so a prize
+    added there shows up here without a code change.
+    """
+    tenants = {}
+    folder = os.path.join(HERE, "campaigns")
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(folder, name), encoding="utf-8") as fh:
+                manifest = json.load(fh)
+        except (OSError, ValueError) as exc:  # pragma: no cover - dev convenience
+            print(f"[dev-api] skipping campaigns/{name}: {exc}")
+            continue
+        slug = (manifest.get("brand") or {}).get("id")
+        if isinstance(slug, str) and SLUG_RE.match(slug):
+            tenants[slug] = Tenant(slug, manifest)
+    if DEFAULT_TENANT not in tenants:  # pragma: no cover - dev convenience
+        print("[dev-api] campaigns/mcdonalds.json missing; using a fallback prize table")
+        tenants[DEFAULT_TENANT] = Tenant(DEFAULT_TENANT, {})
+    return tenants
+
+
+TENANTS = _load_tenants()
 
 
 # ---- helpers ---------------------------------------------------------------
@@ -118,8 +162,8 @@ def normalize_phone(cc, phone):
     return True, f"{code}{digits}"
 
 
-def _player(e164, cc=None):
-    p = STORE.players.get(e164)
+def _player(t, e164, cc=None):
+    p = t.store.players.get(e164)
     if not p:
         p = {
             "id": str(uuid.uuid4()),
@@ -134,41 +178,42 @@ def _player(e164, cc=None):
             "verified": False,
             "device_token": str(uuid.uuid4()),
         }
-        STORE.players[e164] = p
+        t.store.players[e164] = p
     if cc:
         p["country_code"] = cc
     return p
 
 
-def mint_coupon_code(prefix="MC"):
-    """A single-use coupon code, from a CSPRNG, unique across the store.
+def mint_coupon_code(t):
+    """A single-use coupon code, from a CSPRNG, unique across EVERY tenant.
 
     `secrets`, never `random`: a coupon is a bearer token with real cash value,
-    and Mersenne Twister output is reconstructable from observed draws.
+    and Mersenne Twister output is reconstructable from observed draws. Checked
+    against all tenants because codes are globally unique in the real schema.
     """
     for _ in range(12):
         body = "".join(secrets.choice(COUPON_ALPHABET) for _ in range(8))
-        code = f"{prefix}-{body[:4]}-{body[4:]}"
-        if code not in STORE.coupons:
+        code = f"{t.coupon_prefix}-{body[:4]}-{body[4:]}"
+        if not any(code in other.store.coupons for other in TENANTS.values()):
             return code
     raise RuntimeError("mint_coupon_code: could not find a free code")
 
 
-def draw_prize():
-    """Weighted draw over the manifest's prizes, using the CSPRNG.
+def draw_prize(t):
+    """Weighted draw over the tenant's prizes, using the CSPRNG.
 
     Resolution of 1e6 keeps the 0.2% weight meaningful as an integer draw.
     """
-    total = sum(float(p.get("weight", 0)) for p in PRIZES)
+    total = sum(float(p.get("weight", 0)) for p in t.prizes)
     if total <= 0:
-        return PRIZES[0]
+        return t.prizes[0]
     roll = secrets.randbelow(1_000_000) / 1_000_000 * total
     acc = 0.0
-    for p in PRIZES:
+    for p in t.prizes:
         acc += float(p.get("weight", 0))
         if roll < acc:
             return p
-    return PRIZES[-1]
+    return t.prizes[-1]
 
 
 def _otp_echo():
@@ -186,7 +231,7 @@ def _otp_echo():
 # ---- endpoints -------------------------------------------------------------
 
 
-def register(body):
+def register(t, body):
     cc, phone = body.get("cc"), body.get("phone")
     if not body.get("consent"):
         return 400, {"ok": False, "error": "consent_required"}
@@ -194,7 +239,7 @@ def register(body):
     if not valid:
         return 400, {"ok": False, "error": "invalid_phone"}
 
-    p = _player(e164, cc)
+    p = _player(t, e164, cc)
     return 200, {
         "ok": True,
         "playerId": p["id"],
@@ -208,27 +253,27 @@ def register(body):
     }
 
 
-def send_otp(body):
+def send_otp(t, body):
     """Issue a one-time code. Server-generated, server-held, time-limited."""
     cc, phone = body.get("cc"), body.get("phone")
     valid, e164 = normalize_phone(cc, phone)
     if not valid:
         return 400, {"ok": False, "error": "invalid_phone"}
 
-    existing = STORE.otps.get(e164)
+    existing = t.store.otps.get(e164)
     # Crude resend throttle: enough to make the button honest about it.
     if existing and _now() - existing["sent_at"] < 20:
         wait = int(20 - (_now() - existing["sent_at"]))
         return 429, {"ok": False, "error": "rate_limited", "retryAfter": wait}
 
     code = f"{secrets.randbelow(1_000_000):06d}"
-    STORE.otps[e164] = {
+    t.store.otps[e164] = {
         "code": code,
         "sent_at": _now(),
         "expires_at": _now() + SETTINGS["otp_ttl_sec"],
         "attempts": 0,
     }
-    print(f"[dev-api] OTP for {e164}: {code}  (expires in {SETTINGS['otp_ttl_sec']}s)")
+    print(f"[dev-api] {t.slug} OTP for {e164}: {code}  (expires in {SETTINGS['otp_ttl_sec']}s)")
 
     out = {"ok": True, "sent": True, "expiresIn": SETTINGS["otp_ttl_sec"]}
     if _otp_echo():
@@ -236,22 +281,22 @@ def send_otp(body):
     return 200, out
 
 
-def verify_otp(body):
+def verify_otp(t, body):
     cc, phone, code = body.get("cc"), body.get("phone"), str(body.get("code") or "")
     valid, e164 = normalize_phone(cc, phone)
     if not valid:
         return 400, {"ok": False, "error": "invalid_phone"}
 
-    rec = STORE.otps.get(e164)
+    rec = t.store.otps.get(e164)
     if not rec:
         return 400, {"ok": False, "error": "no_code_sent"}
     if _now() > rec["expires_at"]:
-        STORE.otps.pop(e164, None)
+        t.store.otps.pop(e164, None)
         return 400, {"ok": False, "error": "code_expired"}
 
     rec["attempts"] += 1
     if rec["attempts"] > SETTINGS["otp_max_attempts"]:
-        STORE.otps.pop(e164, None)
+        t.store.otps.pop(e164, None)
         return 429, {"ok": False, "error": "too_many_attempts"}
 
     # compare_digest so a wrong code cannot be found one character at a time.
@@ -259,8 +304,8 @@ def verify_otp(body):
         return 400, {"ok": False, "error": "code_incorrect",
                      "attemptsLeft": SETTINGS["otp_max_attempts"] - rec["attempts"]}
 
-    STORE.otps.pop(e164, None)
-    p = _player(e164, cc)
+    t.store.otps.pop(e164, None)
+    p = _player(t, e164, cc)
     p["verified"] = True
     return 200, {
         "ok": True,
@@ -275,7 +320,7 @@ def verify_otp(body):
     }
 
 
-def start_run(body):
+def start_run(t, body):
     cc, phone, device = body.get("cc"), body.get("phone"), body.get("device")
     valid, e164 = normalize_phone(cc, phone)
     if not valid:
@@ -283,9 +328,9 @@ def start_run(body):
     if not device:
         return 400, {"ok": False, "error": "device_required"}
 
-    p = _player(e164, cc)
+    _player(t, e164, cc)
     token = str(uuid.uuid4())
-    STORE.runs[token] = {
+    t.store.runs[token] = {
         "player": e164,
         "device": device,
         "started_at": _now(),
@@ -294,27 +339,28 @@ def start_run(body):
     return 200, {"ok": True, "granted": True, "token": token, "playsLeft": 99}
 
 
-def submit_run(body):
+def submit_run(t, body):
     token = body.get("token")
     score = int(body.get("score") or 0)
     duration_ms = int(body.get("durationMs") or 0)
 
-    run = STORE.runs.get(token)
+    run = t.store.runs.get(token)
     # One token, one submission — a replay is the same 409 the real endpoint
-    # returns, so the client's session handling is exercised for real.
+    # returns, so the client's session handling is exercised for real. A token
+    # from another tenant is simply not in this tenant's store.
     if not run or run["consumed"]:
         return 409, {"ok": False, "error": "invalid_token"}
     run["consumed"] = True
 
-    p = STORE.players[run["player"]]
+    p = t.store.players[run["player"]]
     p["games"] += 1
     p["high_score"] = max(p["high_score"], score)
 
-    wheel = [{"key": x["key"], "label": x["label"]} for x in PRIZES]
+    wheel = [{"key": x["key"], "label": x["label"]} for x in t.prizes]
 
     # Survival is the SERVER's call, re-derived from the duration it was told.
     # The client's `survived` flag is deliberately not read.
-    required_ms = SETTINGS["round_time_sec"] * 1000 * SETTINGS["survival_tolerance"]
+    required_ms = t.round_time_sec * 1000 * SETTINGS["survival_tolerance"]
     survived = duration_ms >= required_ms
 
     suspicious = (
@@ -326,22 +372,22 @@ def submit_run(body):
         "survived": survived,
         "wheel": wheel,
         "orderPoints": p["order_points"],
-        "pointsThreshold": POINTS_THRESHOLD,
+        "pointsThreshold": t.points_threshold,
     }
 
     if suspicious:
         return 200, {**base, "won": False, "suspicious": True}
     if not survived:
         return 200, {**base, "won": False, "gap": int(required_ms - duration_ms)}
-    if p["order_points"] < POINTS_THRESHOLD:
+    if p["order_points"] < t.points_threshold:
         return 200, {**base, "won": False}
 
     # Eligible and survived: draw, mint and record together, so a code can
     # never exist without a win behind it.
-    prize = draw_prize()
-    code = mint_coupon_code()
+    prize = draw_prize(t)
+    code = mint_coupon_code(t)
     expires_at = _now() + 7 * 24 * 3600
-    STORE.coupons[code] = {
+    t.store.coupons[code] = {
         "player": run["player"],
         "prize_key": prize["key"],
         "prize_label": prize["label"],
@@ -349,7 +395,7 @@ def submit_run(body):
         "expires_at": expires_at,
         "redeemed_at": None,
     }
-    p["order_points"] -= POINTS_THRESHOLD  # the wheel SPENDS the points
+    p["order_points"] -= t.points_threshold  # the wheel SPENDS the points
 
     prize_index = next((i for i, w in enumerate(wheel) if w["key"] == prize["key"]), 0)
     return 200, {
@@ -363,7 +409,7 @@ def submit_run(body):
     }
 
 
-def wallet(body):
+def wallet(t, body):
     """Coupons this player holds, newest first — real status, not a mock."""
     valid, e164 = normalize_phone(body.get("cc"), body.get("phone"))
     if not valid:
@@ -377,16 +423,16 @@ def wallet(body):
             "redeemedAt": int(c["redeemed_at"] * 1000) if c["redeemed_at"] else None,
             "status": _coupon_status(c),
         }
-        for code, c in STORE.coupons.items()
+        for code, c in t.store.coupons.items()
         if c["player"] == e164
     ]
     items.sort(key=lambda i: i["issuedAt"], reverse=True)
-    p = STORE.players.get(e164)
+    p = t.store.players.get(e164)
     return 200, {
         "ok": True,
         "items": items,
         "orderPoints": p["order_points"] if p else 0,
-        "pointsThreshold": POINTS_THRESHOLD,
+        "pointsThreshold": t.points_threshold,
     }
 
 
@@ -398,10 +444,10 @@ def _coupon_status(c):
     return "active"
 
 
-def redeem(body):
+def redeem(t, body):
     """Burn a coupon. Single-use is enforced here, not in the browser."""
     code = str(body.get("code") or "").strip().upper()
-    c = STORE.coupons.get(code)
+    c = t.store.coupons.get(code)
     if not c:
         return 404, {"ok": False, "error": "unknown_code"}
     if c["redeemed_at"]:
@@ -413,13 +459,13 @@ def redeem(body):
     return 200, {"ok": True, "status": "redeemed", "redeemedAt": int(c["redeemed_at"] * 1000)}
 
 
-def pos_credit(body):
+def pos_credit(t, body):
     """Credit order points, the way the Foodics POS webhook does in production.
 
     The wheel SPENDS points, so without this the earn-and-spend loop only runs
     one way and a dev sees a real win exactly once before falling below the
     threshold forever. Idempotent on the order id, matching
-    `points_ledger_order_uniq` — replaying a webhook must not pay twice.
+    `points_ledger_tenant_order_uniq` — replaying a webhook must not pay twice.
     """
     valid, e164 = normalize_phone(body.get("cc"), body.get("phone"))
     if not valid:
@@ -431,13 +477,37 @@ def pos_credit(body):
     if points <= 0:
         return 400, {"ok": False, "error": "invalid_points"}
 
-    p = _player(e164)
+    p = _player(t, e164)
     ledger = p.setdefault("ledger", {})
     if order_id in ledger:
         return 200, {"ok": True, "duplicate": True, "orderPoints": p["order_points"]}
     ledger[order_id] = points
     p["order_points"] += points
     return 200, {"ok": True, "credited": points, "orderPoints": p["order_points"]}
+
+
+def tenant_config(query):
+    """GET /api/tenant-config?slug= — what /play/<slug>/ boots from.
+
+    Every campaign in campaigns/ counts as published here. Previews need a
+    signed draft from the real ops API, so a dev server refuses them rather
+    than pretending: the e2e specs stub that response instead.
+    """
+    params = urllib.parse.parse_qs(query)
+    slug = (params.get("slug") or [""])[0]
+    if not SLUG_RE.match(slug):
+        return 400, {"ok": False, "error": "invalid_tenant"}
+    if "preview" in params:
+        return 403, {"ok": False, "error": "invalid_preview"}
+    t = TENANTS.get(slug)
+    if t is None or not t.manifest:
+        return 404, {"ok": False, "error": "not_available"}
+    return 200, {
+        "ok": True,
+        "preview": False,
+        "tenant": {"slug": slug, "name": t.manifest["brand"].get("name"), "status": "active"},
+        "manifest": t.manifest,
+    }
 
 
 ROUTES = {
@@ -452,11 +522,22 @@ ROUTES = {
 }
 
 
-def handle(path, raw_body):
+def handle_get(path, query):
+    """Dispatch one GET. Returns (status, payload) or None if not an API path."""
+    if path == "/api/tenant-config":
+        return tenant_config(query)
+    return None
+
+
+def handle(path, raw_body, tenant=None):
     """Dispatch one POST. Returns (status, payload) or None if not an API path."""
     fn = ROUTES.get(path)
     if not fn:
         return None
+    slug = tenant or DEFAULT_TENANT
+    t = TENANTS.get(slug) if SLUG_RE.match(slug) else None
+    if t is None:
+        return 404, {"ok": False, "error": "tenant_not_found"}
     try:
         body = json.loads(raw_body or b"{}")
     except ValueError:
@@ -464,7 +545,7 @@ def handle(path, raw_body):
     if not isinstance(body, dict):
         return 400, {"ok": False, "error": "bad_json"}
     try:
-        return fn(body)
+        return fn(t, body)
     except Exception as exc:  # pragma: no cover - dev convenience
-        print(f"[dev-api] {path} failed: {exc!r}")
+        print(f"[dev-api] {t.slug} {path} failed: {exc!r}")
         return 500, {"ok": False, "error": "server_error"}

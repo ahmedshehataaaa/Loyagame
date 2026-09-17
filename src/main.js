@@ -7,11 +7,12 @@
    mechanics namespace before that for the same reason.
    ============================================================ */
 import './game/index.js';
-import { loadCampaign } from './campaign/loader.js';
+import { loadCampaign, loadTenantCampaign } from './campaign/loader.js';
 import { initI18n, t, onLangChange, currentLang } from './core/i18n.js';
 import './adapters/engine-bridge.js';
 import { Router, navigate } from './core/router.js';
 import { Store } from './core/store.js';
+import { tenantSlug } from './core/tenant.js';
 import { track, setContext, EVENTS } from './analytics/index.js';
 
 import { WelcomePage } from './pages/welcome.js';
@@ -35,20 +36,31 @@ initI18n();
    Deliberately fire-and-forget: the engine already has a complete, valid
    config, so blocking first paint on a network fetch would trade a guaranteed
    delay for an optional cosmetic gain. The manifest overlays brand and content
-   when it lands; a rejected one is logged and ignored (fail-closed). */
-try {
-  const requested = new URLSearchParams(location.search).get('campaign');
-  if (requested && /^[a-z0-9][a-z0-9-]{1,39}$/.test(requested)) {
-    loadCampaign(`campaigns/${requested}.json`);
+   when it lands; a rejected one is logged and ignored (fail-closed).
+
+   A TENANT page (/play/<slug>/, ADR 0018) is the opposite case: the built-in
+   config is another restaurant, so nothing paints until its own manifest has
+   applied, `?campaign=` is ignored, and a failure shows "unavailable" rather
+   than falling back. See bootTenant() below. */
+const TENANT = tenantSlug();
+if (TENANT) {
+  // The inline boot screen carries the McDonald's mark; never show it here.
+  document.querySelector('#boot img')?.remove();
+} else {
+  try {
+    const requested = new URLSearchParams(location.search).get('campaign');
+    if (requested && /^[a-z0-9][a-z0-9-]{1,39}$/.test(requested)) {
+      loadCampaign(`campaigns/${requested}.json`);
+    }
+  } catch {
+    /* no URL access — built-in config stands */
   }
-} catch {
-  /* no URL access — built-in config stands */
 }
 
 /* Analytics context, set once so no call site has to repeat it. No vendor is
    wired (see src/analytics/index.js) — events buffer until a sink is installed. */
 setContext({
-  campaignId: new URLSearchParams(location.search).get('campaign') ?? 'mcdonalds',
+  campaignId: TENANT ?? new URLSearchParams(location.search).get('campaign') ?? 'mcdonalds',
   locale: currentLang(),
 });
 track(EVENTS.CAMPAIGN_VIEWED, { referrer: document.referrer ? 'external' : 'direct' });
@@ -89,25 +101,88 @@ function offlineBanner() {
 }
 offlineBanner();
 
-Router.add('/', WelcomePage)
-  .add('/sign-in', SignInPage)
-  .add('/play', PlayPage)
-  .add('/rewards', RewardsPage)
-  .add('/leaderboard', LeaderboardPage)
-  .add('/result', ResultPage)
-  // `/win` predates the merged result screen (ADR 0010). Kept as a redirect so
-  // any deep link, bookmark or QR code already in the wild still lands somewhere
-  // sensible instead of bouncing to the welcome screen.
-  .add('/win', () => navigate('/result', { replace: true }))
-  .add('/wallet', WalletPage)
-  .add('/terms', TermsPage)
-  // Dev/QA reference, deliberately not in the player navigation.
-  .add('/assets', AssetLibraryPage)
-  .start(document.getElementById('route'), { fallback: '/' });
+function startRouter() {
+  Router.add('/', WelcomePage)
+    .add('/sign-in', SignInPage)
+    .add('/play', PlayPage)
+    .add('/rewards', RewardsPage)
+    .add('/leaderboard', LeaderboardPage)
+    .add('/result', ResultPage)
+    // `/win` predates the merged result screen (ADR 0010). Kept as a redirect so
+    // any deep link, bookmark or QR code already in the wild still lands somewhere
+    // sensible instead of bouncing to the welcome screen.
+    .add('/win', () => navigate('/result', { replace: true }))
+    .add('/wallet', WalletPage)
+    .add('/terms', TermsPage)
+    // Dev/QA reference, deliberately not in the player navigation.
+    .add('/assets', AssetLibraryPage)
+    .start(document.getElementById('route'), { fallback: '/' });
 
-/* A language switch re-renders the current route in place: pages read i18n at
-   build time, so there is nothing to diff — just paint them again. */
-onLangChange(() => Router.repaint());
+  /* A language switch re-renders the current route in place: pages read i18n at
+     build time, so there is nothing to diff — just paint them again. */
+  onLangChange(() => Router.repaint());
+}
+
+/** Finish the boot screen's job without a route (the unavailable state). */
+function dismissBoot() {
+  document.getElementById('boot')?.remove();
+  document.body.classList.add('is-booted');
+}
+
+/* A tenant that cannot be served says so. It never starts the router, so there
+   is no Play button and no reward call — and nothing of another brand shows. */
+function tenantUnavailable() {
+  document.title = t('tenant.unavailableTitle');
+  const route = document.getElementById('route');
+  route?.replaceChildren();
+  const box = document.createElement('section');
+  box.className = 'screen tenant-unavailable';
+  box.setAttribute('role', 'alert');
+  const h = document.createElement('h1');
+  h.className = 't-title';
+  h.textContent = t('tenant.unavailableTitle');
+  const p = document.createElement('p');
+  p.textContent = t('tenant.unavailableBody');
+  box.append(h, p);
+  route?.append(box);
+  dismissBoot();
+}
+
+/* Ops preview: the draft plays exactly as it would ship, with the reward API
+   switched off, so staff can test a skin without minting a real coupon. */
+function previewBar() {
+  const bar = document.createElement('div');
+  bar.className = 'preview-bar';
+  bar.setAttribute('role', 'status');
+  const paint = () => (bar.textContent = t('tenant.previewBar'));
+  onLangChange(paint);
+  paint();
+  document.body.append(bar);
+}
+
+async function bootTenant(slug) {
+  let preview = null;
+  try {
+    preview = new URLSearchParams(location.search).get('preview');
+  } catch {
+    /* no URL access — published config */
+  }
+  const result = await loadTenantCampaign(slug, { preview });
+  if (!result?.ok) {
+    tenantUnavailable();
+    return;
+  }
+  if (preview && window.CONFIG) {
+    window.CONFIG.API = { ...window.CONFIG.API, enabled: false };
+    previewBar();
+  }
+  document.title = window.BRAND.gameName;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', window.BRAND.colors.primary);
+  startRouter();
+}
+
+if (TENANT) bootTenant(TENANT);
+else startRouter();
 
 /* The shell's pre-boot loading state has served its purpose once the first
    route paints. Removing it here (rather than on `load`) means it covers exactly

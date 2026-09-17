@@ -8,8 +8,11 @@
      { won:true,  prize:{key,label}, prizeIndex, wheel:[{key,label}], orderPoints, pointsThreshold }
      { won:false, gap, suspicious, orderPoints, pointsThreshold }
    `wheel` is the authoritative segment order; the client adds glyphs by
-   matching each key to CONFIG.WHEEL, so the animation matches the award. */
-import { rpc, ok, bad, getSettings, readBody } from './_lib/db.mjs';
+   matching each key to CONFIG.WHEEL, so the animation matches the award.
+   Scoped to the tenant named by X-Tenant: prizes, threshold and round
+   length are that tenant's settings, and a token issued to another tenant
+   is not found (ADR 0018). */
+import { rpc, ok, bad, getSettings, readBody, tenantContext, dbFailure } from './_lib/db.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('method_not_allowed', 405);
@@ -21,7 +24,10 @@ export default async (req) => {
   if (!Number.isFinite(score) || score < 0) return bad('invalid_score');
 
   try {
-    const s = await getSettings();
+    const { ctx, error } = await tenantContext(req, { live: true });
+    if (error) return error;
+
+    const s = await getSettings(ctx);
     const prizes = s.wheel_prizes || [];
     const pointsThreshold = s.wheel_points_threshold ?? 4000;
 
@@ -40,20 +46,24 @@ export default async (req) => {
     const reportedMs = Math.round(durationMs || 0);
     const survived = reportedMs >= requiredMs;
 
-    const rows = await rpc('resolve_run', {
-      p_token: token,
-      p_score: Math.round(score),
-      p_duration: reportedMs,
-      p_device: device || null,
-      p_points_threshold: pointsThreshold,
-      p_min_ms: s.min_run_ms ?? 5000,
-      p_max_score: s.max_plausible_score ?? 2000000,
-      p_prizes: prizes,
-      // Requires the resolve_run signature in supabase/schema.sql at or after
-      // 2026-08-07. The RPC consumes the token either way (the play is spent)
-      // but only draws a prize when this is true.
-      p_survived: survived,
-    });
+    const rows = await rpc(
+      'resolve_run',
+      {
+        p_token: token,
+        p_score: Math.round(score),
+        p_duration: reportedMs,
+        p_device: device || null,
+        p_points_threshold: pointsThreshold,
+        p_min_ms: s.min_run_ms ?? 5000,
+        p_max_score: s.max_plausible_score ?? 2000000,
+        p_prizes: prizes,
+        // Requires the resolve_run signature in supabase/schema.sql at or after
+        // 2026-08-07. The RPC consumes the token either way (the play is spent)
+        // but only draws a prize when this is true.
+        p_survived: survived,
+      },
+      ctx,
+    );
     const r = rows[0];
     if (!r || !r.ok) return bad('invalid_token', 409);
 
@@ -86,7 +96,6 @@ export default async (req) => {
       pointsThreshold,
     });
   } catch (e) {
-    console.error('submit-run:', e.message);
-    return bad('server_error', 500);
+    return dbFailure('submit-run', e);
   }
 };

@@ -43,3 +43,10 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# Tenant pages (ADR 0018): /play/<slug>/ serves the same static build, which
+# reads the slug from the path. Must stay below the /api rule.
+[[redirects]]
+  from = "/play/:slug/*"
+  to = "/:splat"
+  status = 200

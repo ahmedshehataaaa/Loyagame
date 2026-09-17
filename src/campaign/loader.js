@@ -194,3 +194,37 @@ export async function loadCampaign(url) {
     return null;
   }
 }
+
+/**
+ * Fetch and apply a tenant's manifest from `/api/tenant-config` (ADR 0018).
+ *
+ * The opposite contract to loadCampaign: there, falling back to the built-in
+ * config is the safe outcome. For a tenant page the built-in config is ANOTHER
+ * restaurant, so the caller must know whether this worked, and nothing is
+ * applied unless the response is for exactly the tenant in the URL.
+ *
+ * @param {string} slug
+ * @param {{preview?: string|null, fetchImpl?: typeof fetch}} [opts]
+ * @returns {Promise<ValidationResult|null>} null when nothing was applied
+ */
+export async function loadTenantCampaign(slug, { preview = null, fetchImpl = fetch } = {}) {
+  const query = new URLSearchParams({ slug });
+  if (preview) query.set('preview', preview);
+  const url = `/api/tenant-config?${query}`;
+  try {
+    const res = await fetchImpl(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      console.warn(`Tenant config ${slug} -> ${res.status}; not playable.`);
+      return null;
+    }
+    const body = await res.json();
+    if (!body?.ok || body.manifest?.brand?.id !== slug) {
+      console.error(`Tenant config for ${slug} did not describe ${slug}; refusing it.`);
+      return null;
+    }
+    return applyCampaign(body.manifest);
+  } catch (err) {
+    console.warn(`Tenant config ${slug} could not be loaded; not playable.`, err);
+    return null;
+  }
+}

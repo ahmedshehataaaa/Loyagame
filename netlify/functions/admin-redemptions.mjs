@@ -1,24 +1,30 @@
-/* GET (x-admin-key) ?from=ISO&to=ISO&page=1&pageSize=25 -> paginated
-   redemption feed (every wheel prize won, redeemed or not) + the
-   redemption rate for that range. */
-import { rpc, ok, bad, isAdmin } from './_lib/db.mjs';
+/* GET (x-admin-key, X-Tenant) ?from=ISO&to=ISO&page=1&pageSize=25 ->
+   paginated redemption feed (every wheel prize won, redeemed or not) +
+   the redemption rate for that range, for that tenant only. */
+import { rpc, ok, bad, isAdminFor, tenantContext, dbFailure } from './_lib/db.mjs';
 
 export default async (req) => {
-  if (!isAdmin(req)) return bad('unauthorized', 401);
-  const params = new URL(req.url).searchParams;
-  const page = Math.max(1, Number(params.get('page')) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(params.get('pageSize')) || 25));
-
   try {
-    const feed = await rpc('admin_redemptions', {
-      p_from: params.get('from') || null,
-      p_to: params.get('to') || null,
-      p_limit: pageSize,
-      p_offset: (page - 1) * pageSize,
-    });
+    const { ctx, error } = await tenantContext(req, { hideMissing: true });
+    if (error) return error;
+    if (!isAdminFor(req, ctx.tenant)) return bad('unauthorized', 401);
+
+    const params = new URL(req.url).searchParams;
+    const page = Math.max(1, Number(params.get('page')) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(params.get('pageSize')) || 25));
+
+    const feed = await rpc(
+      'admin_redemptions',
+      {
+        p_from: params.get('from') || null,
+        p_to: params.get('to') || null,
+        p_limit: pageSize,
+        p_offset: (page - 1) * pageSize,
+      },
+      ctx,
+    );
     return ok({ page, pageSize, ...feed });
   } catch (e) {
-    console.error('admin-redemptions:', e.message);
-    return bad('server_error', 500);
+    return dbFailure('admin-redemptions', e);
   }
 };

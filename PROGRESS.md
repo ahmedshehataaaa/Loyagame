@@ -1,6 +1,45 @@
 # PROGRESS.md — McSlice Rush (McDonald's)
 
-## Current checkpoint — 2026-08-12 (viewport, leaderboard UI, standings data)
+## Current checkpoint — 2026-09-16 (multi-tenancy, phases 0–5)
+
+Decision record: **ADR 0018**. Plan: `docs/plans/2026-09-15-multi-tenant-phase-0.md`.
+Branch `feature/multi-tenant` (off `dev`, which is off `main`). Ops dashboard:
+`Desktop/claimlabs-ops` (new Next.js app, its own git repo).
+
+**What exists now.** Tenancy lives in Postgres: `tenant_id` and composite FKs on every
+scoped table, RLS on a non-bypass `app_tenant` role reached through per-request JWTs,
+the McDonald's data backfilled as the legacy tenant with a checksum proof
+(`database/migrations/0001–0006`). The API resolves the tenant from `X-Tenant`, and
+no header means McDonald's. `/play/<slug>/` serves the same build and boots that
+tenant's published manifest, or an "unavailable" screen, never another brand.
+Onboarding happens in the ops dashboard: create, brand, menu, reviewed prize ladder,
+signed preview with rewards off, publish, then pause or archive, all audited by name.
+
+**Verified (2026-09-16):**
+- lint, typecheck, 265 unit tests;
+- 81 integration tests against real Postgres + PostgREST (`npm run test:integration`);
+- `tenants.spec.js` on all six viewports (54/54);
+- full e2e suite 894 passed, 6 skipped. The only failures are
+  `analytics.spec.js › verification start and completion…` on all six viewports,
+  and that test **fails the same way on pristine `main`** (checked in a clean
+  worktree). It expects `verification_started` on page load, which the sign-in page
+  only emits after an OTP send. Pre-existing and not touched here.
+- `claimlabs-ops/e2e/onboarding.spec.ts` onboards a client through the UI against
+  `npm run dev:stack` (real DB and API), publishes, checks the live game boots that
+  skin, then pauses it.
+
+**Not done — needs a human:**
+- Nothing is pushed or deployed. The production migration is a human decision: take a
+  backup, check the live `settings.wheel_prizes` row (Krispy Kreme seed, see ADR
+  0018), then run `DATABASE_URL=… node scripts/db-migrate.mjs --confirm-remote`.
+- New env on the game backend: `SUPABASE_JWT_SECRET`, `OPS_ADMIN_KEY`, the
+  `tenant-assets` storage bucket (0006), and the `app_tenant` / `ops_admin` /
+  `tenant_resolver` roles, which the migrations create. On the ops app:
+  `GAME_API_URL`, `GAME_PUBLIC_URL`, `OPS_ADMIN_KEY`, `OPS_PASSWORD`,
+  `OPS_SESSION_SECRET`.
+- ADR 0012 (campaign manifests) is still referenced but missing.
+
+## Previous checkpoint — 2026-08-12 (viewport, leaderboard UI, standings data)
 
 Decision record: **ADR 0017**. Branch `fix/viewport-leaderboard-ui`.
 

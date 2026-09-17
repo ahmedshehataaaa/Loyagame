@@ -25,9 +25,13 @@ import { postJson } from './api.js';
 import { resolveRewardOutcome, REWARD_STATUS } from './reward-state.js';
 import { OUTCOME } from '../game/round-rules.js';
 import { Store } from '../core/store.js';
+import { tenantKey } from '../core/tenant.js';
 
-const DEVICE_KEY = 'mcslice.device.v1';
-const IDENTITY_KEY = 'mcslice.identity.v1';
+/* Per tenant (ADR 0018): a phone registered on one restaurant's page is never
+   silently attributed rounds on another's, and each brand sees its own device
+   id. Unchanged at the site root. */
+const DEVICE_KEY = tenantKey('mcslice.device.v1');
+const IDENTITY_KEY = tenantKey('mcslice.identity.v1');
 
 /* ---- Device identity ---------------------------------------------------
    A stable per-device id. Used by the server for its own device-level

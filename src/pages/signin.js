@@ -17,6 +17,7 @@ import { navigate } from '../core/router.js';
 import { register, clearIdentity, sendOtp, verifyOtp } from '../services/loyalty.js';
 import { t } from '../core/i18n.js';
 import { track, EVENTS } from '../analytics/index.js';
+import { brandLogo, brandSlogan } from '../campaign/brand-copy.js';
 
 const RESEND_COOLDOWN_SEC = 30;
 
@@ -346,8 +347,8 @@ export function SignInPage(root) {
       el(
         'header',
         { class: 'signin__brand' },
-        el('img', { src: 'assets/brand-logo.png', alt: "McDonald's", width: '86', height: '86' }),
-        el('p', { class: 'welcome__slogan', text: "i'm lovin' it" }),
+        el('img', { src: brandLogo().src, alt: brandLogo().alt, width: '86', height: '86' }),
+        el('p', { class: 'welcome__slogan', text: brandSlogan() }),
       ),
       form,
       button(`← ${t('common.back')}`, {

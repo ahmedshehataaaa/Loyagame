@@ -1,18 +1,24 @@
 /* GET ?token=<deviceToken> → live profile (points from the ledger-
    backed players table). The game calls this on boot/home so a POS
-   credit shows up without replay. */
-import { sb, ok, bad, playerByToken } from './_lib/db.mjs';
+   credit shows up without replay.
+   Scoped to the tenant named by X-Tenant. Not gated on a live tenant:
+   a paused campaign's players can still see the balance they earned. */
+import { sb, ok, bad, playerByToken, tenantContext, dbFailure } from './_lib/db.mjs';
 
 export default async (req) => {
   const token = new URL(req.url).searchParams.get('token');
   try {
-    const player = await playerByToken(token);
+    const { ctx, error } = await tenantContext(req);
+    if (error) return error;
+
+    const player = await playerByToken(token, ctx);
     if (!player) return bad('unknown_token', 401);
 
-    sb(`/players?id=eq.${player.id}`, {
-      method: 'PATCH',
-      body: { last_seen_at: new Date().toISOString() },
-    }).catch(() => {});
+    sb(
+      `/players?id=eq.${player.id}`,
+      { method: 'PATCH', body: { last_seen_at: new Date().toISOString() } },
+      ctx,
+    ).catch(() => {});
 
     return ok({
       orderPoints: player.order_points,
@@ -20,7 +26,6 @@ export default async (req) => {
       games: player.games,
     });
   } catch (e) {
-    console.error('profile:', e.message);
-    return bad('server_error', 500);
+    return dbFailure('profile', e);
   }
 };

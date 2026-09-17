@@ -9,11 +9,16 @@ Supabase, neither of which is reachable from a laptop — so every reward call
 used to 404 and the player was told "Rewards are not available in this build"
 on every win. `dev_api.py` mirrors the same wire contract locally. It is a DEV
 server: nothing here ships, and `dist/` contains no Python at all.
+
+TENANT PATHS (ADR 0018). `/play/<slug>/...` is served from the site root, the
+same rewrite `vercel.json` performs in production, so a tenant page can be
+developed and tested locally exactly as it ships.
 """
 
 import http.server
 import json
 import os
+import re
 import socketserver
 import sys
 
@@ -22,10 +27,45 @@ import dev_api
 PORT = int(os.environ.get("PORT", "8765"))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
+# Same slug rule as tenants.slug and src/core/tenant.js.
+TENANT_PATH = re.compile(r"^/play/([a-z0-9][a-z0-9-]{1,39})(/.*)?$")
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
+
+    def _json(self, status, payload):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        path, _, query = self.path.partition("?")
+
+        api = dev_api.handle_get(path, query)
+        if api is not None:
+            self._json(*api)
+            return
+
+        tenant = TENANT_PATH.match(path)
+        if tenant:
+            rest = tenant.group(2)
+            if rest is None:
+                # Without the trailing slash, every relative URL in index.html
+                # would resolve one level too high.
+                self.send_response(301)
+                self.send_header(
+                    "Location", f"/play/{tenant.group(1)}/" + (f"?{query}" if query else "")
+                )
+                self.end_headers()
+                return
+            self.path = rest + (f"?{query}" if query else "")
+
+        super().do_GET()
 
     def do_POST(self):
         """Route `/api/*` to the dev backend; everything else is not a POST target."""
@@ -36,18 +76,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             length = 0
         raw = self.rfile.read(length) if length else b"{}"
 
-        result = dev_api.handle(path, raw)
+        result = dev_api.handle(path, raw, self.headers.get("X-Tenant"))
         if result is None:
             self.send_error(404, "No such endpoint")
             return
-
-        status, payload = result
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self._json(*result)
 
     def end_headers(self):
         # Disable caching so local edits always show on reload.

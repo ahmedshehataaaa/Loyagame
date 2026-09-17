@@ -20,19 +20,17 @@ import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, toggleLang } from '../core/i18n.js';
 import { roundSeconds } from '../core/rules.js';
+import { brandLogo, brandSlogan, prizeTeaser, heroSprites } from '../campaign/brand-copy.js';
 
-/* The airborne items, as [sprite, class] pairs. Positioned in CSS so the
-   composition survives a locale/direction flip without JS. */
-const HERO_ITEMS = [
-  ['assets/items/bigmac.png', 'is-hero'],
-  ['assets/items/fries.png', 'is-left'],
-  ['assets/items/mcflurry.png', 'is-right'],
-  ['assets/items/nuggets.png', 'is-low'],
-];
+/* Classes for the airborne items, in order. Positioned in CSS so the
+   composition survives a locale/direction flip without JS. The sprites come
+   from the brand (campaign/brand-copy.js), so a tenant page shows its own menu. */
+const HERO_SLOTS = ['is-hero', 'is-left', 'is-right', 'is-low'];
 
 function heroArt() {
   const stage = el('div', { class: 'hero', 'aria-hidden': 'true' });
-  for (const [src, cls] of HERO_ITEMS) {
+  for (const [i, src] of heroSprites().entries()) {
+    const cls = HERO_SLOTS[i];
     stage.append(
       el('img', {
         class: `hero__item ${cls}`,
@@ -82,8 +80,8 @@ export function WelcomePage(root) {
       soundBtn,
       el('img', {
         class: 'welcome__arches',
-        src: 'assets/brand-logo.png',
-        alt: "McDonald's",
+        src: brandLogo().src,
+        alt: brandLogo().alt,
         width: '52',
         height: '52',
       }),
@@ -97,7 +95,7 @@ export function WelcomePage(root) {
       }),
     ),
 
-    el('p', { class: 'welcome__slogan', text: t('welcome.slogan') }),
+    el('p', { class: 'welcome__slogan', text: brandSlogan() }),
 
     heroArt(),
 
@@ -106,7 +104,7 @@ export function WelcomePage(root) {
       { class: 'welcome__copy' },
       el('h1', { class: 't-display', html: t('welcome.title') }),
       el('p', { class: 'welcome__sub', text: t('welcome.sub', { seconds: ROUND_TIME }) }),
-      el('p', { class: 'welcome__prize', text: t('welcome.prizeTeaser') }),
+      el('p', { class: 'welcome__prize', text: prizeTeaser() }),
       signedIn &&
         el('p', {
           class: 'welcome__greet',

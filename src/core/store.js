@@ -7,7 +7,11 @@
    or left over from an older shape — none of which may throw.
    ============================================================ */
 
-const KEY = 'mcslice.v1';
+import { tenantKey } from './tenant.js';
+
+/* Per tenant (ADR 0018): a restaurant's page never reads another's profile or
+   cached balance. Unchanged at the site root. */
+const KEY = tenantKey('mcslice.v1');
 
 /** @typedef {{id:string,name:string,avatar?:string,isGuest:boolean}} PlayerProfile */
 /** @typedef {{rewardPoints:number,bestScore:number,lastScore:number,gamesPlayed:number,

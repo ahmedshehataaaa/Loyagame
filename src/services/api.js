@@ -11,6 +11,8 @@
    cannot use exceptions for one and a value for the other.
    ============================================================ */
 
+import { tenantSlug } from '../core/tenant.js';
+
 /**
  * Error kinds callers may branch on. Anything unrecognised collapses to
  * `server_error`, which callers must treat as "no reward" — never as "maybe".
@@ -69,10 +71,17 @@ export async function postJson(path, body, opts = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
+  /** @type {Record<string, string>} */
+  const headers = { 'Content-Type': 'application/json' };
+  // Every call names its tenant, and the server scopes the whole request to it
+  // (ADR 0018). The root build sends none and keeps reaching McDonald's.
+  const tenant = tenantSlug();
+  if (tenant) headers['X-Tenant'] = tenant;
+
   try {
     const res = await fetch(`${base}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body ?? {}),
       signal: opts.signal ?? controller.signal,
       // Reward calls must never be served from a cache.
