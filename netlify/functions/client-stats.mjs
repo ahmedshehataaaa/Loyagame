@@ -4,8 +4,9 @@
    in one client_dashboard() RPC call, for that tenant only. Defaults to
    the last 30 days. */
 import { rpc, ok, bad, isAdminFor, tenantContext, dbFailure } from './_lib/db.mjs';
+import { webHandler } from './_lib/http.mjs';
 
-export default async (req) => {
+const handler = async (req) => {
   const params = new URL(req.url).searchParams;
 
   const to = params.get('to') ? new Date(params.get('to')) : new Date();
@@ -29,3 +30,5 @@ export default async (req) => {
     return dbFailure('client-stats', e);
   }
 };
+
+export default webHandler(handler);

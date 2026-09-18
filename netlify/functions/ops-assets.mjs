@@ -17,12 +17,13 @@
    upload URL is a Storage API call, not a data query. */
 import { randomUUID } from 'node:crypto';
 import { sb, ok, bad, readBody, isOpsAdmin, opsContext, dbFailure, UUID_RE } from './_lib/db.mjs';
+import { webHandler } from './_lib/http.mjs';
 
 const BUCKET = 'tenant-assets';
 const KINDS = new Set(['logo', 'item', 'hazard']);
 const EXT = { 'image/png': 'png', 'image/webp': 'webp', 'image/jpeg': 'jpg' };
 
-export default async (req) => {
+const handler = async (req) => {
   if (req.method !== 'POST') return bad('method_not_allowed', 405);
   if (!isOpsAdmin(req)) return bad('unauthorized', 401);
 
@@ -66,3 +67,5 @@ export default async (req) => {
     return dbFailure('ops-assets', e);
   }
 };
+
+export default webHandler(handler);

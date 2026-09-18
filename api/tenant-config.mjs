@@ -19,6 +19,7 @@ import {
   dbFailure,
   SLUG_RE,
 } from '../lib/db.mjs';
+import { webHandler } from '../lib/http.mjs';
 
 const withCache = (status, obj, cache) =>
   new Response(JSON.stringify(obj), {
@@ -26,7 +27,7 @@ const withCache = (status, obj, cache) =>
     headers: { 'Content-Type': 'application/json', 'Cache-Control': cache },
   });
 
-export default async (req) => {
+const handler = async (req) => {
   if (req.method !== 'GET') return bad('method_not_allowed', 405);
   const params = new URL(req.url).searchParams;
   const slug = params.get('slug') ?? '';
@@ -62,3 +63,5 @@ export default async (req) => {
     return dbFailure('tenant-config', e);
   }
 };
+
+export default webHandler(handler);

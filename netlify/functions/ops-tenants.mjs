@@ -33,6 +33,7 @@ import {
   UUID_RE,
 } from './_lib/db.mjs';
 import { validateCampaign } from '../../src/campaign/schema.js';
+import { webHandler } from './_lib/http.mjs';
 
 const STATUSES = new Set(['trial', 'active', 'paused', 'archived']);
 const FORMATS = new Set(['slice_rush', 'catch_fries']);
@@ -53,7 +54,7 @@ function manifestIssues(manifest) {
 
 const isVersionId = (v) => Number.isSafeInteger(v) && v > 0;
 
-export default async (req) => {
+const handler = async (req) => {
   if (!isOpsAdmin(req)) return bad('unauthorized', 401);
   const ctx = opsContext();
 
@@ -181,3 +182,5 @@ export default async (req) => {
     return dbFailure('ops-tenants', e);
   }
 };
+
+export default webHandler(handler);

@@ -15,8 +15,9 @@ import {
   tenantContext,
   dbFailure,
 } from './_lib/db.mjs';
+import { webHandler } from './_lib/http.mjs';
 
-export default async (req) => {
+const handler = async (req) => {
   if (req.method !== 'POST') return bad('method_not_allowed', 405);
   const body = await readBody(req);
   if (!body) return bad('bad_json');
@@ -62,3 +63,5 @@ export default async (req) => {
     return dbFailure('session-status', e);
   }
 };
+
+export default webHandler(handler);

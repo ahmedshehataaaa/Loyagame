@@ -10,8 +10,9 @@
    (ADR 0018). */
 import { bad, isAdminFor, tenantContext, dbFailure } from '../lib/db.mjs';
 import { SECTIONS } from '../lib/admin-sections.mjs';
+import { webHandler } from '../lib/http.mjs';
 
-export default async (req) => {
+const handler = async (req) => {
   const url = new URL(req.url);
   const section = url.searchParams.get('section') ?? '';
   const run = Object.hasOwn(SECTIONS, section) ? SECTIONS[section] : null;
@@ -26,3 +27,5 @@ export default async (req) => {
     return dbFailure(`admin-${section}`, e);
   }
 };
+
+export default webHandler(handler);

@@ -4,8 +4,9 @@
    Scoped to the tenant named by X-Tenant. Not gated on a live tenant:
    a paused campaign's players can still see the balance they earned. */
 import { sb, ok, bad, playerByToken, tenantContext, dbFailure } from '../lib/db.mjs';
+import { webHandler } from '../lib/http.mjs';
 
-export default async (req) => {
+const handler = async (req) => {
   const token = new URL(req.url).searchParams.get('token');
   try {
     const { ctx, error } = await tenantContext(req);
@@ -29,3 +30,5 @@ export default async (req) => {
     return dbFailure('profile', e);
   }
 };
+
+export default webHandler(handler);

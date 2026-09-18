@@ -18,8 +18,9 @@ import {
   tenantContext,
   dbFailure,
 } from '../lib/db.mjs';
+import { webHandler } from '../lib/http.mjs';
 
-export default async (req) => {
+const handler = async (req) => {
   if (req.method !== 'POST') return bad('method_not_allowed', 405);
 
   try {
@@ -59,3 +60,5 @@ export default async (req) => {
     return dbFailure('pos-credit', e);
   }
 };
+
+export default webHandler(handler);
