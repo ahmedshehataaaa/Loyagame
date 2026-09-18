@@ -10,8 +10,7 @@ import posCredit from '../../api/pos-credit.mjs';
 import startRun from '../../api/start-run.mjs';
 import submitRun from '../../api/submit-run.mjs';
 import sessionStatus from '../../api/session-status.mjs';
-import adminStats from '../../api/admin-stats.mjs';
-import adminActions from '../../api/admin-actions.mjs';
+import admin from '../../api/admin.mjs';
 
 /* Phase 2 pass/fail, end to end: the REAL handlers, calling the REAL PostgREST
  * binary, over a real Postgres with the migrations applied.
@@ -287,7 +286,10 @@ describe('secrets open only their own tenant', () => {
 
   it('brand admin keys read only their own tenant', async () => {
     const stats = (slug, key) =>
-      call(adminStats, { headers: { ...(slug ? { 'x-tenant': slug } : {}), 'x-admin-key': key } });
+      call(admin, {
+        path: '/api/admin?section=stats',
+        headers: { ...(slug ? { 'x-tenant': slug } : {}), 'x-admin-key': key },
+      });
 
     const own = await stats('acme-burger', state['acme-burger'].adminKey);
     expect(own.status).toBe(200);
@@ -303,7 +305,8 @@ describe('secrets open only their own tenant', () => {
     const winOf = async (tenantId) =>
       Number((await stack.admin.query('select id from wheel_wins where tenant_id = $1 limit 1', [tenantId])).rows[0].id);
     const redeem = (slug, winId) =>
-      call(adminActions, {
+      call(admin, {
+        path: '/api/admin?section=actions',
         method: 'POST',
         headers: { 'x-tenant': slug, 'x-admin-key': state[slug].adminKey },
         body: { action: 'redeem_prize', winId, redeemedBy: 'till-4' },

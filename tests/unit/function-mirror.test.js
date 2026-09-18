@@ -7,7 +7,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
    difference is where each copy imports its helpers from. */
 
 const toApiPaths = (src) =>
-  src.replaceAll("'./_lib/db.mjs'", "'../lib/db.mjs'").replaceAll("'../../src/", "'../src/");
+  src.replace(/'\.\/_lib\/([a-z-]+\.mjs)'/g, "'../lib/$1'").replaceAll("'../../src/", "'../src/");
 
 describe('Netlify mirrors of the API', () => {
   const files = readdirSync('api').filter((f) => f.endsWith('.mjs'));
@@ -25,7 +25,13 @@ describe('Netlify mirrors of the API', () => {
     });
   }
 
-  it('share one copy of the database helpers', () => {
-    expect(readFileSync('netlify/functions/_lib/db.mjs', 'utf8')).toBe(readFileSync('lib/db.mjs', 'utf8'));
-  });
+  /* Everything under netlify/functions/_lib/ is a copy of lib/. Drift there is
+     as real as drift in a handler — admin-sections.mjs holds five endpoints. */
+  for (const file of readdirSync('netlify/functions/_lib')) {
+    it(`_lib/${file} is the same file as lib/${file}`, () => {
+      expect(readFileSync(`netlify/functions/_lib/${file}`, 'utf8')).toBe(
+        readFileSync(`lib/${file}`, 'utf8'),
+      );
+    });
+  }
 });

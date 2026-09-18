@@ -126,6 +126,12 @@ const server = createServer(async (req, res) => {
 
     const api = /^\/api\/([a-z0-9-]+)$/.exec(url.pathname);
     if (api) {
+      // The same rewrite vercel.json performs: five admin paths, one function.
+      const admin = /^admin-([a-z]+)$/.exec(api[1]);
+      if (admin) {
+        url.searchParams.set('section', admin[1]);
+        api[1] = 'admin';
+      }
       let handler;
       try {
         handler = await apiHandler(api[1]);

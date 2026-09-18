@@ -11,6 +11,26 @@
   ],
   "rewrites": [
     {
+      "source": "/api/admin-stats",
+      "destination": "/api/admin?section=stats"
+    },
+    {
+      "source": "/api/admin-engagement",
+      "destination": "/api/admin?section=engagement"
+    },
+    {
+      "source": "/api/admin-players",
+      "destination": "/api/admin?section=players"
+    },
+    {
+      "source": "/api/admin-redemptions",
+      "destination": "/api/admin?section=redemptions"
+    },
+    {
+      "source": "/api/admin-actions",
+      "destination": "/api/admin?section=actions"
+    },
+    {
       "source": "/play/:slug([a-z0-9][a-z0-9-]{1,39})/:path*",
       "destination": "/:path*"
     }

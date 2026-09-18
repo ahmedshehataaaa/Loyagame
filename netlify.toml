@@ -37,6 +37,34 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+# The five admin endpoints are one function (Hobby-plan function budget).
+# These must stay ABOVE the generic /api/* rule, which would otherwise look
+# for a function per old path.
+[[redirects]]
+  from = "/api/admin-stats"
+  to = "/.netlify/functions/admin?section=stats"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin-engagement"
+  to = "/.netlify/functions/admin?section=engagement"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin-players"
+  to = "/.netlify/functions/admin?section=players"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin-redemptions"
+  to = "/.netlify/functions/admin?section=redemptions"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin-actions"
+  to = "/.netlify/functions/admin?section=actions"
+  status = 200
+
 # The client calls /api/* (Vercel's convention). Map it onto Netlify's
 # function path so one client build works on both hosts.
 [[redirects]]
