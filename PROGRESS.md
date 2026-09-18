@@ -1,6 +1,42 @@
 # PROGRESS.md — McSlice Rush (McDonald's)
 
-## Current checkpoint — 2026-09-16 (multi-tenancy, phases 0–5)
+## Current checkpoint — 2026-09-18 (multi-tenancy is live)
+
+Decision record: **ADR 0018**. `main` = `feature/multi-tenant` (merged 2026-09-17).
+Ops dashboard: `Desktop/claimlabs-ops` (own repo, deployed).
+
+**Live.** https://loyagame.vercel.app is the McDonald's build; `/play/<slug>/` serves
+any onboarded client; https://claimlabs-ops.vercel.app is the staff tool. The database
+is a free Supabase project (`claimlabs-db`, eu-central-1) provisioned through the Vercel
+marketplace and connected to the loyagame project; baseline schema + migrations
+0001-0006 were applied 2026-09-17, McDonald's is the legacy tenant, and the
+`tenant-assets` bucket exists. `OPS_ADMIN_KEY` is shared by both Vercel projects;
+`ADMIN_KEY` is per-install on the game; the ops dashboard also holds `OPS_PASSWORD`
+and `OPS_SESSION_SECRET`.
+
+**Proved on the deployed sites** (`claimlabs-ops/e2e/live-smoke.spec.ts`): sign in,
+sign off a prize ladder, onboard a client with uploaded art, publish, the game boots
+that skin at its own URL with the sprite served from Supabase Storage, the root build
+is unchanged, then archive and the page goes dark within the 30s config cache.
+
+**Two things the deploy forced:**
+- Vercel's Hobby plan allows twelve Serverless Functions; multi-tenancy made fifteen.
+  The five `admin-*` handlers are now one `api/admin.mjs` dispatching on `?section=`,
+  with rewrites keeping the old paths. Eleven functions ship.
+- Every handler is written Web-style (Request in, Response out), which is how Netlify
+  and the tests call them, but Vercel's Node runtime calls `(req, res)`. `lib/http.mjs`
+  adapts both. Without it every endpoint 500ed in production.
+
+**Still open:**
+- `analytics.spec.js`, `buttons.spec.js`, `journey.spec.js` and friends fail the same 30
+  tests per viewport on pristine `main` as on this branch — main's redesign (phone-only
+  sign-in, new mascot, new copy) landed without updating its tests. Not a regression
+  here; worth a pass of its own.
+- The ops dashboard still uses one shared staff password. Replace with SSO before the
+  team grows.
+- ADR 0012 (campaign manifests) is still referenced but missing.
+
+## Previous checkpoint — 2026-09-16 (multi-tenancy, phases 0–5)
 
 Decision record: **ADR 0018**. Plan: `docs/plans/2026-09-15-multi-tenant-phase-0.md`.
 Branch `feature/multi-tenant` (off `dev`, which is off `main`). Ops dashboard:
