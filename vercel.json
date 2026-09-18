@@ -31,6 +31,10 @@
       "destination": "/api/admin?section=actions"
     },
     {
+      "source": "/play/:slug([a-z0-9][a-z0-9-]{1,39})/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/play/:slug([a-z0-9][a-z0-9-]{1,39})/:path*",
       "destination": "/:path*"
     }
