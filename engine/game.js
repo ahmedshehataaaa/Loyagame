@@ -778,7 +778,10 @@ const Game = (() => {
       SPRITES[def.img] = im;
     });
   }
-  preloadSprites();
+  // At boot window.FOODS is still the built-in McDonald's roster; a tenant page
+  // (/play/<slug>/) would only download sprites it never shows. Its own
+  // roster is preloaded when its round starts.
+  if (!/^\/play\//.test(location.pathname)) preloadSprites();
 
   // Draw one item centered at (0,0), fitted into `size` with its real aspect
   // ratio preserved. Used by BOTH the main draw and bakeHalf, so slicing

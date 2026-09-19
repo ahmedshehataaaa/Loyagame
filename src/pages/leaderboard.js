@@ -10,7 +10,8 @@
    a rotated YOU tag. */
 import { el, button, topbar, fmt, emptyState, loadingState } from '../components/ui.js';
 import { icon, RANK_ICONS, RANK_TINTS } from '../components/icons.js';
-import { normalizeRow, rankStandings, tierFor } from '../game/standings.js';
+import { normalizeRow, rankStandings } from '../game/standings.js';
+import { t, num } from '../core/i18n.js';
 import { RIVALS } from '../data/catalog.js';
 import { Store } from '../core/store.js';
 import { track, EVENTS } from '../analytics/index.js';
@@ -95,7 +96,7 @@ function standingsRow(row) {
       // the player's row can land anywhere in the podium and must not shift it.
       style: podium ? { '--medal': RANK_TINTS[row.rank - 1] } : null,
     },
-    row.you ? el('i', { class: 'lb-row__flag', text: 'YOU' }) : null,
+    row.you ? el('i', { class: 'lb-row__flag', text: t('lb.you') }) : null,
     el(
       'span',
       { class: 'lb-row__rank' },
@@ -119,22 +120,22 @@ function standingsRow(row) {
         { class: 'lb-row__name' },
         el('span', { text: row.name }),
         row.rank === 1 ? icon('verified', { size: 14, className: 'lb-row__verified' }) : null,
-        row.you ? el('i', { class: 'lb-row__live', text: 'LIVE' }) : null,
+        row.you ? el('i', { class: 'lb-row__live', text: t('lb.live') }) : null,
       ),
-      el('span', { class: 'lb-row__tier', text: tierFor(row.rank) }),
+      el('span', { class: 'lb-row__tier', text: t(`lb.tier${Math.min(Math.max(row.rank, 1), 5)}`) }),
     ),
     el(
       'span',
       { class: 'lb-row__score' },
       el('b', { text: fmt(row.score) }),
-      el('i', { class: 'lb-row__unit', text: 'PTS' }),
+      el('i', { class: 'lb-row__unit', text: t('lb.pts') }),
     ),
   );
 }
 
 export function LeaderboardPage(root) {
   track(EVENTS.LEADERBOARD_VIEWED, {});
-  const listHost = el('div', null, loadingState('Loading standings…'));
+  const listHost = el('div', null, loadingState(t('lb.loading')));
   const clockEl = el('b', { class: 'season__clock', text: seasonRemaining() });
   const timeWrap = el(
     'div',
@@ -153,7 +154,7 @@ export function LeaderboardPage(root) {
     el(
       'div',
       { class: 'screen bg-burst' },
-      topbar('Standings', { back: '/' }),
+      topbar(t('lb.title'), { back: '/' }),
       el(
         'section',
         { class: 'card season' },
@@ -161,16 +162,16 @@ export function LeaderboardPage(root) {
         el(
           'div',
           { class: 'season__body' },
-          el('span', { class: 't-kicker', text: 'Season ends in' }),
+          el('span', { class: 't-kicker', text: t('lb.seasonEnds') }),
           timeWrap,
-          el('span', { class: 'season__reset', text: 'Month-end reset' }),
+          el('span', { class: 'season__reset', text: t('lb.reset') }),
         ),
       ),
       listHost,
       el(
         'div',
         { style: { marginTop: 'auto', paddingTop: '18px' } },
-        button('Play a round', {
+        button(t('lb.play'), {
           icon: icon('play', { size: 15 }),
           onClick: () => navigate('/play'),
         }),
@@ -192,8 +193,8 @@ export function LeaderboardPage(root) {
         listHost.append(
           emptyState(
             icon('chart', { size: 40 }),
-            'No standings yet',
-            'Play a round to put yourself on the board.',
+            t('lb.none'),
+            t('lb.noneBody'),
           ),
         );
         return;
@@ -211,14 +212,14 @@ export function LeaderboardPage(root) {
         el(
           'div',
           { class: 'lb-head' },
-          el('span', { class: 't-kicker', text: 'This season' }),
+          el('span', { class: 't-kicker', text: t('lb.thisSeason') }),
           // Only claim a position when there IS one. Rendering `You: #${me.rank}`
           // against a missing row would print "You: #undefined".
-          me ? el('span', { class: 't-kicker', text: `You: #${me.rank}` }) : null,
+          me ? el('span', { class: 't-kicker', text: t('lb.youRank', { rank: num(me.rank) }) }) : null,
         ),
         el('ol', { class: 'lb-list' }, ...ranked.map(standingsRow)),
         me && me.score === 0
-          ? el('p', { class: 'lb-note', text: 'Play a round to set your first score.' })
+          ? el('p', { class: 'lb-note', text: t('lb.firstScore') })
           : null,
       ].filter((node) => node instanceof Node);
 
@@ -229,8 +230,8 @@ export function LeaderboardPage(root) {
       listHost.append(
         emptyState(
           icon('alert', { size: 40 }),
-          'Standings unavailable',
-          'Could not load the board. Try again shortly.',
+          t('lb.unavailable'),
+          t('lb.unavailableBody'),
           el(
             'div',
             { style: { marginTop: '14px', width: '200px' } },

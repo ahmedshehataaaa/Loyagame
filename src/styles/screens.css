@@ -221,7 +221,9 @@
 .game-hint {
   position: absolute;
   left: 50%;
-  bottom: 26px;
+  /* Above the stake pill (.game-stake), which owns the bottom edge: at 26px
+     the two sat on top of each other for the hint's first seconds. */
+  bottom: calc(var(--sp-md) + env(safe-area-inset-bottom, 0px) + 44px);
   transform: translateX(-50%);
   z-index: 2;
   width: max-content;
@@ -455,7 +457,7 @@
   padding: 4px var(--sp-lg);
   border: var(--border-ink-thin);
   border-radius: var(--r-full);
-  background: linear-gradient(180deg, #e8503f 0%, var(--c-primary) 100%);
+  background: linear-gradient(180deg, var(--c-primary-hi-2) 0%, var(--c-primary) 100%);
   box-shadow: var(--lip-red);
   color: var(--c-white);
   font-size: var(--fs-label);
@@ -576,7 +578,7 @@
     width: 140px;
   }
   .game-hint {
-    bottom: 10px;
+    bottom: calc(var(--sp-sm) + env(safe-area-inset-bottom, 0px) + 40px);
   }
 }
 @media (max-width: 359px) {

@@ -57,7 +57,11 @@ export function toEngineShape(value) {
     FOODS: items.map((i) => ({
       id: i.id,
       img: i.img,
-      glyph: i.glyph ?? '🍔', // fallback only if a sprite fails to load
+      // Drawn only while a sprite is missing. It used to be a burger, which
+      // flashed on a pizza tenant's first spawns while its sprites were still
+      // downloading; a plate is nobody's product. (Sprites are warmed as soon
+      // as the manifest applies, so this is the failure case, not the norm.)
+      glyph: i.glyph ?? '🍽️',
       points: i.points,
       radius: i.radius,
       juice: i.juice ?? '#d8892f',
@@ -121,16 +125,49 @@ export function toEngineShape(value) {
  */
 export function applyBrandTokens(brand, root = document?.documentElement) {
   if (!root || !brand?.colors) return;
+  const { primary, primary2, accent, accent2, ink, surface } = brand.colors;
+  /* A manifest carries six colours, but the stylesheet uses more brand tokens
+     than that: gradient highlights, the dark standings ground, text on the
+     accent, tinted cards. Setting only the six left every one of those at its
+     McDonald's value, so a tenant's screens glowed McDonald's red and gold.
+     Each is derived from the tenant's own palette instead. */
+  const mix = (a, b, pct) => (a && b ? `color-mix(in srgb, ${a} ${pct}%, ${b})` : null);
   const map = {
-    '--c-primary': brand.colors.primary,
-    '--c-primary-dark': brand.colors.primary2,
-    '--c-secondary': brand.colors.accent,
-    '--c-secondary-dark': brand.colors.accent2,
-    '--c-ink': brand.colors.ink,
-    '--c-surface': brand.colors.surface,
+    '--c-primary': primary,
+    '--c-primary-dark': primary2,
+    '--c-secondary': accent,
+    '--c-secondary-dark': accent2,
+    '--c-ink': ink,
+    '--c-surface': surface,
+    '--c-primary-hi': mix(primary, 'white', 82),
+    '--c-primary-hi-2': mix(primary, 'white', 88),
+    '--c-primary-deep': mix(primary2, 'black', 75),
+    '--c-night-1': mix(primary2, 'black', 80),
+    '--c-night-2': mix(primary2, 'black', 50),
+    '--c-night-3': mix(primary2, 'black', 30),
+    '--c-secondary-hi': mix(accent, 'white', 60),
+    '--c-secondary-hot': accent2,
+    '--c-secondary-ink': mix(accent2, ink, 25),
+    '--c-ink-soft': mix(ink, primary, 70),
+    '--c-surface-alt': mix(surface, primary, 88),
   };
   for (const [prop, val] of Object.entries(map)) {
     if (val) root.style.setProperty(prop, val);
+  }
+}
+
+/* Start downloading a manifest's sprites the moment it applies — a player
+   reads the welcome screen first, so by the first spawn they are cached and
+   the engine's own preload (at round start) resolves instantly. Held in a
+   module array so the requests are not collected before they finish. */
+const warming = [];
+function warmSprites(defs) {
+  if (typeof Image === 'undefined') return;
+  for (const def of defs) {
+    if (!def?.img) continue;
+    const im = new Image();
+    im.src = def.img;
+    warming.push(im);
   }
 }
 
@@ -166,6 +203,7 @@ export function applyCampaign(manifest, opts = {}) {
   }
   window.FOODS = shaped.FOODS;
   window.BOMB = shaped.BOMB;
+  warmSprites([...shaped.FOODS, shaped.BOMB]);
   window.BRAND = shaped.BRAND;
 
   applyBrandTokens(result.value.brand);

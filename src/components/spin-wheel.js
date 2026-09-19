@@ -20,6 +20,8 @@
 import { el, button } from './ui.js';
 import { t, num } from '../core/i18n.js';
 import { prizes as configuredPrizes } from '../core/rules.js';
+import { icon } from './icons.js';
+import { brandLogo } from '../campaign/brand-copy.js';
 
 /* Timings. The spin is long enough to feel like an event and short enough
    that a player who has already won does not sit waiting for permission. */
@@ -94,10 +96,12 @@ function segmentCard(seg, i, count) {
     el(
       'div',
       { class: 'wheel__card', style: { '--seg-a': `${angle}deg` } },
+      /* A named prize ("Free Soft Drink") is not a discount: it used to read
+         "🎁 OFF". It gets the gift icon and FREE; only a percentage says OFF. */
       seg.pct
         ? el('span', { class: 'wheel__pct', text: seg.pct })
-        : el('span', { class: 'wheel__glyph', text: '🎁' }),
-      el('span', { class: 'wheel__label', text: 'OFF' }),
+        : el('span', { class: 'wheel__glyph' }, icon('gift', { size: 22 })),
+      el('span', { class: 'wheel__label', text: seg.pct ? t('wheel.off') : t('wheel.free') }),
     ),
   );
 }
@@ -127,8 +131,9 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
       { class: 'wheel__hub' },
       el('img', {
         class: 'wheel__hub-logo',
-        src: 'assets/brand-logo.png',
-        alt: "McDonald's",
+        // The page's own brand: the arches on the root, the tenant's logo on /play/<slug>/.
+        src: brandLogo().src,
+        alt: brandLogo().alt,
         'aria-hidden': 'true',
       }),
     ),

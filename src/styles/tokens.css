@@ -10,9 +10,16 @@
   --c-primary: #da291c; /* McDonald's red — page ground */
   --c-primary-dark: #a81a10; /* pressed edges / bevel lips   */
   --c-primary-deep: #7d1109;
+  --c-primary-hi: #f0432f; /* highlight at the top of red gradients */
+  --c-primary-hi-2: #e8503f;
+  --c-night-1: #4a0d08; /* the dark maroon ground of the standings screen */
+  --c-night-2: #2a0705;
+  --c-night-3: #1a0403;
   --c-secondary: #ffc72c; /* golden yellow — CTA, currency */
   --c-secondary-hi: #ffd65c; /* gradient top of yellow surfaces */
   --c-secondary-dark: #c8930a; /* bevel lip under yellow        */
+  --c-secondary-hot: #ff8c00; /* far end of the progress meter  */
+  --c-secondary-ink: #5b4a12; /* text set ON the yellow         */
   --c-ink: #27251f; /* structural outline / heading  */
   --c-ink-soft: #5c403b;
   --c-surface: #fff8f6; /* card paper                    */
@@ -67,7 +74,8 @@
   --lip-gold: 0 6px 0 0 var(--c-secondary-dark);
   --lip-red: 0 6px 0 0 var(--c-primary-dark);
   --lift: 0 10px 18px rgba(0, 0, 0, 0.32);
-  --glow-gold: 0 0 22px 5px rgba(255, 199, 44, 0.6);
+  /* Glows follow --c-secondary, so a tenant's accent glows in its own colour. */
+  --glow-gold: 0 0 22px 5px color-mix(in srgb, var(--c-secondary) 60%, transparent);
 
   /* ---- elevation scale ------------------------------------
      THREE levels, and only three. Every raised surface picks one, so depth
@@ -85,8 +93,10 @@
   /* ---- attention ------------------------------------------
      Reserved for the ONE thing on a screen the player should act on next, and
      for the moment something is earned. Never decorative. */
-  --glow-attention: 0 0 0 3px rgba(255, 199, 44, 0.5), 0 0 26px 7px rgba(255, 199, 44, 0.45);
-  --glow-focus: 0 0 0 3px rgba(255, 199, 44, 0.55), 0 6px 14px rgba(0, 0, 0, 0.24);
+  --glow-attention:
+    0 0 0 3px color-mix(in srgb, var(--c-secondary) 50%, transparent),
+    0 0 26px 7px color-mix(in srgb, var(--c-secondary) 45%, transparent);
+  --glow-focus: 0 0 0 3px color-mix(in srgb, var(--c-secondary) 55%, transparent), 0 6px 14px rgba(0, 0, 0, 0.24);
 
   /* ---- pressed feedback ------------------------------------ */
   --press-scale: 0.97;

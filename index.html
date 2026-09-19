@@ -92,16 +92,41 @@
       }
     </style>
 
-    <!-- Hero art the first screen needs. -->
-    <link rel="preload" as="image" href="assets/brand-logo.png" />
-    <link rel="preload" as="image" href="assets/items/bigmac.png" />
+    <!-- Hero art the first screen needs — the ROOT build's first screen only.
+       A tenant page (/play/<slug>/) shows its own art, so it must not fetch
+       the arches and a Big Mac, and must not install as "McSlice Rush":
+       src/main.js gives it a manifest built from its own brand. -->
+    <script>
+      (function () {
+        var head = document.head;
+        if (document.documentElement.classList.contains('is-tenant')) {
+          head.querySelectorAll('link[rel="manifest"], link[rel="apple-touch-icon"]').forEach(function (l) {
+            l.remove();
+          });
+          return;
+        }
+        ['assets/brand-logo.png', 'assets/items/bigmac.png'].forEach(function (href) {
+          var l = document.createElement('link');
+          l.rel = 'preload';
+          l.as = 'image';
+          l.href = href;
+          head.appendChild(l);
+        });
+      })();
+    </script>
   </head>
   <body>
     <!-- Pre-boot loading state. Inline (no CSS/JS dependency) so it paints on the
        first frame and covers exactly the gap it exists for: module evaluation
        and first render. src/main.js removes it on the first route paint. -->
     <div id="boot" role="status" aria-live="polite">
-      <img src="assets/brand-logo.png" alt="" width="72" height="72" />
+      <img alt="" width="72" height="72" />
+      <script>
+        // The arches only on the root build; a tenant's splash stays plain.
+        if (!document.documentElement.classList.contains('is-tenant')) {
+          document.currentScript.previousElementSibling.src = 'assets/brand-logo.png';
+        }
+      </script>
       <div id="boot-bar"><i></i></div>
       <p>Loading&hellip;</p>
     </div>

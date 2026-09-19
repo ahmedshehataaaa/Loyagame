@@ -128,9 +128,15 @@ ul {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* A column, so a short screen can grow to the bottom edge: min-height: 100%
+     on a child of a flex item with no definite height fell short, and the
+     flat #app colour showed as a band under every short screen. */
+  display: flex;
+  flex-direction: column;
 }
 
 .screen {
+  flex: 1 0 auto;
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -142,7 +148,7 @@ ul {
 .bg-burst {
   background: radial-gradient(
     circle at 50% 28%,
-    #f0432f 0%,
+    var(--c-primary-hi) 0%,
     var(--c-primary) 48%,
     var(--c-primary-dark) 100%
   );

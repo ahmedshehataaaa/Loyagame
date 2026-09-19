@@ -545,7 +545,12 @@ test.describe('(f) Stitch reference fidelity', () => {
     });
     expect(weights.you, 'a YOU row is present').toBeTruthy();
     // The gold glow is the strongest treatment in the list and only YOU has it.
-    expect(weights.you.shadow, 'YOU row carries the attention glow').toContain('255, 199, 44');
+    // The glow is a color-mix of --c-secondary (so a tenant glows in its own
+    // accent), which Chromium serialises as color(srgb 1 0.78 0.17 / a) rather
+    // than rgba(255, 199, 44, a) — the same gold, written differently.
+    expect(weights.you.shadow, 'YOU row carries the attention glow').toMatch(
+      /255, 199, 44|color\(srgb 1 0\.78\d* 0\.17\d*/,
+    );
     expect(weights.you.border, 'YOU row has the heaviest border').toBeGreaterThanOrEqual(
       weights.first.border,
     );

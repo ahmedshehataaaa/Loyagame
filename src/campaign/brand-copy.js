@@ -28,10 +28,17 @@ export function brandLogo() {
 const escapeHtml = (v) =>
   String(v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+/* Tenant names and prize labels are data, usually Latin, dropped into a
+   sentence that may be Arabic. Without an isolate the bidi algorithm lets them
+   swallow neighbouring punctuation: "Jimmy's Slice Master!" rendered as
+   "!Jimmy's Slice Master" on the RTL welcome screen. FSI … PDI keeps each
+   one a self-contained run in either direction. */
+const isolate = (v) => `⁨${v}⁩`;
+
 /** Welcome headline, as HTML (it carries a line break). The game name is data. */
 export function welcomeTitleHtml() {
   const m = tenantManifest();
-  return m ? t('welcome.titleBrand', { game: escapeHtml(m.brand.gameName) }) : t('welcome.title');
+  return m ? t('welcome.titleBrand', { game: `<bdi>${escapeHtml(m.brand.gameName)}</bdi>` }) : t('welcome.title');
 }
 
 export function brandSlogan() {
@@ -44,11 +51,11 @@ export function prizeTeaser() {
   if (!m) return t('welcome.prizeTeaser');
   const labels = m.rewards.prizes.map((p) => p.label);
   if (m.brand.features?.wheel === false || !labels.length) {
-    return t('welcome.prizeTeaserBrand', { brand: m.brand.name });
+    return t('welcome.prizeTeaserBrand', { brand: isolate(m.brand.name) });
   }
   return labels.length === 1
-    ? t('welcome.prizeTeaserOne', { prize: labels[0] })
-    : t('welcome.prizeTeaserRange', { from: labels[0], to: labels[labels.length - 1] });
+    ? t('welcome.prizeTeaserOne', { prize: isolate(labels[0]) })
+    : t('welcome.prizeTeaserRange', { from: isolate(labels[0]), to: isolate(labels[labels.length - 1]) });
 }
 
 /* The hazard rule. The root strings name McDonald's burnt fries; a tenant's

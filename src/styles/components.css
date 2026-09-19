@@ -62,14 +62,14 @@
   100% {
     box-shadow:
       0 6px 0 0 var(--btn-lip),
-      0 0 0 3px rgba(255, 199, 44, 0.42),
-      0 0 20px 5px rgba(255, 199, 44, 0.34);
+      0 0 0 3px color-mix(in srgb, var(--c-secondary) 42%, transparent),
+      0 0 20px 5px color-mix(in srgb, var(--c-secondary) 34%, transparent);
   }
   50% {
     box-shadow:
       0 6px 0 0 var(--btn-lip),
-      0 0 0 4px rgba(255, 199, 44, 0.6),
-      0 0 32px 10px rgba(255, 199, 44, 0.5);
+      0 0 0 4px color-mix(in srgb, var(--c-secondary) 60%, transparent),
+      0 0 32px 10px color-mix(in srgb, var(--c-secondary) 50%, transparent);
   }
 }
 
@@ -114,7 +114,7 @@
 }
 .btn--danger {
   --btn-lip: var(--c-primary-dark);
-  background: linear-gradient(180deg, #f0432f 0%, var(--c-primary) 62%);
+  background: linear-gradient(180deg, var(--c-primary-hi) 0%, var(--c-primary) 62%);
   color: var(--c-white);
 }
 .btn--ghost {
@@ -247,7 +247,7 @@
 .meter__fill {
   height: 100%;
   border-radius: var(--r-full);
-  background: linear-gradient(90deg, var(--c-secondary), #ff8c00);
+  background: linear-gradient(90deg, var(--c-secondary), var(--c-secondary-hot));
   transition: width var(--t-med);
 }
 /* The leading edge of the fill glows — "you are nearly there" said with light
@@ -263,7 +263,7 @@
   background: #fff;
   box-shadow:
     0 0 10px 3px #fff,
-    0 0 18px 6px rgba(255, 199, 44, 0.85);
+    0 0 18px 6px color-mix(in srgb, var(--c-secondary) 85%, transparent);
   transition: left var(--t-med);
   animation: spark-breathe 1.8s ease-in-out infinite;
 }
@@ -272,12 +272,12 @@
   100% {
     box-shadow:
       0 0 8px 2px #fff,
-      0 0 14px 4px rgba(255, 199, 44, 0.7);
+      0 0 14px 4px color-mix(in srgb, var(--c-secondary) 70%, transparent);
   }
   50% {
     box-shadow:
       0 0 12px 4px #fff,
-      0 0 24px 9px rgba(255, 199, 44, 0.95);
+      0 0 24px 9px color-mix(in srgb, var(--c-secondary) 95%, transparent);
   }
 }
 
@@ -566,7 +566,7 @@
 .lb-row__live {
   padding: 0 5px;
   border-radius: var(--r-sm);
-  background: rgba(218, 41, 28, 0.18);
+  background: color-mix(in srgb, var(--c-primary) 18%, transparent);
   color: var(--c-primary);
   font-size: var(--fs-micro);
   font-style: normal;
@@ -967,7 +967,7 @@
     transparent
   );
   transform: rotate(-14deg);
-  box-shadow: 0 0 18px rgba(255, 199, 44, 0.75);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c-secondary) 75%, transparent);
 }
 @keyframes hero-float {
   0%,
@@ -1119,6 +1119,12 @@
   background: linear-gradient(180deg, var(--c-secondary-hi), var(--c-secondary));
   color: var(--c-ink);
   box-shadow: var(--lip-ink);
+}
+/* The card is a light surface: a ghost button's white text vanished on it. */
+.wallet-card .btn--ghost {
+  background: transparent;
+  color: var(--c-ink);
+  border-color: color-mix(in srgb, var(--c-ink) 35%, transparent);
 }
 .wallet-card.is-redeemed {
   background: var(--c-surface-alt);
@@ -1592,7 +1598,7 @@
   border: 10px solid var(--c-secondary);
   box-shadow:
     0 0 0 3px rgba(0, 0, 0, 0.18),
-    0 0 34px 10px rgba(255, 199, 44, 0.4),
+    0 0 34px 10px color-mix(in srgb, var(--c-secondary) 40%, transparent),
     0 18px 40px rgba(0, 0, 0, 0.5);
   transform: rotate(0deg);
   will-change: transform;
@@ -1634,7 +1640,7 @@
     scale(1.22);
   box-shadow:
     0 0 0 3px var(--c-secondary),
-    0 0 22px 8px rgba(255, 199, 44, 0.9);
+    0 0 22px 8px color-mix(in srgb, var(--c-secondary) 90%, transparent);
   z-index: 3;
   animation: wedge-pop 0.5s ease-out;
 }
@@ -1682,8 +1688,9 @@
   object-fit: contain;
 }
 .wheel__glyph {
-  font-size: 18px;
+  display: flex;
   line-height: 1;
+  color: var(--c-primary);
 }
 .wheel__label {
   font-size: 5.5px;
@@ -1722,8 +1729,9 @@
   justify-content: center;
 }
 .wheel__hub-logo {
-  width: 62%;
-  height: 62%;
+  width: 78%;
+  height: 78%;
+  border-radius: 22%;
   object-fit: contain;
   display: block;
 }
@@ -1799,10 +1807,19 @@
   box-shadow: var(--e1), var(--glow-attention);
   user-select: all; /* one tap selects the whole code if clipboard is blocked */
 }
-/* The whole reveal is a "you earned this" moment, so it uses the shared
-   success beat rather than a bespoke animation. */
+/* The success beat's scale, without its card shadow: earned-pop ends on a lip
+   and a glow ring, which on a line of text drew a hard box around "YOU WON!". */
 .spin__won {
-  animation: earned-pop 0.62s ease-out both;
+  animation: text-pop 0.62s ease-out both;
+}
+@keyframes text-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.08);
+  }
 }
 .spin__hint,
 .spin__points {

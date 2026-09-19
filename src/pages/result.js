@@ -56,7 +56,8 @@ export function ResultPage(root) {
      a screen the player has to wait out. */
   const confetti = el('div', { class: 'confetti', 'aria-hidden': 'true' });
   if (won && !reduced) {
-    const colors = ['#FFC72C', '#ffffff', '#FF8C00', '#ffe9a8'];
+    // Brand tokens, so a tenant's confetti is its own colours, not McDonald's gold.
+    const colors = ['var(--c-secondary)', '#ffffff', 'var(--c-secondary-hot)', 'var(--c-secondary-hi)'];
     for (let i = 0; i < 34; i++) {
       confetti.append(
         el('i', {

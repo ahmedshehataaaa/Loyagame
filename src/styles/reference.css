@@ -591,7 +591,7 @@
   border: 0;
   border-radius: 10px;
   background: var(--c-secondary);
-  color: #5b4a12;
+  color: var(--c-secondary-ink);
   box-shadow: none;
 }
 .spin__actions .btn:active:not(:disabled) {
@@ -607,7 +607,7 @@
 }
 .spin__code button {
   background: var(--c-secondary);
-  color: #5b4a12;
+  color: var(--c-secondary-ink);
   border: 0;
   font-weight: 700;
 }
@@ -620,7 +620,7 @@
 
 .screen.bg-burst:has(.lb-list) {
   background:
-    radial-gradient(120% 80% at 50% 0%, #4a0d08 0%, #2a0705 55%, #1a0403 100%), var(--c-primary);
+    radial-gradient(120% 80% at 50% 0%, var(--c-night-1) 0%, var(--c-night-2) 55%, var(--c-night-3) 100%), var(--c-primary);
 }
 
 /* Gold slab, dark text — it is the header of the screen in the mockup. */
@@ -674,7 +674,7 @@
   background: linear-gradient(180deg, var(--c-secondary-hi), var(--c-secondary));
   border-color: #241c19;
   box-shadow:
-    0 0 0 3px rgba(255, 199, 44, 0.35),
+    0 0 0 3px color-mix(in srgb, var(--c-secondary) 35%, transparent),
     0 6px 0 0 rgba(0, 0, 0, 0.5);
 }
 .lb-row--you .lb-row__name,

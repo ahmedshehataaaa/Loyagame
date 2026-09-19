@@ -7,7 +7,7 @@
    mechanics namespace before that for the same reason.
    ============================================================ */
 import './game/index.js';
-import { loadCampaign, loadTenantCampaign } from './campaign/loader.js';
+import { loadCampaign, loadTenantCampaign, appliedCampaign } from './campaign/loader.js';
 import { initI18n, t, onLangChange, currentLang } from './core/i18n.js';
 import './adapters/engine-bridge.js';
 import { Router, navigate } from './core/router.js';
@@ -102,10 +102,14 @@ function offlineBanner() {
 offlineBanner();
 
 function startRouter() {
+  /* /rewards is the McDonald's points catalogue and /assets its sprite sheet —
+     both are McDonald's content through and through. A tenant has neither, so
+     its pages send those deep links to the screens that ARE its own. */
+  const rootOnly = (page, fallback) => (TENANT ? () => navigate(fallback, { replace: true }) : page);
   Router.add('/', WelcomePage)
     .add('/sign-in', SignInPage)
     .add('/play', PlayPage)
-    .add('/rewards', RewardsPage)
+    .add('/rewards', rootOnly(RewardsPage, '/wallet'))
     .add('/leaderboard', LeaderboardPage)
     .add('/result', ResultPage)
     // `/win` predates the merged result screen (ADR 0010). Kept as a redirect so
@@ -115,7 +119,7 @@ function startRouter() {
     .add('/wallet', WalletPage)
     .add('/terms', TermsPage)
     // Dev/QA reference, deliberately not in the player navigation.
-    .add('/assets', AssetLibraryPage)
+    .add('/assets', rootOnly(AssetLibraryPage, '/'))
     .start(document.getElementById('route'), { fallback: '/' });
 
   /* A language switch re-renders the current route in place: pages read i18n at
@@ -178,7 +182,37 @@ async function bootTenant(slug) {
   }
   document.title = window.BRAND.gameName;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', window.BRAND.colors.primary);
+  tenantWebManifest(slug);
   startRouter();
+}
+
+/* index.html drops the shared manifest on a tenant page (it names McSlice
+   Rush), so "Add to Home Screen" installs the tenant's own game: its name, its
+   colours, its logo, and a start URL that comes back to its own page. */
+function tenantWebManifest(slug) {
+  const b = window.BRAND;
+  const base = `${location.origin}/play/${slug}/`;
+  const logo = appliedCampaign()?.brand?.logo;
+  const manifest = {
+    name: b.gameName,
+    short_name: b.gameName,
+    start_url: base,
+    scope: base,
+    display: 'fullscreen',
+    background_color: b.colors.primary,
+    theme_color: b.colors.primary,
+    icons: logo ? [{ src: new URL(logo, base).href, sizes: '512x512', type: 'image/png', purpose: 'any' }] : [],
+  };
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }));
+  document.head.append(link);
+  if (logo) {
+    const touch = document.createElement('link');
+    touch.rel = 'apple-touch-icon';
+    touch.href = logo;
+    document.head.append(touch);
+  }
 }
 
 if (TENANT) bootTenant(TENANT);
