@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createServer } from 'node:http';
-import { startStack, manifestFor, STANDARD_LABELS, JWT_SECRET, LEGACY_TENANT } from './support/stack.js';
+import {
+  startStack,
+  manifestFor,
+  STANDARD_LABELS,
+  JWT_SECRET,
+  LEGACY_TENANT,
+} from './support/stack.js';
 import { clearTenantCache } from '../../lib/db.mjs';
 import opsTenants from '../../api/ops-tenants.mjs';
 import opsAssets from '../../api/ops-assets.mjs';
@@ -48,7 +54,11 @@ async function call(handler, { method = 'GET', path = '/', headers = {}, body } 
 }
 
 const ops = (body) =>
-  call(opsTenants, { method: 'POST', headers: { 'x-ops-key': OPS_KEY }, body: { actor: ACTOR, ...body } });
+  call(opsTenants, {
+    method: 'POST',
+    headers: { 'x-ops-key': OPS_KEY },
+    body: { actor: ACTOR, ...body },
+  });
 const post = (handler, slug, body, headers = {}) =>
   call(handler, {
     method: 'POST',
@@ -58,7 +68,9 @@ const post = (handler, slug, body, headers = {}) =>
 
 /** Backdate a round so resolve_run accepts a 31-second survival as genuine. */
 const backdate = (token) =>
-  stack.admin.query("update runs set created_at = now() - interval '40 seconds' where token = $1", [token]);
+  stack.admin.query("update runs set created_at = now() - interval '40 seconds' where token = $1", [
+    token,
+  ]);
 
 beforeAll(async () => {
   stack = await startStack({ postgrest: true });
@@ -104,7 +116,13 @@ describe('onboarding through the ops API', () => {
       ['acme-burger', 'Acme Burger', 'AB'],
       ['nile-cafe', 'Nile Cafe', 'NC'],
     ]) {
-      const created = await ops({ action: 'create', name, slug, gameFormat: 'slice_rush', couponPrefix: prefix });
+      const created = await ops({
+        action: 'create',
+        name,
+        slug,
+        gameFormat: 'slice_rush',
+        couponPrefix: prefix,
+      });
       expect(created.status, JSON.stringify(created.body)).toBe(200);
       const tenantId = created.body.tenant.id;
 
@@ -129,18 +147,45 @@ describe('onboarding through the ops API', () => {
   });
 
   it("passes the database's reasons back", async () => {
-    const fries = await ops({ action: 'create', name: 'F', slug: 'fries-co', gameFormat: 'catch_fries', couponPrefix: 'FC' });
+    const fries = await ops({
+      action: 'create',
+      name: 'F',
+      slug: 'fries-co',
+      gameFormat: 'catch_fries',
+      couponPrefix: 'FC',
+    });
     expect(fries).toMatchObject({ status: 400, body: { error: 'game_format_unavailable' } });
 
-    const dup = await ops({ action: 'create', name: 'A', slug: 'acme-burger', gameFormat: 'slice_rush', couponPrefix: 'AA' });
+    const dup = await ops({
+      action: 'create',
+      name: 'A',
+      slug: 'acme-burger',
+      gameFormat: 'slice_rush',
+      couponPrefix: 'AA',
+    });
     expect(dup).toMatchObject({ status: 409, body: { error: 'slug_taken' } });
 
-    const prefix = await ops({ action: 'create', name: 'P', slug: 'prefix-co', gameFormat: 'slice_rush', couponPrefix: 'lower' });
+    const prefix = await ops({
+      action: 'create',
+      name: 'P',
+      slug: 'prefix-co',
+      gameFormat: 'slice_rush',
+      couponPrefix: 'lower',
+    });
     expect(prefix).toMatchObject({ status: 400, body: { error: 'invalid_coupon_prefix' } });
 
-    expect((await ops({ action: 'create', name: 'X', slug: 'x-co', gameFormat: 'slice_rush', couponPrefix: 'XC', actor: '' })).body.error).toBe(
-      'actor_required',
-    );
+    expect(
+      (
+        await ops({
+          action: 'create',
+          name: 'X',
+          slug: 'x-co',
+          gameFormat: 'slice_rush',
+          couponPrefix: 'XC',
+          actor: '',
+        })
+      ).body.error,
+    ).toBe('actor_required');
   });
 
   it('rejects an invalid manifest with the validator the game uses', async () => {
@@ -160,10 +205,21 @@ describe('onboarding through the ops API', () => {
 
   it('lists every tenant, and never returns a key once it has been shown', async () => {
     const overview = await call(opsTenants, { headers: { 'x-ops-key': OPS_KEY } });
-    expect(overview.body.tenants.map((t) => t.slug).sort()).toEqual(['acme-burger', 'mcdonalds', 'nile-cafe']);
+    expect(overview.body.tenants.map((t) => t.slug).sort()).toEqual([
+      'acme-burger',
+      'mcdonalds',
+      'nile-cafe',
+    ]);
 
-    const detail = await call(opsTenants, { path: '/?slug=acme-burger', headers: { 'x-ops-key': OPS_KEY } });
-    expect(detail.body.detail.tenant).toMatchObject({ hasAdminKey: true, hasPosSecret: true, status: 'trial' });
+    const detail = await call(opsTenants, {
+      path: '/?slug=acme-burger',
+      headers: { 'x-ops-key': OPS_KEY },
+    });
+    expect(detail.body.detail.tenant).toMatchObject({
+      hasAdminKey: true,
+      hasPosSecret: true,
+      status: 'trial',
+    });
     const text = JSON.stringify(detail.body);
     expect(text).not.toContain(state['acme-burger'].adminKey);
     expect(text).not.toContain(state['acme-burger'].posSecret);
@@ -181,7 +237,13 @@ describe('the config a game boots from', () => {
 
   it('serves nothing for an unknown or unpublished tenant', async () => {
     expect((await call(tenantConfig, { path: '/?slug=ghost-brand' })).status).toBe(404);
-    const created = await ops({ action: 'create', name: 'Draft Only', slug: 'draft-only', gameFormat: 'slice_rush', couponPrefix: 'DO' });
+    const created = await ops({
+      action: 'create',
+      name: 'Draft Only',
+      slug: 'draft-only',
+      gameFormat: 'slice_rush',
+      couponPrefix: 'DO',
+    });
     state['draft-only'] = { id: created.body.tenant.id };
     expect((await call(tenantConfig, { path: '/?slug=draft-only' })).status).toBe(404);
     expect((await call(tenantConfig, { path: '/?slug=../etc' })).status).toBe(400);
@@ -195,17 +257,31 @@ describe('the config a game boots from', () => {
       rewardPresetId: 'standard-10',
       prizeLabels: STANDARD_LABELS,
     });
-    const preview = await ops({ action: 'preview', slug: 'draft-only', versionId: draft.body.versionId });
+    const preview = await ops({
+      action: 'preview',
+      slug: 'draft-only',
+      versionId: draft.body.versionId,
+    });
     expect(preview.body.path).toMatch(/^\/play\/draft-only\/\?preview=/);
 
-    const ok = await call(tenantConfig, { path: `/?slug=draft-only&preview=${encodeURIComponent(preview.body.token)}` });
+    const ok = await call(tenantConfig, {
+      path: `/?slug=draft-only&preview=${encodeURIComponent(preview.body.token)}`,
+    });
     expect(ok).toMatchObject({ status: 200, body: { preview: true } });
     expect(ok.headers.get('cache-control')).toBe('no-store');
 
-    const wrongSlug = await call(tenantConfig, { path: `/?slug=acme-burger&preview=${encodeURIComponent(preview.body.token)}` });
+    const wrongSlug = await call(tenantConfig, {
+      path: `/?slug=acme-burger&preview=${encodeURIComponent(preview.body.token)}`,
+    });
     expect(wrongSlug.status).toBe(403);
     const tampered = preview.body.token.replace(/.$/, (c) => (c === 'A' ? 'B' : 'A'));
-    expect((await call(tenantConfig, { path: `/?slug=draft-only&preview=${encodeURIComponent(tampered)}` })).status).toBe(403);
+    expect(
+      (
+        await call(tenantConfig, {
+          path: `/?slug=draft-only&preview=${encodeURIComponent(tampered)}`,
+        })
+      ).status,
+    ).toBe(403);
   });
 });
 
@@ -225,7 +301,11 @@ describe('players at two brands', () => {
       expect(credit.status, JSON.stringify(credit.body)).toBe(200);
       expect(credit.body.duplicate).toBe(false); // same order id, different till system
 
-      const start = await post(startRun, slug, { cc: PHONE.cc, phone: PHONE.phone, device: `device-${slug}` });
+      const start = await post(startRun, slug, {
+        cc: PHONE.cc,
+        phone: PHONE.phone,
+        device: `device-${slug}`,
+      });
       expect(start.body.granted).toBe(true);
       await backdate(start.body.token);
 
@@ -247,7 +327,11 @@ describe('players at two brands', () => {
   });
 
   it('the client’s survived claim is still ignored: a short round wins nothing', async () => {
-    const start = await post(startRun, 'nile-cafe', { cc: '+20', phone: '1004445555', device: 'd-short' });
+    const start = await post(startRun, 'nile-cafe', {
+      cc: '+20',
+      phone: '1004445555',
+      device: 'd-short',
+    });
     await backdate(start.body.token);
     const r = await post(submitRun, 'nile-cafe', {
       token: start.body.token,
@@ -259,28 +343,71 @@ describe('players at two brands', () => {
     expect(r.body).toMatchObject({ won: false, survived: false });
   });
 
-  it("a round token cannot be spent at another brand", async () => {
-    const start = await post(startRun, 'acme-burger', { cc: '+20', phone: '1007778888', device: 'd-cross' });
+  it('a round token cannot be spent at another brand', async () => {
+    const start = await post(startRun, 'acme-burger', {
+      cc: '+20',
+      phone: '1007778888',
+      device: 'd-cross',
+    });
     await backdate(start.body.token);
-    const r = await post(submitRun, 'nile-cafe', { token: start.body.token, score: 10, durationMs: 31000, device: 'd-cross' });
+    const r = await post(submitRun, 'nile-cafe', {
+      token: start.body.token,
+      score: 10,
+      durationMs: 31000,
+      device: 'd-cross',
+    });
     expect(r).toMatchObject({ status: 409, body: { error: 'invalid_token' } });
   });
 
   it('eligibility and lockouts are per brand', async () => {
     const status = (slug) =>
       post(sessionStatus, slug, { cc: PHONE.cc, phone: PHONE.phone, device: 'another-device' });
-    expect((await status('acme-burger')).body).toMatchObject({ eligible: false, reason: 'locked_win', orderPoints: 2000 });
-    const none = await post(sessionStatus, 'draft-only', { cc: PHONE.cc, phone: PHONE.phone, device: 'x' });
+    expect((await status('acme-burger')).body).toMatchObject({
+      eligible: false,
+      reason: 'locked_win',
+      orderPoints: 2000,
+    });
+    const none = await post(sessionStatus, 'draft-only', {
+      cc: PHONE.cc,
+      phone: PHONE.phone,
+      device: 'x',
+    });
     expect(none).toMatchObject({ status: 403, body: { error: 'tenant_not_published' } });
+  });
+
+  it('My Rewards lists a win with its code — only on the device that won it, only at that brand', async () => {
+    const on = (slug, device) =>
+      post(sessionStatus, slug, { cc: PHONE.cc, phone: PHONE.phone, device });
+    const mine = (await on('acme-burger', 'device-acme-burger')).body.wins;
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ redeemed: false, prize: { label: expect.any(String) } });
+    expect(mine[0].code).toMatch(/^AB-/);
+    expect(Date.parse(mine[0].expiresAt)).toBeGreaterThan(Date.now());
+    // Same phone, another device: the phone is unverified, so no codes.
+    expect((await on('acme-burger', 'another-device')).body.wins).toEqual([]);
+    // Same phone and device name at another brand sees only that brand's win.
+    const other = (await on('nile-cafe', 'device-nile-cafe')).body.wins;
+    expect(other.map((w) => w.code.slice(0, 3))).toEqual(['NC-']);
   });
 });
 
 describe('secrets open only their own tenant', () => {
-  it("a POS secret credits only its tenant; an unknown tenant looks exactly like a wrong secret", async () => {
+  it('a POS secret credits only its tenant; an unknown tenant looks exactly like a wrong secret', async () => {
     const order = { phone: PHONE.pos, orderId: 'ORDER-X', points: 10 };
-    expect((await post(posCredit, 'nile-cafe', order, { 'x-webhook-secret': state['acme-burger'].posSecret })).status).toBe(401);
-    expect((await post(posCredit, 'acme-burger', order, { 'x-webhook-secret': 'legacy-foodics-secret' })).status).toBe(401);
-    const ghost = await post(posCredit, 'ghost-brand', order, { 'x-webhook-secret': state['acme-burger'].posSecret });
+    expect(
+      (
+        await post(posCredit, 'nile-cafe', order, {
+          'x-webhook-secret': state['acme-burger'].posSecret,
+        })
+      ).status,
+    ).toBe(401);
+    expect(
+      (await post(posCredit, 'acme-burger', order, { 'x-webhook-secret': 'legacy-foodics-secret' }))
+        .status,
+    ).toBe(401);
+    const ghost = await post(posCredit, 'ghost-brand', order, {
+      'x-webhook-secret': state['acme-burger'].posSecret,
+    });
     expect(ghost).toMatchObject({ status: 401, body: { error: 'unauthorized' } });
   });
 
@@ -303,7 +430,13 @@ describe('secrets open only their own tenant', () => {
 
   it('a brand redeems its own coupons, and cannot touch another brand’s', async () => {
     const winOf = async (tenantId) =>
-      Number((await stack.admin.query('select id from wheel_wins where tenant_id = $1 limit 1', [tenantId])).rows[0].id);
+      Number(
+        (
+          await stack.admin.query('select id from wheel_wins where tenant_id = $1 limit 1', [
+            tenantId,
+          ])
+        ).rows[0].id,
+      );
     const redeem = (slug, winId) =>
       call(admin, {
         path: '/api/admin?section=actions',
@@ -324,7 +457,11 @@ describe('tenant status', () => {
     await ops({ action: 'set_status', tenantId: state['nile-cafe'].id, status: 'paused' });
     clearTenantCache();
     try {
-      const start = await post(startRun, 'nile-cafe', { cc: '+20', phone: '1001112222', device: 'd-p' });
+      const start = await post(startRun, 'nile-cafe', {
+        cc: '+20',
+        phone: '1001112222',
+        device: 'd-p',
+      });
       expect(start).toMatchObject({ status: 403, body: { error: 'tenant_inactive' } });
       expect((await call(tenantConfig, { path: '/?slug=nile-cafe' })).status).toBe(404);
       const credit = await post(
@@ -344,7 +481,11 @@ describe('tenant status', () => {
     await post(startRun, 'acme-burger', { cc: '+20', phone: '1003334444', device: 'd-warm' }); // warm the cache
     await ops({ action: 'set_status', tenantId: state['acme-burger'].id, status: 'paused' });
     try {
-      const start = await post(startRun, 'acme-burger', { cc: '+20', phone: '1003334444', device: 'd-warm' });
+      const start = await post(startRun, 'acme-burger', {
+        cc: '+20',
+        phone: '1003334444',
+        device: 'd-warm',
+      });
       expect(start).toMatchObject({ status: 403, body: { error: 'tenant_inactive' } });
     } finally {
       await ops({ action: 'set_status', tenantId: state['acme-burger'].id, status: 'trial' });
@@ -357,13 +498,16 @@ describe("the pre-tenancy client keeps reaching McDonald's", () => {
   it('a request with no tenant registers a McDonald’s player', async () => {
     const r = await post(register, null, { cc: '+20', phone: '1006660000', consent: true });
     expect(r.status).toBe(200);
-    const { rows } = await stack.admin.query('select tenant_id from players where id = $1', [r.body.playerId]);
+    const { rows } = await stack.admin.query('select tenant_id from players where id = $1', [
+      r.body.playerId,
+    ]);
     expect(rows[0].tenant_id).toBe(LEGACY_TENANT);
   });
 });
 
 describe('brand asset uploads', () => {
-  const upload = (body) => call(opsAssets, { method: 'POST', headers: { 'x-ops-key': OPS_KEY }, body });
+  const upload = (body) =>
+    call(opsAssets, { method: 'POST', headers: { 'x-ops-key': OPS_KEY }, body });
 
   it("builds the storage path itself, inside the tenant's folder", async () => {
     storageCalls.length = 0;
@@ -385,11 +529,28 @@ describe('brand asset uploads', () => {
 
   it('refuses other file types, kinds, unknown tenants, and callers without the ops key', async () => {
     const id = state['acme-burger'].id;
-    expect((await upload({ tenantId: id, kind: 'item', contentType: 'image/svg+xml' })).body.error).toBe(
-      'unsupported_content_type',
-    );
-    expect((await upload({ tenantId: id, kind: 'script', contentType: 'image/png' })).body.error).toBe('invalid_kind');
-    expect((await upload({ tenantId: '99999999-9999-4999-8999-999999999999', kind: 'logo', contentType: 'image/png' })).status).toBe(404);
-    expect((await call(opsAssets, { method: 'POST', body: { tenantId: id, kind: 'logo', contentType: 'image/png' } })).status).toBe(401);
+    expect(
+      (await upload({ tenantId: id, kind: 'item', contentType: 'image/svg+xml' })).body.error,
+    ).toBe('unsupported_content_type');
+    expect(
+      (await upload({ tenantId: id, kind: 'script', contentType: 'image/png' })).body.error,
+    ).toBe('invalid_kind');
+    expect(
+      (
+        await upload({
+          tenantId: '99999999-9999-4999-8999-999999999999',
+          kind: 'logo',
+          contentType: 'image/png',
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await call(opsAssets, {
+          method: 'POST',
+          body: { tenantId: id, kind: 'logo', contentType: 'image/png' },
+        })
+      ).status,
+    ).toBe(401);
   });
 });

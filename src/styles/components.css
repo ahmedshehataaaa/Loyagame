@@ -1848,3 +1848,22 @@
     font-size: var(--fs-small);
   }
 }
+
+/* The coupon code on a wallet card: what staff verify at the counter, so it
+   reads at arm's length and never wraps mid-code. */
+.wallet-card__code {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  border: 2px dashed currentColor;
+  border-radius: 10px;
+}
+.wallet-card__code b {
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}

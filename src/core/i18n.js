@@ -211,7 +211,10 @@ const STRINGS = {
     'wallet.expires': 'Expires {date}',
     'wallet.noExpiry': 'No expiry set',
     'wallet.counterOnly': 'Redeeming at the counter only — not available in-app yet.',
-    'wallet.serverNote': 'Your prize history lives on our servers and needs a connection to load.',
+    'wallet.serverNote':
+      "Couldn't load your prizes. Check your connection and open this page again.",
+    'wallet.loading': 'Loading your prizes…',
+    'wallet.code': 'CODE',
 
     'terms.title': 'Terms & eligibility',
     'terms.intro': 'Plain-language summary of how this game and its rewards work.',
@@ -444,7 +447,9 @@ const STRINGS = {
     'wallet.expires': 'تنتهي {date}',
     'wallet.noExpiry': 'بدون تاريخ انتهاء',
     'wallet.counterOnly': 'الاستلام عند الكاشير فقط — غير متاح داخل التطبيق بعد.',
-    'wallet.serverNote': 'سجل جوائزك محفوظ على خوادمنا ويحتاج اتصالاً لتحميله.',
+    'wallet.serverNote': 'تعذّر تحميل جوائزك. تحقق من الاتصال وافتح الصفحة مرة أخرى.',
+    'wallet.loading': 'جارٍ تحميل جوائزك…',
+    'wallet.code': 'الكود',
 
     'terms.title': 'الشروط والأهلية',
     'terms.intro': 'ملخّص مبسّط لكيفية عمل اللعبة وجوائزها.',

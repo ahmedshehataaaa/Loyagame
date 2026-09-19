@@ -1,4 +1,6 @@
-/* POST { cc, phone, device } → whether this player may start a round.
+/* POST { cc, phone, device } → whether this player may start a round, and
+   the prizes this player won ON THIS DEVICE (`wins`, codes included) for the
+   My Rewards screen.
    Read-only eligibility (limits enforced by phone OR device). The game
    calls this right after phone login to decide: play, or show the
    waiting page with a countdown.
@@ -6,6 +8,7 @@
    not follow the player to another (ADR 0018). */
 import {
   rpc,
+  sb,
   ok,
   bad,
   normalizePhone,
@@ -48,6 +51,18 @@ const handler = async (req) => {
     // threshold so the client can paint its home progress bar without an
     // extra round-trip. A phone that's never ordered has no player row → 0.
     const player = await playerByPhone(e164, ctx);
+    /* A coupon code is a bearer token, and phone identity is unverified, so a
+       phone number alone must not reveal codes: only wins recorded against
+       this same device id are returned. */
+    const wins = player
+      ? await sb(
+          `/wheel_wins?player_id=eq.${player.id}&device_id=eq.${encodeURIComponent(device)}` +
+            '&select=prize_key,prize_label,code,expires_at,redeemed,created_at' +
+            '&order=created_at.desc&limit=20',
+          {},
+          ctx,
+        )
+      : [];
     return ok({
       phone: e164,
       eligible: r.eligible,
@@ -58,6 +73,13 @@ const handler = async (req) => {
       maxPlays: s.max_plays ?? 5,
       orderPoints: player ? player.order_points : 0,
       pointsThreshold: s.wheel_points_threshold ?? 4000,
+      wins: wins.map((w) => ({
+        prize: { key: w.prize_key, label: w.prize_label },
+        code: w.code,
+        expiresAt: w.expires_at,
+        redeemed: w.redeemed,
+        at: w.created_at,
+      })),
     });
   } catch (e) {
     return dbFailure('session-status', e);

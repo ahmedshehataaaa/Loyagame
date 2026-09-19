@@ -104,6 +104,44 @@ export function clearIdentity() {
 }
 
 /**
+ * @typedef {{prize:{key:string,label:string}, code:string, expiresAt:string|null,
+ *            redeemed:boolean}} WalletWin
+ */
+
+/**
+ * The prizes this player won on this device, from the server — the My Rewards
+ * list. Only well-formed, server-issued entries are passed on: a row with no
+ * label or no code is dropped, never filled in.
+ * @returns {Promise<{ok:true, wins:WalletWin[]} | {ok:false, kind:string}>}
+ */
+export async function fetchWallet() {
+  const identity = getIdentity();
+  if (!identity) return { ok: false, kind: 'no_identity' };
+  const result = await postJson('/session-status', {
+    cc: identity.cc,
+    phone: identity.phone,
+    device: deviceId(),
+  });
+  if (!result.ok) return { ok: false, kind: result.kind ?? 'error' };
+  const rows = Array.isArray(result.data?.wins) ? result.data.wins : [];
+  const wins = rows
+    .filter(
+      (w) =>
+        typeof w?.prize?.label === 'string' &&
+        w.prize.label.length > 0 &&
+        typeof w.code === 'string' &&
+        w.code.length > 0,
+    )
+    .map((w) => ({
+      prize: { key: String(w.prize.key ?? ''), label: w.prize.label },
+      code: w.code,
+      expiresAt: typeof w.expiresAt === 'string' ? w.expiresAt : null,
+      redeemed: w.redeemed === true,
+    }));
+  return { ok: true, wins };
+}
+
+/**
  * Register (or re-claim) a phone number with the backend.
  * @returns {Promise<import('./api.js').ApiResult<any>>}
  */
