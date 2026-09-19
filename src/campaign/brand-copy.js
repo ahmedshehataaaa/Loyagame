@@ -51,6 +51,18 @@ export function prizeTeaser() {
     : t('welcome.prizeTeaserRange', { from: labels[0], to: labels[labels.length - 1] });
 }
 
+/* The hazard rule. The root strings name McDonald's burnt fries; a tenant's
+   hazard is whatever its manifest throws, so its pages use neutral wording. */
+export function hazardRule(lives) {
+  return tenantManifest()
+    ? { icon: 'alert', text: t('howTo.avoidBrand', { lives }) }
+    : { icon: 'fries', text: t('howTo.avoid', { lives }) };
+}
+
+export function playHint() {
+  return t(tenantManifest() ? 'play.hintBrand' : 'play.hint');
+}
+
 /** The welcome hero: the root mascot, or the tenant's hero item (else its first). */
 export function heroImage() {
   const m = tenantManifest();

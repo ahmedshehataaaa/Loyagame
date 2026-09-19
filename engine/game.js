@@ -99,11 +99,19 @@ const Game = (() => {
     });
   }
 
+  /* The live roster. config.js declares FOODS and BOMB with top-level `const`,
+     which in a classic script is a global LEXICAL binding, not a window
+     property. The campaign loader can only replace window.FOODS/BOMB, so a bare
+     `FOODS` here kept reading the built-in McDonald's roster and every tenant
+     page threw Big Macs under its own brand. Always go through window. */
+  const liveFoods = () => window.FOODS;
+  const liveBomb = () => window.BOMB;
+
   /* Largest sprite radius in play, so the inset covers the worst case. Read
      live: a campaign manifest can change the roster after boot. */
   function maxItemRadius() {
-    let r = BOMB?.radius ?? 0;
-    for (const f of FOODS) if (f.radius > r) r = f.radius;
+    let r = liveBomb()?.radius ?? 0;
+    for (const f of liveFoods()) if (f.radius > r) r = f.radius;
     return r;
   }
   window.addEventListener('resize', resize);
@@ -242,11 +250,12 @@ const Game = (() => {
 
     for (const spawn of wave.spawns) {
       if (spawn.kind === 'bomb') {
-        launchPlanned(BOMB, spawn, { isBomb: true });
+        launchPlanned(liveBomb(), spawn, { isBomb: true });
       } else if (spawn.kind === 'special') {
         launchPlanned(SPECIALS[spawn.special], spawn, { special: spawn.special });
       } else {
-        const def = FOODS[(Math.random() * FOODS.length) | 0];
+        const foods = liveFoods();
+        const def = foods[(Math.random() * foods.length) | 0];
         launchPlanned(def, spawn, { golden: spawn.golden });
       }
     }
@@ -754,21 +763,22 @@ const Game = (() => {
   // ---- Item sprites (real McDonald's product art) ----------------------
   // Every FOODS entry + the BOMB has its own transparent PNG, so each item
   // is visually distinct in flight (no shared emoji glyph). Sprites are
-  // preloaded once at module load; until one is ready — or if it fails —
-  // we fall back to the item's emoji so the game never renders nothing.
+  // preloaded at module load and again when a round starts, because a tenant
+  // manifest arrives by fetch AFTER this module runs and brings its own
+  // sprites. Until one is ready — or if it fails — we fall back to the item's
+  // emoji so the game never renders nothing.
   const SPRITES = Object.create(null);
 
-  (function preloadSprites() {
-    const defs = (typeof FOODS !== 'undefined' ? FOODS : []).concat(
-      typeof BOMB !== 'undefined' ? [BOMB] : [],
-    );
+  function preloadSprites() {
+    const defs = (liveFoods() || []).concat(liveBomb() ? [liveBomb()] : []);
     defs.forEach((def) => {
       if (!def || !def.img || SPRITES[def.img]) return;
       const im = new Image();
       im.src = def.img;
       SPRITES[def.img] = im;
     });
-  })();
+  }
+  preloadSprites();
 
   // Draw one item centered at (0,0), fitted into `size` with its real aspect
   // ratio preserved. Used by BOTH the main draw and bakeHalf, so slicing
@@ -1010,6 +1020,7 @@ const Game = (() => {
 
   // ---- Scene control ----------------------------------------------------
   function startGame() {
+    preloadSprites(); // the tenant roster may have landed since boot
     foods = [];
     halves = [];
     particles = [];

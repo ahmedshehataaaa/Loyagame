@@ -14,6 +14,7 @@ import { coachCard, hasSeenCoach, markCoachSeen } from '../components/coach.js';
 import { spinWheel } from '../components/spin-wheel.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives } from '../core/rules.js';
+import { playHint } from '../campaign/brand-copy.js';
 import { track, EVENTS } from '../analytics/index.js';
 
 /* Round shape comes from the engine config, never from a literal here — these
@@ -103,7 +104,7 @@ export function PlayPage(root) {
 
   const hint = el('p', {
     class: 'game-hint',
-    text: t('play.hint'),
+    text: playHint(),
   });
   setTimeout(() => hint.classList.add('is-gone'), 3200);
 

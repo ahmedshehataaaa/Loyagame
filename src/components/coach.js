@@ -14,6 +14,7 @@ import { el, button } from './ui.js';
 import { icon } from './icons.js';
 import { t, num } from '../core/i18n.js';
 import { roundSeconds, startLives } from '../core/rules.js';
+import { hazardRule } from '../campaign/brand-copy.js';
 
 const SEEN_KEY = 'mcslice.coached.v1';
 
@@ -50,6 +51,7 @@ export function coachCard({ onStart, dismissible = true }) {
   // Live reads: the coach card must teach the rules of the RUNNING campaign.
   const seconds = roundSeconds();
   const lives = startLives();
+  const hazard = hazardRule(num(lives));
 
   const panel = el(
     'div',
@@ -61,7 +63,7 @@ export function coachCard({ onStart, dismissible = true }) {
       { class: 'coach__rules' },
       // Order matters: what to do, what kills you, how you win, what you get.
       rule('blade', t('howTo.slice')),
-      rule('fries', t('howTo.avoid', { lives: num(lives) })),
+      rule(hazard.icon, hazard.text),
       rule('clock', t('howTo.survive', { seconds })),
       rule('gift', t('howTo.reward')),
     ),
