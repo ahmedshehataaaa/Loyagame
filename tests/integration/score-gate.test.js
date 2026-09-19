@@ -62,7 +62,8 @@ describe('score gate (0007)', () => {
   it('pays out a survived round that reaches the score, spending no order points', async () => {
     const r = await round(PHONE, 'dev-1', { score: 4200, gate: 'score' });
     expect(r.won).toBe(true);
-    expect(r.code).toMatch(/^SP-/);
+    // Same shape and alphabet as before 0008: no 0/O/1/I, two groups of four.
+    expect(r.code).toMatch(/^SP-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
     expect(await balance(PHONE)).toBe(0);
     const ledger = await stack.admin.query(
       "select count(*)::int n from points_ledger where tenant_id = $1 and reason = 'wheel_spend'",

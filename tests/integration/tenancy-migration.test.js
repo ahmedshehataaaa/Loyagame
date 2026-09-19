@@ -1,11 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import {
-  startStack,
-  asTenant,
-  asRole,
-  playWinningRound,
-  LEGACY_TENANT,
-} from './support/stack.js';
+import { startStack, asTenant, asRole, playWinningRound, LEGACY_TENANT } from './support/stack.js';
 import { applyMigrations, listMigrations } from '../../scripts/db-migrate.mjs';
 
 /* Phase 1 pass/fail: "existing McDonald's data migrates with zero data loss".
@@ -15,7 +9,13 @@ import { applyMigrations, listMigrations } from '../../scripts/db-migrate.mjs';
  * value for value. Checking row counts alone would pass a migration that
  * rewrote balances. */
 
-const TABLES = { players: 'id', points_ledger: 'id', runs: 'id', wheel_wins: 'id', settings: 'key' };
+const TABLES = {
+  players: 'id',
+  points_ledger: 'id',
+  runs: 'id',
+  wheel_wins: 'id',
+  settings: 'key',
+};
 
 async function snapshot(client) {
   const out = {};
@@ -42,16 +42,23 @@ describe('a pre-existing bug the migration fixes', () => {
       await stack.admin.query('select id from wheel_wins where not redeemed order by id limit 1')
     ).rows[0]?.id;
     if (winId) {
-      const r = await asTenant(stack.admin, LEGACY_TENANT, async (c) =>
-        (await c.query("select * from redeem_wheel_win($1, 'till-9')", [winId])).rows[0],
+      const r = await asTenant(
+        stack.admin,
+        LEGACY_TENANT,
+        async (c) =>
+          (await c.query("select * from redeem_wheel_win($1, 'till-9')", [winId])).rows[0],
       );
       expect(r.ok).toBe(true);
     } else {
       // Only the seeded (already redeemed) win exists: the fixed function must
       // still run and answer, instead of raising.
-      const seeded = (await stack.admin.query('select id from wheel_wins order by id limit 1')).rows[0].id;
-      const r = await asTenant(stack.admin, LEGACY_TENANT, async (c) =>
-        (await c.query("select * from redeem_wheel_win($1, 'till-9')", [seeded])).rows[0],
+      const seeded = (await stack.admin.query('select id from wheel_wins order by id limit 1'))
+        .rows[0].id;
+      const r = await asTenant(
+        stack.admin,
+        LEGACY_TENANT,
+        async (c) =>
+          (await c.query("select * from redeem_wheel_win($1, 'till-9')", [seeded])).rows[0],
       );
       expect(r).toMatchObject({ ok: false, error: 'already_redeemed' });
     }
@@ -61,6 +68,10 @@ describe('a pre-existing bug the migration fixes', () => {
 beforeAll(async () => {
   stack = await startStack({
     beforeMigrations: async (c) => {
+      // The pre-tenancy world ran as Supabase's postgres role, whose search path
+      // includes the extensions schema (pgcrypto). Scoped to this seed only, so
+      // the tenant-role tests still run with Supabase's narrower path.
+      await c.query('set search_path = public, extensions');
       await c.query(
         "select * from credit_order_points('+201001110001', 'FOODICS-1', 5200, 'foodics', null, 520)",
       );
@@ -79,8 +90,8 @@ beforeAll(async () => {
       await c.query("update runs set created_at = now() - interval '40 seconds' where token = $1", [
         grant.token,
       ]);
-      const prizes = (await c.query("select value from settings where key = 'wheel_prizes'")).rows[0]
-        .value;
+      const prizes = (await c.query("select value from settings where key = 'wheel_prizes'"))
+        .rows[0].value;
       const won = (
         await c.query(
           "select * from resolve_run($1, 1800, 31000, 'device-a', 4000, 5000, 2000000, $2, true)",
@@ -97,7 +108,10 @@ beforeAll(async () => {
       // Autocommit: the failed statement leaves nothing behind to roll back.
       preTenancyRedeemError = await c
         .query("select * from redeem_wheel_win($1, 'till-3')", [win.id])
-        .then(() => null, (err) => err.message);
+        .then(
+          () => null,
+          (err) => err.message,
+        );
       await c.query(
         "update wheel_wins set redeemed = true, redeemed_at = now(), redeemed_by = 'till-3' where id = $1",
         [win.id],
@@ -193,19 +207,24 @@ describe('the migration record', () => {
 
 describe("McDonald's keeps working after the migration", () => {
   it('a replayed POS order is still recognised as a duplicate', async () => {
-    const r = await asTenant(stack.admin, LEGACY_TENANT, async (c) =>
-      (
-        await c.query(
-          "select * from credit_order_points('+201001110001', 'FOODICS-1', 5200, 'foodics', null, 520)",
-        )
-      ).rows[0],
+    const r = await asTenant(
+      stack.admin,
+      LEGACY_TENANT,
+      async (c) =>
+        (
+          await c.query(
+            "select * from credit_order_points('+201001110001', 'FOODICS-1', 5200, 'foodics', null, 520)",
+          )
+        ).rows[0],
     );
     expect(r.duplicate).toBe(true);
   });
 
   it('a migrated player can earn, play and win through the tenant role', async () => {
     await asTenant(stack.admin, LEGACY_TENANT, (c) =>
-      c.query("select * from credit_order_points('+201001110002', 'FOODICS-3', 4000, 'foodics', null, 400)"),
+      c.query(
+        "select * from credit_order_points('+201001110002', 'FOODICS-3', 4000, 'foodics', null, 400)",
+      ),
     );
     const r = await playWinningRound(stack.admin, LEGACY_TENANT, {
       phone: '+201001110002',
@@ -218,15 +237,21 @@ describe("McDonald's keeps working after the migration", () => {
   });
 
   it('a deployment still on the service key keeps serving McDonald’s during the rollout', async () => {
-    const r = await asRole(stack.admin, 'service_role', null, async (c) =>
-      (
-        await c.query(
-          "select * from start_play('+201001110099', '+20', 'device-z', 24, 999999, 12, '2026-09')",
-        )
-      ).rows[0],
+    const r = await asRole(
+      stack.admin,
+      'service_role',
+      null,
+      async (c) =>
+        (
+          await c.query(
+            "select * from start_play('+201001110099', '+20', 'device-z', 24, 999999, 12, '2026-09')",
+          )
+        ).rows[0],
     );
     expect(r.ok).toBe(true);
-    const { rows } = await stack.admin.query('select tenant_id from runs where token = $1', [r.token]);
+    const { rows } = await stack.admin.query('select tenant_id from runs where token = $1', [
+      r.token,
+    ]);
     expect(rows[0].tenant_id).toBe(LEGACY_TENANT);
   });
 });

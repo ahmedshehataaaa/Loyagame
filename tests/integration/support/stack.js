@@ -36,6 +36,13 @@ do $$ begin
   end if;
 end $$;
 grant anon, authenticated, service_role to authenticator;
+
+-- Supabase installs pgcrypto in an "extensions" schema that only its own
+-- client roles can use. Created in public here, it hid a production failure:
+-- mint_coupon_code could not see gen_random_bytes, so every win 500'd.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+grant usage on schema extensions to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
@@ -114,7 +121,11 @@ export async function startStack({ postgrest = false, beforeMigrations } = {}) {
 
   await admin.query(SUPABASE_SHIM);
   await admin.query(readFileSync('supabase/schema.sql', 'utf8'));
-  if (beforeMigrations) await beforeMigrations(admin);
+  if (beforeMigrations) {
+    await beforeMigrations(admin);
+    // A seed may widen its session (search_path); nothing after it inherits that.
+    await admin.query('reset search_path');
+  }
   const applied = await applyMigrations(admin, { log: () => {} });
 
   let rest = null;
@@ -225,7 +236,9 @@ export function manifestFor(slug, { name = 'Test Brand', roundSeconds = 30 } = {
     schemaVersion: 1,
     brand: { id: slug, name, gameName: `${name} Rush`, locales: ['en', 'ar'] },
     rules: { roundSeconds, lives: 2 },
-    items: [{ id: 'burger', label: 'Burger', img: 'assets/items/bigmac.png', points: 300, radius: 50 }],
+    items: [
+      { id: 'burger', label: 'Burger', img: 'assets/items/bigmac.png', points: 300, radius: 50 },
+    ],
     hazard: { id: 'burnt', img: 'assets/items/burnt.png', radius: 48 },
     campaign: { startsAt: null, endsAt: null },
   };
@@ -298,7 +311,13 @@ export async function playWinningRound(admin, tenantId, { phone, device, score =
     const settings = Object.fromEntries(s.map((r) => [r.key, r.value]));
     const { rows } = await c.query(
       'select * from resolve_run($1, $2, 31000, $3, $4, 5000, 2000000, $5, true)',
-      [token, score, device, settings.wheel_points_threshold ?? 4000, JSON.stringify(settings.wheel_prizes ?? [])],
+      [
+        token,
+        score,
+        device,
+        settings.wheel_points_threshold ?? 4000,
+        JSON.stringify(settings.wheel_prizes ?? []),
+      ],
     );
     return { token, ...rows[0] };
   });
