@@ -17,7 +17,7 @@
    ============================================================ */
 import { el, topbar } from '../components/ui.js';
 import { t, num } from '../core/i18n.js';
-import { roundSeconds, startLives, pointsThreshold, prizes } from '../core/rules.js';
+import { roundSeconds, startLives, pointsThreshold, prizes, scoreGated } from '../core/rules.js';
 
 /** A titled block. Keeps the section rhythm identical down the page. */
 const section = (headingKey, bodyText) =>
@@ -48,7 +48,10 @@ export function TermsPage(root) {
 
       section('terms.eligibilityH', t('terms.eligibilityB')),
       section('terms.rulesH', t('terms.rulesB', { seconds: ROUND_TIME, lives: num(START_LIVES) })),
-      section('terms.prizeH', t('terms.prizeB', { threshold: num(THRESHOLD) })),
+      section(
+        'terms.prizeH',
+        t(scoreGated() ? 'terms.prizeBScore' : 'terms.prizeB', { threshold: num(THRESHOLD) }),
+      ),
       section('terms.oddsH', t('terms.oddsB')),
 
       // The actual prize set, straight from config so it cannot go stale.

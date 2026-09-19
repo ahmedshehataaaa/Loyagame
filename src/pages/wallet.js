@@ -18,7 +18,7 @@ import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, num } from '../core/i18n.js';
 import { REWARD_STATUS } from '../services/reward-state.js';
-import { pointsThreshold } from '../core/rules.js';
+import { pointsThreshold, scoreGated } from '../core/rules.js';
 import { track, EVENTS } from '../analytics/index.js';
 
 /** One issued prize. */
@@ -69,30 +69,52 @@ export function WalletPage(root) {
   // Points header — the gate on every future prize, so it belongs here.
   const pts = Store.progress().rewardPoints;
   const need = pointsThreshold();
+  const byScore = scoreGated();
   body.append(
-    el(
-      'section',
-      { class: 'card points-head' },
-      el(
-        'div',
-        { class: 'points-head__row' },
+    byScore
+      ? /* Score-gated: there is no balance to show — the bar is per round. */
         el(
-          'div',
-          null,
-          el('span', { class: 't-kicker', text: t('reward.pointsLabel') }),
-          el('b', { class: 'points-head__value', text: num(pts) }),
+          'section',
+          { class: 'card points-head' },
+          el(
+            'div',
+            { class: 'points-head__row' },
+            el(
+              'div',
+              null,
+              el('span', { class: 't-kicker', text: t('reward.spinAt') }),
+              el('b', { class: 'points-head__value', text: num(need) }),
+            ),
+          ),
+          el('p', {
+            class: 't-muted',
+            style: { fontSize: '13px', marginTop: '6px' },
+            text: t('wallet.scoreGoal'),
+          }),
+        )
+      : el(
+          'section',
+          { class: 'card points-head' },
+          el(
+            'div',
+            { class: 'points-head__row' },
+            el(
+              'div',
+              null,
+              el('span', { class: 't-kicker', text: t('reward.pointsLabel') }),
+              el('b', { class: 'points-head__value', text: num(pts) }),
+            ),
+            el('span', { class: 'rank-chip', text: `/ ${num(need)}` }),
+          ),
+          el('p', {
+            class: 't-muted',
+            style: { fontSize: '13px', marginTop: '6px' },
+            text:
+              pts >= need
+                ? t('reward.pointsEnough')
+                : t('reward.pointsShort', { short: num(Math.max(0, need - pts)) }),
+          }),
         ),
-        el('span', { class: 'rank-chip', text: `/ ${num(need)}` }),
-      ),
-      el('p', {
-        class: 't-muted',
-        style: { fontSize: '13px', marginTop: '6px' },
-        text:
-          pts >= need
-            ? t('reward.pointsEnough')
-            : t('reward.pointsShort', { short: num(Math.max(0, need - pts)) }),
-      }),
-    ),
   );
 
   if (last && last.status === REWARD_STATUS.AWARDED && last.prize) {
@@ -103,7 +125,7 @@ export function WalletPage(root) {
       emptyState(
         icon('gift', { size: 40 }),
         t('wallet.empty'),
-        t('wallet.emptyBody'),
+        byScore ? t('wallet.emptyBodyScore', { threshold: num(need) }) : t('wallet.emptyBody'),
         el(
           'div',
           { style: { marginTop: '14px', width: '220px' } },

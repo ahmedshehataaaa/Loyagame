@@ -13,7 +13,7 @@
 import { el, button } from './ui.js';
 import { icon } from './icons.js';
 import { t, num } from '../core/i18n.js';
-import { roundSeconds, startLives } from '../core/rules.js';
+import { roundSeconds, startLives, scoreGated, pointsThreshold } from '../core/rules.js';
 import { hazardRule } from '../campaign/brand-copy.js';
 
 const SEEN_KEY = 'mcslice.coached.v1';
@@ -65,7 +65,12 @@ export function coachCard({ onStart, dismissible = true }) {
       rule('blade', t('howTo.slice')),
       rule(hazard.icon, hazard.text),
       rule('clock', t('howTo.survive', { seconds })),
-      rule('gift', t('howTo.reward')),
+      rule(
+        'gift',
+        scoreGated()
+          ? t('howTo.rewardScore', { threshold: num(pointsThreshold()) })
+          : t('howTo.reward'),
+      ),
     ),
 
     button(t('howTo.start'), {

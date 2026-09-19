@@ -104,6 +104,9 @@ export function toEngineShape(value) {
     WHEEL: {
       enabled: brand.features?.wheel !== false,
       pointsThreshold: rewards.pointsThreshold,
+      gate: /** @type {'order_points'|'score'} */ (
+        rewards.gate === 'score' ? 'score' : 'order_points'
+      ),
       // Glyphs are cosmetic and not part of the manifest contract: the label is
       // what the player is told and what staff hand over.
       prizes: rewards.prizes.map((p) => ({
@@ -250,7 +253,10 @@ export async function loadTenantCampaign(slug, { preview = null, fetchImpl = fet
   if (preview) query.set('preview', preview);
   const url = `/api/tenant-config?${query}`;
   try {
-    const res = await fetchImpl(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+    const res = await fetchImpl(url, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
     if (!res.ok) {
       console.warn(`Tenant config ${slug} -> ${res.status}; not playable.`);
       return null;

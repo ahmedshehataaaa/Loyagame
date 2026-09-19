@@ -17,7 +17,7 @@ import { rewardPanel } from '../components/reward-panel.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { t, num } from '../core/i18n.js';
-import { roundSeconds, startLives } from '../core/rules.js';
+import { roundSeconds, startLives, scoreGated } from '../core/rules.js';
 
 export function ResultPage(root) {
   // Read at render time so a campaign manifest reaches this screen too.
@@ -57,7 +57,12 @@ export function ResultPage(root) {
   const confetti = el('div', { class: 'confetti', 'aria-hidden': 'true' });
   if (won && !reduced) {
     // Brand tokens, so a tenant's confetti is its own colours, not McDonald's gold.
-    const colors = ['var(--c-secondary)', '#ffffff', 'var(--c-secondary-hot)', 'var(--c-secondary-hi)'];
+    const colors = [
+      'var(--c-secondary)',
+      '#ffffff',
+      'var(--c-secondary-hot)',
+      'var(--c-secondary-hi)',
+    ];
     for (let i = 0; i < 34; i++) {
       confetti.append(
         el('i', {
@@ -116,12 +121,16 @@ export function ResultPage(root) {
         el('b', { text: num(Store.progress().bestScore) }),
         el('small', { text: t('result.best') }),
       ),
-      el(
-        'div',
-        { class: 'victory__cell' },
-        el('b', { text: num(Store.progress().rewardPoints) }),
-        el('small', { text: t('reward.pointsLabel') }),
-      ),
+      // A score-gated client has no order-points balance; a permanent 0 there
+      // reads as "your points were not saved".
+      scoreGated()
+        ? null
+        : el(
+            'div',
+            { class: 'victory__cell' },
+            el('b', { text: num(Store.progress().rewardPoints) }),
+            el('small', { text: t('reward.pointsLabel') }),
+          ),
     ),
   );
 

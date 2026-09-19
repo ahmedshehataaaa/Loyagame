@@ -58,7 +58,8 @@ const STRINGS = {
     'welcome.prizeTeaserOne': 'Win {prize}',
     'welcome.prizeTeaserBrand': 'Play for real rewards from {brand}',
     'tenant.unavailableTitle': 'This game isn’t available right now',
-    'tenant.unavailableBody': 'The campaign may have ended or be paused. Please ask a member of staff.',
+    'tenant.unavailableBody':
+      'The campaign may have ended or be paused. Please ask a member of staff.',
     'tenant.previewBar': 'Preview — rewards are switched off',
     'welcome.trust': 'Free to play · One round takes {seconds} seconds',
 
@@ -150,6 +151,18 @@ const STRINGS = {
     'reward.pointsLabel': 'ORDER POINTS',
     'reward.pointsShort': '{short} more to unlock a prize — earned by ordering.',
     'reward.pointsEnough': 'Enough for a prize.',
+    // Score-gated clients (no POS to credit order points): the bar is the round score.
+    'reward.scoreLabel': 'ROUND SCORE',
+    'reward.scoreShort': '{short} points short of a spin. Go again!',
+    'reward.scoreEnough': 'Enough for a spin.',
+    'reward.spinAt': 'SPIN AT',
+    'reward.not_eligible.msgScore':
+      'Score {threshold} or more in a round you survive to spin the prize wheel.',
+    'howTo.rewardScore': 'Last the full round with {threshold}+ points to spin for a real prize.',
+    'wallet.emptyBodyScore': 'Survive a round with {threshold}+ points and your prize lands here.',
+    'wallet.scoreGoal': 'Last the full round with this score to spin the prize wheel.',
+    'terms.prizeBScore':
+      'Lasting the full round with at least {threshold} points spins the prize wheel. After a win there is a wait before you can play for another prize. Prizes are issued by our servers, not by the app.',
     'reward.checkAgain': 'Check again',
     'reward.viewWallet': 'View My Rewards',
 
@@ -378,6 +391,17 @@ const STRINGS = {
     'reward.pointsLabel': 'نقاط الطلبات',
     'reward.pointsShort': 'تحتاج {short} نقطة أخرى لفتح جائزة — تُكتسب بالطلب.',
     'reward.pointsEnough': 'كافية لجائزة.',
+    'reward.scoreLabel': 'نتيجة الدور',
+    'reward.scoreShort': 'ينقصك {short} نقطة لتلفّ العجلة. حاول مجدداً!',
+    'reward.scoreEnough': 'كافية لتلفّ العجلة.',
+    'reward.spinAt': 'اللفّ عند',
+    'reward.not_eligible.msgScore':
+      'سجّل {threshold} نقطة أو أكثر في دور تصمد فيه لتلفّ عجلة الجوائز.',
+    'howTo.rewardScore': 'اصمد الدور كاملاً بـ {threshold} نقطة أو أكثر لتلفّ على جائزة حقيقية.',
+    'wallet.emptyBodyScore': 'اصمد في دور واجمع {threshold} نقطة أو أكثر وستظهر جائزتك هنا.',
+    'wallet.scoreGoal': 'اصمد الدور كاملاً بهذه النتيجة لتلفّ عجلة الجوائز.',
+    'terms.prizeBScore':
+      'الصمود الدور كاملاً بـ {threshold} نقطة على الأقل يلفّ عجلة الجوائز. بعد الفوز تنتظر فترة قبل أن تلعب على جائزة أخرى. الجوائز تُصدر من خوادمنا، لا من التطبيق.',
     'reward.checkAgain': 'تحقق مرة أخرى',
     'reward.viewWallet': 'اعرض جوائزي',
 

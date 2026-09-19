@@ -191,6 +191,13 @@ function checkRewards(rewards, errors, warnings) {
     });
   }
 
+  // What the threshold is measured against. Optional; absent means order points,
+  // the stricter rule. The server holds its own copy (settings.wheel_gate), so
+  // this only words the copy — it cannot open a wheel.
+  if (rewards.gate !== undefined && rewards.gate !== 'order_points' && rewards.gate !== 'score') {
+    errors.push({ path: 'rewards.gate', message: "must be 'order_points' or 'score'" });
+  }
+
   if (!Array.isArray(rewards.prizes) || rewards.prizes.length === 0) {
     errors.push({ path: 'rewards.prizes', message: 'at least one prize is required' });
     return rewards;

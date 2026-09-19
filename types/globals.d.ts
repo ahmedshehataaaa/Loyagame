@@ -32,6 +32,8 @@ interface SliceRushConfig {
     pointsThreshold: number;
     /** Round score needed to reach the wheel; 0 lets every survivor spin. */
     minRoundScore?: number;
+    /** What pointsThreshold measures: an order-points balance (default) or the round score. */
+    gate?: 'order_points' | 'score';
     prizes: Array<{ key: string; glyph: string; label: string; weight: number }>;
   };
   LIMITS: { maxPlays: number; windowHrs: number; winLockoutHrs: number };

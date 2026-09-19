@@ -36,6 +36,8 @@ import { OUTCOME } from '../game/round-rules.js';
  * @property {boolean} retryable    can the player meaningfully try the same action again
  * @property {number|null} orderPoints
  * @property {number|null} pointsThreshold
+ * @property {'order_points'|'score'} gate  what pointsThreshold is measured against
+ * @property {number|null} score    this round's score, as the server recorded it
  */
 
 export const REWARD_STATUS = /** @type {const} */ ({
@@ -64,6 +66,8 @@ function deny(status, extra = {}) {
     retryable: status === 'pending' || status === 'error' || status === 'rate_limited',
     orderPoints: extra.orderPoints ?? null,
     pointsThreshold: extra.pointsThreshold ?? null,
+    gate: gateOf(extra.gate),
+    score: extra.score ?? null,
   };
 }
 
@@ -81,6 +85,10 @@ function validPrize(prize) {
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 
+/** Anything but an explicit 'score' is the stricter order-points rule. */
+const gateOf = (v) =>
+  /** @type {'order_points'|'score'} */ (v === 'score' ? 'score' : 'order_points');
+
 /**
  * Resolve what the player may be told about a reward.
  *
@@ -96,6 +104,8 @@ export function resolveRewardOutcome({ roundOutcome, apiResult }) {
     return deny(REWARD_STATUS.ELIMINATED, {
       orderPoints: apiResult?.ok ? num(apiResult.data?.orderPoints) : null,
       pointsThreshold: apiResult?.ok ? num(apiResult.data?.pointsThreshold) : null,
+      gate: apiResult?.ok ? apiResult.data?.gate : undefined,
+      score: apiResult?.ok ? num(apiResult.data?.score) : null,
     });
   }
 
@@ -130,22 +140,36 @@ export function resolveRewardOutcome({ roundOutcome, apiResult }) {
   const d = apiResult.data ?? {};
   const orderPoints = num(d.orderPoints);
   const pointsThreshold = num(d.pointsThreshold);
+  const gate = gateOf(d.gate);
+  const score = num(d.score);
 
   // The server flags runs it distrusts. Never pay those out from the client,
   // even if it also said `won`.
   if (d.suspicious === true) {
-    return deny(REWARD_STATUS.FLAGGED, { orderPoints, pointsThreshold, wheel: d.wheel });
+    return deny(REWARD_STATUS.FLAGGED, {
+      orderPoints,
+      pointsThreshold,
+      gate,
+      score,
+      wheel: d.wheel,
+    });
   }
 
   if (d.won !== true) {
-    return deny(REWARD_STATUS.NOT_ELIGIBLE, { orderPoints, pointsThreshold, wheel: d.wheel });
+    return deny(REWARD_STATUS.NOT_ELIGIBLE, {
+      orderPoints,
+      pointsThreshold,
+      gate,
+      score,
+      wheel: d.wheel,
+    });
   }
 
   // `won: true` but no usable prize is a server contract violation. Fail closed:
   // showing a blank or placeholder prize is how players end up at a till with a
   // reward that does not exist.
   if (!validPrize(d.prize)) {
-    return deny(REWARD_STATUS.ERROR, { orderPoints, pointsThreshold });
+    return deny(REWARD_STATUS.ERROR, { orderPoints, pointsThreshold, gate, score });
   }
 
   return {
@@ -158,5 +182,7 @@ export function resolveRewardOutcome({ roundOutcome, apiResult }) {
     retryable: false,
     orderPoints,
     pointsThreshold,
+    gate,
+    score,
   };
 }

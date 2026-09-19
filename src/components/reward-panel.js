@@ -14,19 +14,33 @@ import { el, button } from './ui.js';
 import { REWARD_STATUS } from '../services/reward-state.js';
 import { t, num } from '../core/i18n.js';
 
-/** Progress toward the points needed for a prize, when the server told us. */
+/** The message for a status. A score-gated denial names the score it needs,
+    not order points the player has no way to earn. */
+export function rewardMessage(outcome) {
+  if (outcome.status === REWARD_STATUS.NOT_ELIGIBLE && outcome.gate === 'score') {
+    const need = outcome.pointsThreshold;
+    return t('reward.not_eligible.msgScore', { threshold: num(Number.isFinite(need) ? need : 0) });
+  }
+  return t(`reward.${outcome.status}.msg`);
+}
+
+/** Progress toward the points needed for a prize, when the server told us.
+    Score-gated: this round's score against the bar, not an order balance. */
 function pointsRow(outcome) {
-  const { orderPoints: pts, pointsThreshold: need } = outcome;
+  const byScore = outcome.gate === 'score';
+  const pts = byScore ? outcome.score : outcome.orderPoints;
+  const need = outcome.pointsThreshold;
   if (!Number.isFinite(pts) || !Number.isFinite(need) || need <= 0) return null;
   const short = Math.max(0, need - pts);
+  const [label, shortKey, enoughKey] = byScore
+    ? ['reward.scoreLabel', 'reward.scoreShort', 'reward.scoreEnough']
+    : ['reward.pointsLabel', 'reward.pointsShort', 'reward.pointsEnough'];
   return el(
     'div',
     { class: 'reward-panel__points' },
-    el('span', { class: 't-kicker', text: t('reward.pointsLabel') }),
+    el('span', { class: 't-kicker', text: t(label) }),
     el('b', { text: `${num(pts)} / ${num(need)}` }),
-    el('small', {
-      text: short > 0 ? t('reward.pointsShort', { short: num(short) }) : t('reward.pointsEnough'),
-    }),
+    el('small', { text: short > 0 ? t(shortKey, { short: num(short) }) : t(enoughKey) }),
   );
 }
 
@@ -39,7 +53,7 @@ export function rewardPanel(outcome, handlers = {}) {
 
   const awarded = outcome.status === REWARD_STATUS.AWARDED && !!outcome.prize;
   const title = t(`reward.${outcome.status}.title`);
-  const message = t(`reward.${outcome.status}.msg`);
+  const message = rewardMessage(outcome);
 
   return el(
     'section',

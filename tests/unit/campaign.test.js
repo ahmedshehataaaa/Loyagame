@@ -233,3 +233,26 @@ describe('toEngineShape', () => {
     expect(shaped.WHEEL.enabled).toBe(false);
   });
 });
+
+describe('rewards.gate (migration 0007)', () => {
+  it('defaults to order points when absent', () => {
+    const shaped = toEngineShape(validateCampaign(minimal()).value);
+    expect(shaped.WHEEL.gate).toBe('order_points');
+  });
+
+  it('carries a score gate through to the engine', () => {
+    const m = minimal();
+    m.rewards.gate = 'score';
+    const r = validateCampaign(m);
+    expect(r.ok).toBe(true);
+    expect(toEngineShape(r.value).WHEEL.gate).toBe('score');
+  });
+
+  it('rejects an unknown gate rather than guessing', () => {
+    const m = minimal();
+    m.rewards.gate = 'vibes';
+    const r = validateCampaign(m);
+    expect(r.ok).toBe(false);
+    expect(r.errors.some((e) => e.path === 'rewards.gate')).toBe(true);
+  });
+});

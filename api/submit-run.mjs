@@ -2,11 +2,13 @@
    The token (from start-run) binds this to a real, server-initiated
    round, so a curl'd fake score with no token is rejected. The SERVER
    decides the wheel result (weighted) — the client only animates to it.
-   The wheel is gated on the player's real ORDER-POINTS balance (not the
-   score) — a spin needs, and spends, wheel_points_threshold points.
+   By default the wheel is gated on the player's real ORDER-POINTS balance
+   (not the score) — a spin needs, and spends, wheel_points_threshold points.
+   A tenant with settings.wheel_gate = 'score' (no POS to credit points) is
+   gated on this round's score instead, and nothing is spent (migration 0007).
    Returns:
-     { won:true,  prize:{key,label}, prizeIndex, wheel:[{key,label}], orderPoints, pointsThreshold }
-     { won:false, gap, suspicious, orderPoints, pointsThreshold }
+     { won:true,  prize:{key,label}, prizeIndex, wheel:[{key,label}], orderPoints, pointsThreshold, gate, score }
+     { won:false, gap, suspicious, orderPoints, pointsThreshold, gate, score }
    `wheel` is the authoritative segment order; the client adds glyphs by
    matching each key to CONFIG.WHEEL, so the animation matches the award.
    Scoped to the tenant named by X-Tenant: prizes, threshold and round
@@ -31,6 +33,8 @@ const handler = async (req) => {
     const s = await getSettings(ctx);
     const prizes = s.wheel_prizes || [];
     const pointsThreshold = s.wheel_points_threshold ?? 4000;
+    // Anything but an explicit 'score' is the stricter order-points rule.
+    const gate = s.wheel_gate === 'score' ? 'score' : 'order_points';
 
     /* SURVIVAL IS RE-DERIVED HERE, NOT TAKEN FROM THE CLIENT.
        Winning a round means lasting the full duration (ADR 0004), and only a
@@ -62,6 +66,10 @@ const handler = async (req) => {
         // 2026-08-07. The RPC consumes the token either way (the play is spent)
         // but only draws a prize when this is true.
         p_survived: survived,
+        // Sent only when set, so this deploys safely ahead of migration 0007:
+        // the pre-0007 function has no p_gate, and naming it would 404 every
+        // round for every tenant.
+        ...(gate === 'score' ? { p_gate: gate } : {}),
       },
       ctx,
     );
@@ -83,6 +91,8 @@ const handler = async (req) => {
         wheel,
         orderPoints: r.order_points,
         pointsThreshold,
+        gate,
+        score: Math.round(score),
       });
     }
     return ok({
@@ -95,6 +105,8 @@ const handler = async (req) => {
       wheel,
       orderPoints: r.order_points,
       pointsThreshold,
+      gate,
+      score: Math.round(score),
     });
   } catch (e) {
     return dbFailure('submit-run', e);

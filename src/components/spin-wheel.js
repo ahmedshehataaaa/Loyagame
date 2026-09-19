@@ -22,6 +22,7 @@ import { t, num } from '../core/i18n.js';
 import { prizes as configuredPrizes } from '../core/rules.js';
 import { icon } from './icons.js';
 import { brandLogo } from '../campaign/brand-copy.js';
+import { rewardMessage } from './reward-panel.js';
 
 /* Timings. The spin is long enough to feel like an event and short enough
    that a player who has already won does not sit waiting for permission. */
@@ -265,8 +266,8 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
   /** Denied but not faulted — survived, just not eligible to be paid out. */
   function showDenial(outcome) {
     settled = true;
-    status.textContent = t(`reward.${outcome.status}.msg`);
-    const pts = outcome.orderPoints;
+    status.textContent = rewardMessage(outcome);
+    const pts = outcome.gate === 'score' ? outcome.score : outcome.orderPoints;
     const need = outcome.pointsThreshold;
     if (Number.isFinite(pts) && Number.isFinite(need)) {
       status.append(el('p', { class: 'spin__points', text: `${num(pts)} / ${num(need)}` }));

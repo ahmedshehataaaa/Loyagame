@@ -207,3 +207,53 @@ describe('points reporting', () => {
     expect(out.pointsThreshold).toBeNull();
   });
 });
+
+describe('score-gated tenants (migration 0007)', () => {
+  /** @returns {any} */
+  const ok = (data) => ({ ok: true, data });
+
+  it('carries the gate and the round score on a denial', () => {
+    const r = resolveRewardOutcome({
+      roundOutcome: survived,
+      apiResult: ok({
+        won: false,
+        gap: 900,
+        orderPoints: 0,
+        pointsThreshold: 4000,
+        gate: 'score',
+        score: 3100,
+      }),
+    });
+    expect(r.status).toBe(REWARD_STATUS.NOT_ELIGIBLE);
+    expect(r.gate).toBe('score');
+    expect(r.score).toBe(3100);
+  });
+
+  it('treats a missing or unknown gate as order points', () => {
+    for (const gate of [undefined, 'vibes', 42]) {
+      const r = resolveRewardOutcome({
+        roundOutcome: survived,
+        apiResult: ok({ won: false, orderPoints: 10, pointsThreshold: 4000, gate }),
+      });
+      expect(r.gate).toBe('order_points');
+    }
+  });
+
+  it('still requires an explicit server award: a high score alone is not a prize', () => {
+    const r = resolveRewardOutcome({
+      roundOutcome: survived,
+      apiResult: ok({ won: false, pointsThreshold: 4000, gate: 'score', score: 99999 }),
+    });
+    expect(r.awarded).toBe(false);
+    expect(r.prize).toBe(null);
+  });
+
+  it('has score copy in both languages', () => {
+    for (const lang of /** @type {const} */ (['en', 'ar'])) {
+      setLang(lang);
+      const msg = t('reward.not_eligible.msgScore', { threshold: '4000' });
+      expect(msg).not.toBe('reward.not_eligible.msgScore');
+    }
+    setLang('en');
+  });
+});
