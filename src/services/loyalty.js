@@ -230,6 +230,25 @@ export async function startRound() {
     device: deviceId(),
   });
 
+  /* The server refused the stored number itself. Retrying cannot help, and
+     sign-in skips itself while a number is stored, so the player would be
+     stuck on "No prize has been issued" every round. Forget the number and
+     treat the round as signed out: the reveal then offers "Sign in to win". */
+  if (!result.ok && result.detail === 'invalid_phone') {
+    clearIdentity();
+    Store.signOut();
+    current = {
+      token: null,
+      granted: false,
+      rewardable: false,
+      denyReason: 'no_identity',
+      nextPlayAt: null,
+      failure: null,
+      consumed: false,
+    };
+    return current;
+  }
+
   if (!result.ok) {
     current = {
       token: null,

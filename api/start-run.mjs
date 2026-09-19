@@ -25,8 +25,18 @@ const handler = async (req) => {
 
   const { cc, phone, device } = body;
   const { ok: valid, e164 } = normalizePhone(cc, phone);
-  if (!valid) return bad('invalid_phone');
-  if (!device) return bad('device_required');
+  /* Logged with the digit count only (never the number): a refused start
+     shows the player a generic failure, and this line is how to tell why. */
+  if (!valid) {
+    console.warn(
+      `start-run: invalid_phone (${String(phone ?? '').replace(/[^0-9]/g, '').length} digits)`,
+    );
+    return bad('invalid_phone');
+  }
+  if (!device) {
+    console.warn('start-run: device_required');
+    return bad('device_required');
+  }
 
   try {
     const { ctx, error } = await tenantContext(req, { live: true });
