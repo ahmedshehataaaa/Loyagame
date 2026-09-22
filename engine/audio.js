@@ -19,11 +19,68 @@ const Sound = (() => {
     master.connect(ctx.destination);
   }
 
+  /* A silent WAV. Playing it through an <audio> element inside a gesture moves
+     older iOS into the "playback" audio session, which is what lets Web Audio
+     sound with the ring/silent switch on silent. */
+  const SILENT_WAV =
+    'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+  let sessionSet = false;
+  function playbackSession() {
+    if (sessionSet) return;
+    sessionSet = true;
+    try {
+      // Safari 17+: the direct way to ignore the silent switch.
+      const nav = /** @type {any} */ (navigator);
+      if (nav.audioSession) nav.audioSession.type = 'playback';
+      const el = new Audio(SILENT_WAV);
+      el.setAttribute('playsinline', '');
+      const p = el.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch {
+      /* audio is non-critical */
+    }
+  }
+
   // Browsers require audio to start from a user gesture.
   function unlock() {
     ensure();
-    if (ctx && ctx.state === 'suspended') ctx.resume();
+    if (!ctx) return;
+    playbackSession();
+    if (ctx.state !== 'running') {
+      const r = ctx.resume();
+      if (r && r.catch) r.catch(() => {});
+      // iOS only counts a context as unlocked once a source has started
+      // inside the gesture, so start a one-sample silent buffer too.
+      try {
+        const src = ctx.createBufferSource();
+        src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+        src.connect(ctx.destination);
+        src.start(0);
+      } catch {
+        /* ignore */
+      }
+    }
   }
+
+  /* The engine calls unlock() from the canvas's pointerdown, but for a TOUCH
+     pointer that is not a user activation (the spec only counts pointerup /
+     touchend / click for touch), so on phones the context stayed suspended
+     and the game was silent. Unlock on every activating event instead, until
+     the context is actually running — and again after iOS interrupts it
+     (backgrounding, a call). */
+  const GESTURES = ['touchend', 'pointerup', 'click', 'keydown'];
+  function onGesture() {
+    unlock();
+  }
+  GESTURES.forEach((ev) =>
+    document.addEventListener(ev, onGesture, { capture: true, passive: true }),
+  );
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && ctx && ctx.state !== 'running') {
+      const r = ctx.resume();
+      if (r && r.catch) r.catch(() => {});
+    }
+  });
 
   function tone(freq, dur, type = 'sine', vol = 0.4, slideTo = null) {
     if (!ctx || muted) return;
