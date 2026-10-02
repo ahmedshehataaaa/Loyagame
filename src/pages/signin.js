@@ -8,12 +8,38 @@ import { navigate } from '../core/router.js';
 import { setIdentity, getIdentity } from '../services/loyalty.js';
 import { track, EVENTS } from '../analytics/index.js';
 import { brandLogo } from '../campaign/brand-copy.js';
+import { tenantSlug } from '../core/tenant.js';
 
 /* Dialling code paired with the local numbers this campaign captures. Matches
    normalizeLoosePhone() in lib/db.mjs, which maps POS numbers to +20 — the two
    MUST agree or a player's rounds and their orders resolve to different people.
    Change both together if this campaign ever runs outside Egypt. */
 const COUNTRY_CODE = '+20';
+
+/* The root build is the McDonald's sales demo, shown to prospects outside
+   Egypt (US and Canada first), so it takes any number rather than turning them
+   away at the door. Real clients live under /play/<slug>/ and keep the strict
+   Egyptian check above. No POS credits the demo, so the +20 pairing with
+   normalizeLoosePhone() does not apply to it. */
+const DEMO_ANY_NUMBER = !tenantSlug();
+
+/** Split a free-form demo number into the { cc, local } the API expects
+    (lib/db.mjs normalizePhone: 6–13 digits after the code). Returns null when
+    there are too few digits to be a phone number at all. */
+function demoIdentity(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (raw.trim().startsWith('+')) {
+    // Already international. North America is "+1"; anything else is kept
+    // whole behind a bare "+" so the stored identity is still +<digits>.
+    if (digits.startsWith('1') && digits.length === 11) return { cc: '+1', local: digits.slice(1) };
+    return digits.length >= 7 && digits.length <= 14 ? { cc: '+', local: digits } : null;
+  }
+  const local = digits.replace(/^0+/, '');
+  if (digits.startsWith('0') && /^1[0125]\d{8}$/.test(local)) return { cc: COUNTRY_CODE, local };
+  // US/Canada: 10 digits, or 11 with the leading 1 typed out.
+  if (digits.length === 11 && digits.startsWith('1')) return { cc: '+1', local: digits.slice(1) };
+  return local.length >= 6 && local.length <= 13 ? { cc: '+1', local } : null;
+}
 
 export function SignInPage(root) {
   /* Already have a number — skip straight to the game. Both halves: a number
@@ -28,7 +54,7 @@ export function SignInPage(root) {
     class: 'signin__phone-input',
     type: 'tel',
     inputmode: 'numeric',
-    placeholder: '01XXXXXXXXX',
+    placeholder: DEMO_ANY_NUMBER ? 'Your phone number' : '01XXXXXXXXX',
     maxlength: '15',
     autocomplete: 'tel-national',
     autofocus: true,
@@ -62,6 +88,17 @@ export function SignInPage(root) {
        from the POS webhook, so order points would not have credited either.
        Numbers are entered in local 0-prefixed form; drop that zero, exactly as
        normalizeLoosePhone() does. */
+    if (DEMO_ANY_NUMBER) {
+      const id = demoIdentity(num);
+      if (!id) {
+        hint.textContent = 'Enter a phone number, e.g. (555) 555-0123.';
+        hint.hidden = false;
+        input.focus();
+        return;
+      }
+      begin(id.cc, id.local);
+      return;
+    }
     const local = num.replace(/\D/g, '').replace(/^0+/, '');
     /* An Egyptian mobile: 01X and eight more digits, so ten once the 0 is
        dropped. Anything else used to be stored anyway, and the server then
@@ -72,7 +109,12 @@ export function SignInPage(root) {
       input.focus();
       return;
     }
-    setIdentity(COUNTRY_CODE, local);
+    begin(COUNTRY_CODE, local);
+  }
+
+  function begin(cc, local) {
+    const num = input.value.trim();
+    setIdentity(cc, local);
     Store.signIn({ name: `Player ${num.slice(-4)}`, isGuest: false, avatar: 'assets/avatar.png' });
     track(EVENTS.VERIFICATION_COMPLETED, { method: 'phone_direct', accepted: true });
     navigate('/play');
