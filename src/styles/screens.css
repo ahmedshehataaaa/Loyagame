@@ -217,6 +217,29 @@
   height: 44px;
   font-size: 16px;
 }
+/* At 320px the row is wider than the shell and the pause button was cut off
+   at the right edge. Tighten the spacing, never the 44px touch targets. */
+@media (max-width: 359px) {
+  .hud {
+    gap: 4px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  .hud__pill {
+    padding: 4px 7px;
+  }
+  .hud__mid {
+    min-width: 0;
+  }
+  .hud__goal {
+    padding: 3px 6px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .hud__right {
+    gap: 4px;
+  }
+}
 
 .game-hint {
   position: absolute;

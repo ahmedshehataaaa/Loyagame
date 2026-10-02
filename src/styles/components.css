@@ -343,6 +343,20 @@
   place-items: center;
   margin-bottom: 6px;
 }
+/* Percentage prizes have no food art: the number is the picture. */
+.reward__pct {
+  font-family: var(--font-display);
+  font-size: 46px;
+  line-height: 1;
+  color: var(--c-primary);
+  text-shadow: 0 3px 0 var(--c-ink);
+}
+.prizes__actions {
+  display: grid;
+  gap: var(--sp-sm);
+  margin-top: auto;
+  padding-top: 18px;
+}
 .reward__art img {
   max-height: 100%;
   width: auto;
@@ -1120,8 +1134,11 @@
   color: var(--c-ink);
   box-shadow: var(--lip-ink);
 }
-/* The card is a light surface: a ghost button's white text vanished on it. */
-.wallet-card .btn--ghost {
+/* The card is a light surface: a ghost button's white text vanished on it.
+   The result screen's prize panel is one too ("View My Rewards" was white on
+   gold for McDonald's and white on cream for every tenant). */
+.wallet-card .btn--ghost,
+.reward-panel .btn--ghost {
   background: transparent;
   color: var(--c-ink);
   border-color: color-mix(in srgb, var(--c-ink) 35%, transparent);

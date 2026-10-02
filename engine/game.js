@@ -167,6 +167,8 @@ const Game = (() => {
   let timeLeft = 0; // seconds remaining in the round (CONFIG.ROUND_TIME)
   let spawnTimer = 0;
   let frenzyTimer = 0; // >0 → rapid spawns
+  /** The live streak label, replaced rather than stacked. */
+  let comboPopup = null;
   let freezeTimer = 0; // >0 → slow-motion
   let shake = 0;
   let pointerDown = false;
@@ -229,6 +231,12 @@ const Game = (() => {
   }
 
   function spawnWave() {
+    // A full sky waits a beat instead of piling on: frenzy used to stack
+    // dozens of items until nothing on the field could be read.
+    if (foods.filter((f) => !f.sliced).length >= CONFIG.spawn.maxAirborne) {
+      spawnTimer = 0.15;
+      return;
+    }
     const wave = Mechanics.planWave({
       difficulty: difficulty(),
       rng: Math.random,
@@ -353,7 +361,7 @@ const Game = (() => {
     comboTimer = CONFIG.COMBO_WINDOW;
     combo++;
     bestCombo = Math.max(bestCombo, combo);
-    const mult = combo >= 2 ? combo : 1;
+    const mult = combo >= 2 ? Math.min(combo, CONFIG.COMBO_MAX_MULT) : 1;
     const goldMult = f.golden ? CONFIG.POWERUP.goldenMult : 1;
     const hero = !!f.def.hero; // Big Mac® — the iconic item
     const gained = f.def.points * mult * goldMult;
@@ -371,13 +379,17 @@ const Game = (() => {
           : combo >= 5
             ? `GOLDEN STREAK ×${combo}`
             : combo === 4
-              ? 'BIG MAC COMBO ×4'
+              ? 'COMBO ×4'
               : combo === 3
                 ? 'TRIPLE!'
                 : 'DOUBLE!';
       const col =
         combo >= 8 ? '#ff2e4d' : combo >= 5 ? '#ffd23e' : combo >= 4 ? '#26d07e' : '#fff3a0';
-      emitPopup({
+      // ONE streak label at a time. Each combo slice used to add its own, so a
+      // long combo stacked a dozen overlapping "HOT STREAK" labels.
+      const prev = popups.indexOf(comboPopup);
+      if (prev >= 0) popups.splice(prev, 1);
+      comboPopup = {
         x: f.x,
         y: f.y - 44,
         text: name,
@@ -385,7 +397,8 @@ const Game = (() => {
         life: 1.0,
         vy: -52,
         size: combo >= 5 ? 34 : 28,
-      });
+      };
+      emitPopup(comboPopup);
     }
 
     // Score burst — the hero Big Mac reads biggest + brightest.
@@ -882,8 +895,15 @@ const Game = (() => {
       ctx.fillStyle = u.color;
       ctx.strokeStyle = 'rgba(0,0,0,0.35)';
       ctx.lineWidth = 5;
-      ctx.strokeText(u.text, u.x, u.y);
-      ctx.fillText(u.text, u.x, u.y);
+      // Keep the whole label inside the VISIBLE field. The field is cropped
+      // on narrow screens, so a streak label over an item near the edge was
+      // cut in half ("GOLDEN STRE").
+      const half = ctx.measureText(u.text).width / 2 + 8;
+      const lo = visible.minXFrac * W + half;
+      const hi = visible.maxXFrac * W - half;
+      const x = lo > hi ? (lo + hi) / 2 : Math.min(Math.max(u.x, lo), hi);
+      ctx.strokeText(u.text, x, u.y);
+      ctx.fillText(u.text, x, u.y);
     }
     ctx.globalAlpha = 1;
   }

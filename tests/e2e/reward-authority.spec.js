@@ -378,20 +378,14 @@ test.describe('client-side value creation is closed off', () => {
     });
     await page.goto('/index.html#/rewards');
 
-    // With a huge local balance every card reads as affordable, which is the
-    // point: affordability is a client-side judgement and must not be
-    // sufficient to actually obtain anything.
-    const firstCard = page.locator('.reward:not([disabled])').first();
-    await expect(firstCard).toBeVisible();
-    await firstCard.click();
+    /* The page used to be a points shop whose redeem flow only ever refused.
+       It now shows what the wheel can land on, and offers nothing to redeem:
+       even with a huge local balance there is no control that could spend it. */
+    await expect(page.locator('.reward').first()).toBeVisible();
+    await expect(page.locator('.reward button, button.reward')).toHaveCount(0);
+    await page.locator('.reward').first().click();
+    await expect(page.locator('.modal, [role="dialog"]')).toHaveCount(0);
 
-    // Confirm the redemption through the real modal.
-    await page.getByRole('button', { name: /yes, redeem/i }).click();
-
-    // The attempt is refused, and says so.
-    await expect(page.locator('.toast')).toContainText(/counter only|unavailable/i);
-
-    // Nothing was granted: no reward marked owned, balance untouched.
     const after = await page.evaluate(() => {
       const raw = JSON.parse(localStorage.getItem('mcslice.v1') || '{}');
       return {

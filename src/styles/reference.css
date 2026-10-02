@@ -768,3 +768,32 @@
   font-weight: 600;
   font-size: 13px;
 }
+
+/* At 320px the podium row's 44px rank, 16px gaps and 7-digit score left the
+   name a few pixels, so "Ahmed" rendered as "A…". Give the name the room. */
+@media (max-width: 359px) {
+  .lb-row {
+    gap: 8px;
+    padding: 10px;
+  }
+  .lb-row__rank {
+    min-width: 28px;
+  }
+  .lb-row__score {
+    font-size: 16px;
+  }
+}
+
+/* Prizes page: the rarity pill rides the top corner, not the middle, so it
+   never covers a "15%" the way the old cost pill was allowed to cover art. */
+.prize-grid .reward__cost {
+  top: 10px;
+  inset-inline-start: 10px;
+  transform: none;
+  padding: 4px 9px;
+  font-size: 10px;
+}
+.prize-grid .reward__pct {
+  justify-self: center;
+  margin-right: 0;
+}

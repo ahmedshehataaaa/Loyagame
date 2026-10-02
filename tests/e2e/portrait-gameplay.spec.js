@@ -9,31 +9,31 @@ import { test, expect } from '@playwright/test';
    layout, coordinate mapping, and that exactly one HUD exists. */
 
 /**
- * Fresh guest session, landed on the play screen.
+ * A first-time player, landed on the play screen through the real flow.
  *
- * A first-time player cannot go straight from PLAY NOW to the round: /play is
- * guarded on having a profile, so PLAY NOW lands on sign-in and the player has
- * to pick "Continue as guest" first. That extra wall is itself a finding in the
- * audit (the brief asks for minimal verification and a fast start), but until
- * the flow changes the test has to walk the flow that actually exists.
+ * The redesign replaced "Continue as guest" with phone-only sign-in, and this
+ * helper kept waiting for the guest button. Every gameplay spec below timed
+ * out in setup and never ran, which is how gameplay regressions shipped
+ * unnoticed. Walk the flow that exists: PLAY NOW, enter a number, Play.
  */
 async function startRound(page) {
   // The how-to-play card gates the first round on a fresh device and pauses
   // behind itself; these specs test layout and input, so skip it.
   await page.addInitScript(() => localStorage.setItem('mcslice.coached.v1', '1'));
+  // No backend in this harness: grant the round so play starts cleanly.
+  await page.route('**/api/start-run', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, granted: true, token: '11111111-1111-4111-8111-111111111111' }),
+    }),
+  );
   await page.goto('/index.html#/');
   await page.getByRole('button', { name: /play now/i }).click();
-
-  // Either the guard bounced us to sign-in, or a profile already existed.
-  if (/#\/sign-in$/.test(new URL(page.url()).hash ? page.url() : '')) {
-    await page.getByRole('button', { name: /continue as guest/i }).click();
-  } else {
-    await expect(page).toHaveURL(/#\/(play|sign-in)$/);
-    if (/#\/sign-in$/.test(page.url())) {
-      await page.getByRole('button', { name: /continue as guest/i }).click();
-    }
+  if (/#\/sign-in$/.test(page.url())) {
+    await page.locator('.signin__phone-input').fill('(415) 555-0123');
+    await page.getByRole('button', { name: /^play$/i }).click();
   }
-
   await expect(page).toHaveURL(/#\/play$/);
   await page.locator('#game').waitFor({ state: 'attached' });
 }

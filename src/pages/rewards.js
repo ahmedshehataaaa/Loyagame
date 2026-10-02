@@ -1,189 +1,113 @@
-/* Rewards Catalog — Stitch "McSlice Rush - Rewards Catalog".
-   Points header + progress to the next reward you can afford, a card grid
-   built from typed data, and a redeemed-history list. */
-import {
-  el,
-  button,
-  topbar,
-  meter,
-  toast,
-  fmt,
-  modal,
-  emptyState,
-} from '../components/ui.js';
+/* Prizes — Stitch "McSlice Rush - Rewards Catalog", root build only.
+   The Stitch layout (points header, art grid) now shows what the prize wheel
+   can actually land on. It used to be a points shop: 500 PTS for fries, 1,000
+   for a Big Mac. Those points never existed (the wheel is the only way to win)
+   and every redeem ended in "not available in-app yet", so the screen
+   contradicted the game. The prizes, odds and score gate are read from
+   CONFIG.WHEEL, the same mirror the wheel, terms and wallet use. */
+import { el, button, topbar, meter, fmt } from '../components/ui.js';
 import { icon } from '../components/icons.js';
-import { REWARDS } from '../data/catalog.js';
 import { Store } from '../core/store.js';
 import { navigate } from '../core/router.js';
+import { pointsThreshold, prizes } from '../core/rules.js';
+
+/* Item art for the food prizes, matched on the label so a relabelled prize
+   falls back to the gift icon rather than showing the wrong food. */
+/** @type {[RegExp, string][]} */
+const ART = [
+  [/fries/i, 'assets/items/fries.png'],
+  [/big ?mac/i, 'assets/items/bigmac.png'],
+  [/mcflurry/i, 'assets/items/mcflurry.png'],
+  [/apple pie/i, 'assets/items/applepie.png'],
+  [/nugget/i, 'assets/items/nuggets.png'],
+  [/hash ?brown/i, 'assets/items/hashbrown.png'],
+  [/filet/i, 'assets/items/filetofish.png'],
+];
+
+/** Weight is a percentage (the ladder sums to 100); say it as rarity. */
+function rarity(weight) {
+  if (weight >= 12) return 'Common';
+  if (weight >= 4) return 'Rare';
+  return 'Ultra rare';
+}
 
 export function RewardsPage(root) {
   const wrap = el('div', { class: 'screen bg-burst' });
-  const listHost = el('div');
+  const threshold = pointsThreshold();
+  const best = Store.progress().bestScore || 0;
+  const list = prizes();
+  const top = list.reduce((a, p) => (!a || p.weight < a.weight ? p : a), null);
 
-  function state(reward, progress) {
-    if (progress.redeemedRewardIds.includes(reward.id)) return 'owned';
-    if (progress.rewardPoints < reward.cost) return 'locked';
-    return 'available';
-  }
-
-  /* The single tile worth acting on right now: the most valuable reward the
-     balance actually covers. It carries the ribbon and the strongest glow, so
-     the screen has ONE focal point among the tiles rather than every affordable
-     tile shouting equally. Returns null when nothing is affordable yet. */
-  function activeRewardId(progress) {
-    const affordable = REWARDS.filter((r) => state(r, progress) === 'available');
-    if (!affordable.length) return null;
-    return affordable.reduce((best, r) => (r.cost > best.cost ? r : best)).id;
-  }
-
-  function confirmRedeem(reward) {
-    const overlay = modal({
-      title: `Redeem ${reward.name}?`,
-      body: `This spends ${fmt(reward.cost)} points. Show the code at the counter to claim it.`,
-      actions: [
-        button('Yes, redeem', {
-          onClick: () => {
-            const res = Store.redeem(reward);
-            overlay.remove();
-            if (res.ok) {
-              toast(`${reward.name} redeemed!`, 'ok');
-              paint();
-            } else if (res.error === 'insufficient_points') toast('Not enough points yet.', 'bad');
-            else if (res.error === 'already_redeemed') toast('Already redeemed.', 'bad');
-            else if (res.error === 'server_required') {
-              // Expected until the catalogue is wired to redeem_wheel_win()
-              // server-side. Say so plainly rather than implying a fault.
-              toast('Redeeming at the counter only — not available in-app yet.', 'bad');
-            } else toast('That reward is unavailable.', 'bad');
-          },
-        }),
-        button('Cancel', { variant: 'ghost', onClick: () => overlay.remove() }),
-      ],
-      onClose: () => overlay.remove(),
-    });
-    wrap.append(overlay);
-  }
-
-  function rewardCard(reward, progress, activeId) {
-    const st = state(reward, progress);
-    const isActive = reward.id === activeId;
-    const card = el(
-      'button',
+  function prizeCard(p) {
+    const art = ART.find(([re]) => re.test(p.label))?.[1];
+    const pct = /(\d+)%\s*off/i.exec(p.label);
+    const isTop = p === top;
+    return el(
+      'div',
       {
-        class: `reward reward--${st === 'available' ? 'ready' : st}${
-          isActive ? ' reward--active' : ''
-        }`,
-        type: 'button',
-        disabled: st !== 'available',
-        'aria-label': `${reward.name}, ${fmt(reward.cost)} points, ${
-          st === 'owned' ? 'already redeemed' : st === 'locked' ? 'locked' : 'available to redeem'
-        }`,
-        onClick: () => st === 'available' && confirmRedeem(reward),
+        class: `reward reward--ready${isTop ? ' reward--active' : ''}`,
+        role: 'listitem',
+        'aria-label': `${p.label}, ${rarity(p.weight).toLowerCase()}`,
       },
-      el('span', { class: 'reward__cost', text: `${fmt(reward.cost)} PTS` }),
-      // "ACTIVE", not "ACTIVE TIER" — it marks the reward currently in use, and
-      // there are no tiers to belong to.
-      isActive && el('span', { class: 'reward__ribbon', text: 'ACTIVE' }),
-      st === 'owned' && el('span', { class: 'reward__flag', 'aria-hidden': 'true', text: '✓' }),
-      st === 'locked' &&
-        el('span', { class: 'reward__flag', 'aria-hidden': 'true' }, icon('lock', { size: 13 })),
+      el('span', { class: 'reward__cost', text: rarity(p.weight).toUpperCase() }),
+      isTop && el('span', { class: 'reward__ribbon', text: 'TOP PRIZE' }),
       el(
         'span',
         { class: 'reward__art' },
-        el('img', {
-          src: reward.art,
-          alt: '',
-          loading: 'lazy',
-          width: '84',
-          height: '84',
-          onError: (e) => {
-            e.target.replaceWith(icon('gift', { size: 38 }));
-          },
-        }),
+        art
+          ? el('img', {
+              src: art,
+              alt: '',
+              loading: 'lazy',
+              width: '84',
+              height: '84',
+              onError: (e) => e.target.replaceWith(icon('gift', { size: 38 })),
+            })
+          : pct
+            ? el('b', { class: 'reward__pct', text: `${pct[1]}%` })
+            : icon('gift', { size: 38 }),
       ),
-      el('span', { class: 'reward__name', text: reward.name }),
-      el('span', { class: 'reward__desc', text: reward.desc }),
-    );
-    return card;
-  }
-
-  function paint() {
-    const progress = Store.progress();
-    /* Progress runs to the next REWARD the player cannot afford yet, not to a
-       membership tier. This screen used to announce a rank ("RANK: PRO SLICER")
-       and count down to the "next tier", which framed a game as a loyalty
-       scheme the player had joined. The points and the rewards are real and
-       stay; only the ladder of titles is gone. */
-    const nextReward = REWARDS.filter((r) => r.cost > progress.rewardPoints).sort(
-      (a, b) => a.cost - b.cost,
-    )[0];
-    const redeemed = REWARDS.filter((r) => progress.redeemedRewardIds.includes(r.id));
-    const activeId = activeRewardId(progress);
-
-    listHost.innerHTML = '';
-    listHost.append(
-      el(
-        'section',
-        { class: 'card points-head' },
-        el(
-          'div',
-          { class: 'points-head__row' },
-          el(
-            'div',
-            null,
-            el('span', { class: 't-kicker', text: 'Points earned' }),
-            el('b', { class: 'points-head__value', text: fmt(progress.rewardPoints) }),
-          ),
-        ),
-        meter(
-          progress.rewardPoints,
-          nextReward ? nextReward.cost : Math.max(progress.rewardPoints, 1),
-          {
-            hint: nextReward
-              ? `${nextReward.name.toUpperCase()} UNLOCKED AT ${fmt(nextReward.cost)} POINTS`
-              : 'EVERY REWARD UNLOCKED',
-          },
-        ),
-      ),
-
-      el('h2', { class: 't-kicker section-head', text: 'Rewards you can claim' }),
-      el('div', { class: 'reward-grid' }, ...REWARDS.map((r) => rewardCard(r, progress, activeId))),
-
-      el('h2', { class: 't-kicker section-head', text: 'Redeemed' }),
-      redeemed.length
-        ? el(
-            'ul',
-            { class: 'lb-list' },
-            ...redeemed.map((r) =>
-              el(
-                'li',
-                { class: 'lb-row' },
-                el('img', { class: 'lb-row__avatar', src: r.art, alt: '', loading: 'lazy' }),
-                el('span', { class: 'lb-row__name' }, el('span', { text: r.name })),
-                el('span', { class: 'tag-you', text: 'CLAIMED' }),
-              ),
-            ),
-          )
-        : emptyState(
-            icon('ticket', { size: 40 }),
-            'Nothing redeemed yet',
-            'Win rounds to bank points, then claim a reward here.',
-          ),
+      el('span', {
+        class: 'reward__name',
+        text: pct ? `${pct[1]}% off` : p.label.replace(/^free\s+/i, ''),
+      }),
+      el('span', { class: 'reward__desc', text: pct ? 'Your whole order' : 'Free, on the house' }),
     );
   }
 
   wrap.append(
-    topbar('Rewards', { back: '/' }),
-    listHost,
+    topbar('Prizes', { back: '/' }),
+    el(
+      'section',
+      { class: 'card points-head' },
+      el(
+        'div',
+        { class: 'points-head__row' },
+        el(
+          'div',
+          null,
+          el('span', { class: 't-kicker', text: 'Spin the wheel at' }),
+          el('b', { class: 'points-head__value', text: fmt(threshold) }),
+        ),
+      ),
+      meter(Math.min(best, threshold), threshold, {
+        hint:
+          best >= threshold
+            ? `YOUR BEST ${fmt(best)} — SURVIVE WITH ${fmt(threshold)}+ TO SPIN`
+            : `YOUR BEST ${fmt(best)} — LAST THE FULL ROUND WITH ${fmt(threshold)}+`,
+      }),
+    ),
+    el('h2', { class: 't-kicker section-head', text: 'What the wheel can land on' }),
+    el('div', { class: 'reward-grid prize-grid', role: 'list' }, ...list.map(prizeCard)),
     el(
       'div',
-      { style: { marginTop: 'auto', paddingTop: '18px' } },
+      { class: 'prizes__actions' },
       button('Play a round', {
         icon: icon('play', { size: 15 }),
         onClick: () => navigate('/play'),
       }),
+      button('My prizes', { variant: 'ghost', onClick: () => navigate('/wallet') }),
     ),
   );
-  paint();
   root.append(wrap);
 }

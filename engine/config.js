@@ -38,6 +38,10 @@ const CONFIG = {
   SPIN_WHEEL_MIN_SCORE: 150,
 
   COMBO_WINDOW: 0.45, // seconds; slices within this window chain a combo
+  // The combo multiplier stops here. Uncapped, the 15th item of a frenzy combo
+  // scored x15, so ten swipes reached ~38,000 and one frenzy cleared the
+  // 4,000 score gate on its own.
+  COMBO_MAX_MULT: 5,
   HIT_TOLERANCE: 1.08, // slice hitbox vs sprite radius; >1 = forgiving on touch
 
   // ---- Backend API (Netlify Functions + Supabase) ----------------------
@@ -66,16 +70,27 @@ const CONFIG = {
   // are the odds of each prize (they sum to 100 so each weight reads as a %).
   // Low-value prizes are common, high-value rare. Edit freely to match
   // margins; the SERVER re-reads these weights, so a redeploy applies new odds.
+  // The root build is the sales demo and has no POS behind it, so it runs the
+  // same score gate as Jimmy's (ADR 0019): survive with pointsThreshold SCORE
+  // and the wheel spins. Order points could never be earned here, so under the
+  // old order-points gate no prospect could ever win. Prizes are the reviewed
+  // standard-10 ladder (keys and weights from reward_presets) with McDonald's
+  // labels, ASCII-only to match the server's settings.wheel_prizes.
   WHEEL: {
     enabled: true,
-    pointsThreshold: 4000, // ORDER-POINTS needed to spin (a spin spends this); server-authoritative, this is the offline mirror
+    gate: 'score',
+    pointsThreshold: 4000, // score needed in a survived round; server-authoritative, this is the mirror
     prizes: [
-      { key: 'off5',  label: '5% off',  weight: 35 },
-      { key: 'off6',  label: '6% off',  weight: 20 },
-      { key: 'off7',  label: '7% off',  weight: 18 },
-      { key: 'off8',  label: '8% off',  weight: 13 },
-      { key: 'off9',  label: '9% off',  weight: 9  },
-      { key: 'off10', label: '10% off', weight: 5  },
+      { key: 'off5',      label: '5% off your order',  weight: 28  },
+      { key: 'side1',     label: 'Free Fries',         weight: 20  },
+      { key: 'off10',     label: '10% off your order', weight: 18  },
+      { key: 'side2',     label: 'Free Soft Drink',    weight: 12  },
+      { key: 'medium',    label: 'Free McFlurry',      weight: 9   },
+      { key: 'off15',     label: '15% off your order', weight: 6   },
+      { key: 'dessert',   label: 'Free Apple Pie',     weight: 4   },
+      { key: 'off20',     label: '20% off your order', weight: 2   },
+      { key: 'signature', label: 'Free Big Mac',       weight: 0.8 },
+      { key: 'off25',     label: '25% off your order', weight: 0.2 },
     ],
   },
 
@@ -90,7 +105,7 @@ const CONFIG = {
     // plays-left counter entirely.
     maxPlays: 999999,
     windowHrs: 24,
-    winLockoutHrs: 12, // separate limit: cooldown AFTER a win (still active)
+    winLockoutHrs: 24, // one prize per phone per day, as on Jimmy's
   },
 
   // Difficulty ramp, expressed as a FRACTION of ROUND_TIME rather than an
@@ -112,6 +127,12 @@ const CONFIG = {
     // old unconstrained per-spawn roll produced routinely at high difficulty.
     maxBombsPerWave: 1,
     bombClearanceFrac: 0.18,
+    // Frenzy used to spawn at 0.32x the interval with 2 extra items per wave,
+    // which buried the field under dozens of items. Gentler, and capped by
+    // maxAirborne: a wave waits while this many items are already in the air.
+    frenzyIntervalMultiplier: 0.55,
+    frenzyExtraCount: 1,
+    maxAirborne: 9,
   },
 
   // ---- Effects budget (ADR 0011) --------------------------------------
@@ -137,7 +158,7 @@ const CONFIG = {
     goldenChance: 0.05, // chance a normal spawn is a GOLDEN item (big points + bonus)
     goldenMult: 3, // golden items score this multiple
     specialChance: 0.05, // chance a wave includes a frenzy/freeze pickup
-    frenzyDuration: 5, // seconds of rapid spawns after slicing ⚡
+    frenzyDuration: 3, // seconds of rapid spawns after slicing ⚡
     freezeDuration: 4, // seconds of slow-motion after slicing ❄️
   },
 };

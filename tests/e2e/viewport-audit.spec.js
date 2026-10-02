@@ -498,24 +498,20 @@ test.describe('(f) Stitch reference fidelity', () => {
     await expect(send).not.toHaveClass(/btn--glow/);
   });
 
-  test('(g) locked and unlocked speak the same language everywhere', async ({ page }) => {
+  test('(g) the prizes page shows exactly the wheel, with one top prize', async ({ page }) => {
     await seed(page);
     await page.goto('/index.html#/rewards');
     await page.locator('.reward').first().waitFor();
 
-    // Locked tiles are disabled and carry a padlock; owned tiles never do.
-    const locked = page.locator('.reward--locked');
-    const lockedCount = await locked.count();
-    expect(lockedCount, 'seeded balance should leave some tiles locked').toBeGreaterThan(0);
-    for (let i = 0; i < lockedCount; i++) {
-      await expect(locked.nth(i)).toBeDisabled();
-      expect(await locked.nth(i).locator('.reward__flag svg').count()).toBe(1);
-    }
+    /* One tile per wheel prize: this page used to sell a points catalogue
+       that had nothing to do with what the wheel could award. */
+    const wheel = await page.evaluate(() => window.CONFIG.WHEEL.prizes.length);
+    await expect(page.locator('.reward')).toHaveCount(wheel);
 
-    // Exactly one tile is the active focal point, and it is affordable.
+    // Exactly one focal tile, the rarest prize, and nothing is locked or owned.
     await expect(page.locator('.reward--active')).toHaveCount(1);
-    await expect(page.locator('.reward--active')).toBeEnabled();
     await expect(page.locator('.reward--active .reward__ribbon')).toBeVisible();
+    await expect(page.locator('.reward--locked, .reward--owned')).toHaveCount(0);
   });
 
   test('(g) the points balance outweighs everything else on Rewards', async ({ page }) => {
