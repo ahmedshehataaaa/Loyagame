@@ -251,3 +251,33 @@ test.describe('slice input', () => {
     expect(hasPointer).toBe(true);
   });
 });
+
+test.describe('browser zoom below 100%', () => {
+  /* At 75% zoom devicePixelRatio is 0.75. clearFrame() used to clear
+     canvas.width x canvas.height UNDER the dpr transform, which covered only
+     75% of each side, so the right and bottom strips were never wiped and
+     every sprite crossing them smeared into a trail of copies. */
+  test.use({ deviceScaleFactor: 0.75 });
+
+  test('every frame clears the whole canvas, edges included', async ({ page }) => {
+    await startRound(page);
+    await page.locator('.game-stage.is-playing').waitFor({ state: 'visible' });
+    const opaqueCorner = await page.evaluate(async () => {
+      const c = /** @type {HTMLCanvasElement} */ (document.getElementById('game'));
+      const g = c.getContext('2d');
+      // Paint everything, then let the engine draw two frames over it.
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = '#00ff00';
+      g.fillRect(0, 0, c.width, c.height);
+      g.restore();
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      // The bottom-right corner is outside the old cleared area.
+      const d = g.getImageData(c.width - 6, c.height - 6, 4, 4).data;
+      let green = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i + 1] === 255 && d[i] === 0 && d[i + 3] === 255) green++;
+      return green;
+    });
+    expect(opaqueCorner, 'paint left behind in the bottom-right corner').toBe(0);
+  });
+});

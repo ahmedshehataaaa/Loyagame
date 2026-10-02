@@ -759,8 +759,13 @@ const Game = (() => {
 
   // ---- Render -----------------------------------------------------------
   function clearFrame() {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Clear in raw backing pixels, THEN scale. Clearing canvas.width under a
+    // dpr transform covered dpr x the canvas: below 100% browser zoom (dpr
+    // < 1) a strip on the right and bottom was never wiped, and every sprite
+    // that crossed it left a smeared trail of copies.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   function applyWorld() {
