@@ -398,6 +398,7 @@ def submit_run(t, body):
     expires_at = _now() + 7 * 24 * 3600
     t.store.coupons[code] = {
         "player": run["player"],
+        "device": run["device"],
         "prize_key": prize["key"],
         "prize_label": prize["label"],
         "issued_at": _now(),
@@ -443,6 +444,44 @@ def wallet(t, body):
         "items": items,
         "orderPoints": p["order_points"] if p else 0,
         "pointsThreshold": t.points_threshold,
+    }
+
+
+def session_status(t, body):
+    """My Rewards: this player's wins ON THIS DEVICE, codes included.
+
+    Mirrors api/session-status.mjs. It was missing here, so locally My Rewards
+    always said "Couldn't load your prizes". A code is a bearer token and the
+    phone is unverified, so only wins recorded against this device come back.
+    """
+    valid, e164 = normalize_phone(body.get("cc"), body.get("phone"))
+    if not valid:
+        return 400, {"ok": False, "error": "invalid_phone"}
+    device = body.get("device")
+    p = t.store.players.get(e164)
+    wins = sorted(
+        (
+            {
+                "prize": {"key": c["prize_key"], "label": c["prize_label"]},
+                "code": code,
+                "expiresAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(c["expires_at"])),
+                "redeemed": c["redeemed_at"] is not None,
+                "at": c["issued_at"],
+            }
+            for code, c in t.store.coupons.items()
+            if c["player"] == e164 and device and c.get("device") == device
+        ),
+        key=lambda w: w["at"],
+        reverse=True,
+    )
+    return 200, {
+        "ok": True,
+        "phone": e164,
+        "eligible": True,
+        "reason": "ok",
+        "orderPoints": p["order_points"] if p else 0,
+        "pointsThreshold": t.points_threshold,
+        "wins": wins,
     }
 
 
@@ -528,6 +567,7 @@ ROUTES = {
     "/api/start-run": start_run,
     "/api/submit-run": submit_run,
     "/api/wallet": wallet,
+    "/api/session-status": session_status,
     "/api/redeem": redeem,
 }
 

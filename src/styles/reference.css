@@ -799,3 +799,112 @@
   justify-self: center;
   margin-right: 0;
 }
+
+/* ---- The play flow fits one phone screen, no scrolling ----
+   Welcome -> sign-in -> round -> wheel -> result is played one-handed on a
+   phone; a CTA or Close below the fold is a dead end for most players. Lists
+   (prizes, standings, terms) still scroll: they are lists. */
+
+/* Welcome: the mascot takes whatever height is left, instead of a fixed share
+   of the width (a 1024x1536 image at 62% width was ~350px tall on a 375x667
+   phone and pushed PLAY NOW's links off the bottom). */
+.welcome {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.welcome__hero {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.welcome__mascot {
+  width: auto;
+  max-width: min(62%, 260px);
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Wheel: once the result is in, the disc has done its job. It steps back so
+   the prize, code and actions fit without scrolling. */
+/* zoom, not width: a narrower box kept the prize labels at full text size
+   and they piled on top of each other. zoom scales the whole wheel, labels
+   included, and gives the space back to the layout. */
+.spin.is-revealed .wheel {
+  zoom: 0.62;
+  margin-top: var(--sp-xs);
+  margin-bottom: 0;
+}
+.spin.is-revealed .spin__sub {
+  display: none;
+}
+
+@media (max-height: 860px) {
+  .spin-overlay {
+    padding-top: var(--sp-sm);
+    padding-bottom: calc(var(--sp-sm) + env(safe-area-inset-bottom, 0px));
+  }
+  .spin {
+    gap: 6px;
+  }
+  .spin__actions .btn {
+    padding-block: 13px;
+  }
+
+  /* Result: tighter, and the in-card "View My Rewards" goes; MY REWARDS sits
+     directly below it, so it was the same button twice. */
+  .victory__head {
+    margin: var(--sp-xs) 0 var(--sp-sm);
+  }
+  .victory__score {
+    font-size: 42px;
+  }
+  .victory__grid {
+    margin-top: var(--sp-sm);
+    padding-top: var(--sp-sm);
+  }
+  .victory__actions {
+    margin-top: var(--sp-sm);
+  }
+  .reward-panel {
+    margin-top: var(--sp-sm);
+    padding: var(--sp-sm) var(--sp-md);
+  }
+  .reward-panel__actions {
+    display: none;
+  }
+}
+
+@media (max-height: 700px) {
+  .spin__title {
+    font-size: 28px;
+  }
+  .spin.is-revealed .wheel {
+    zoom: 0.5;
+  }
+  .spin__hint {
+    display: none; /* "Saved to My Rewards" — the View My Rewards button says it */
+  }
+  .victory__badge {
+    margin-top: 4px;
+  }
+  .victory__grid {
+    display: none; /* slices / best: bragging rights, the score above is the result */
+  }
+  .reward-panel__points {
+    margin-top: var(--sp-xs);
+    padding-top: var(--sp-xs);
+  }
+  .victory__actions .btn {
+    padding-block: 11px;
+  }
+  .welcome__copy {
+    margin-bottom: var(--sp-sm);
+  }
+  .points-head {
+    padding-block: var(--sp-sm);
+  }
+  /* The default bottom padding is a full --sp-xl: on a 640px phone that was
+     the difference between the last button fitting and not. */
+  .screen {
+    padding-bottom: var(--sp-sm);
+  }
+}

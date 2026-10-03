@@ -216,6 +216,7 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn,
 
   function showPrize(outcome) {
     settled = true;
+    panel.classList.add('is-revealed'); // the wheel steps back for the result
     status.classList.remove('is-error');
     status.replaceChildren(
       el('p', { class: 'spin__won', text: t('reward.awarded.title') }),
@@ -272,6 +273,7 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn,
   /** Denied but not faulted — survived, just not eligible to be paid out. */
   function showDenial(outcome) {
     settled = true;
+    panel.classList.add('is-revealed'); // the wheel steps back for the result
     status.textContent = rewardMessage(outcome);
     const pts = outcome.gate === 'score' ? outcome.score : outcome.orderPoints;
     const need = outcome.pointsThreshold;
