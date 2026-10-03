@@ -25,7 +25,11 @@ async function startRound(page) {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ ok: true, granted: true, token: '11111111-1111-4111-8111-111111111111' }),
+      body: JSON.stringify({
+        ok: true,
+        granted: true,
+        token: '11111111-1111-4111-8111-111111111111',
+      }),
     }),
   );
   await page.goto('/index.html#/');
@@ -275,9 +279,79 @@ test.describe('browser zoom below 100%', () => {
       // The bottom-right corner is outside the old cleared area.
       const d = g.getImageData(c.width - 6, c.height - 6, 4, 4).data;
       let green = 0;
-      for (let i = 0; i < d.length; i += 4) if (d[i + 1] === 255 && d[i] === 0 && d[i + 3] === 255) green++;
+      for (let i = 0; i < d.length; i += 4)
+        if (d[i + 1] === 255 && d[i] === 0 && d[i + 3] === 255) green++;
       return green;
     });
     expect(opaqueCorner, 'paint left behind in the bottom-right corner').toBe(0);
+  });
+});
+
+test.describe('desktop frame', () => {
+  /* On desktop the shell is a centred phone frame. The Spin to Win overlay
+     is position: fixed, and components.css's base `inset: 0` used to win the
+     cascade over base.css's desktop centring, so the wheel opened half off
+     the LEFT edge of the window instead of over the game. */
+  test.use({ viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false });
+
+  test('the round-end wheel opens exactly over the game frame', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('mcslice.coached.v1', '1');
+      localStorage.setItem(
+        'mcslice.identity.v1',
+        JSON.stringify({ cc: '+1', phone: '4155550123' }),
+      );
+      localStorage.setItem(
+        'mcslice.v1',
+        JSON.stringify({
+          profile: { id: 'p_desk', name: 'Player 0123', isGuest: false },
+          progress: {
+            rewardPoints: 0,
+            bestScore: 0,
+            lastScore: 0,
+            gamesPlayed: 1,
+            redeemedRewardIds: [],
+            lastRun: null,
+          },
+          settings: { soundEnabled: false, reducedMotion: true },
+        }),
+      );
+    });
+    const token = '11111111-1111-4111-8111-111111111111';
+    await page.route('**/api/start-run', (r) =>
+      r.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, granted: true, token }),
+      }),
+    );
+    await page.route('**/api/submit-run', (r) =>
+      r.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          won: true,
+          prize: { key: 'side1', label: 'Free Fries' },
+          code: 'AB12CD',
+        }),
+      }),
+    );
+    await page.goto('/index.html?play#/play');
+    await page.locator('.game-stage.is-playing').waitFor({ state: 'visible' });
+    await page.evaluate(async () => {
+      const r = await window.LoyaltyData.submitRun(24800, 30000, {
+        survived: true,
+        outcome: 'survived',
+        livesRemaining: 1,
+      });
+      window.UI.showChooser(24800, r);
+    });
+    const overlay = page.locator('.spin-overlay');
+    await overlay.waitFor({ state: 'visible' });
+    const frame = await page.locator('#app').boundingBox();
+    const box = await overlay.boundingBox();
+    expect(Math.abs(box.x - frame.x), 'wheel left edge vs frame').toBeLessThanOrEqual(1);
+    expect(Math.abs(box.width - frame.width), 'wheel width vs frame').toBeLessThanOrEqual(1);
   });
 });

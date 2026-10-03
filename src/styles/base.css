@@ -97,11 +97,15 @@ ul {
      `.offline-bar` spanned the full desktop width and `.spin-overlay` painted
      its solid red over the entire screen. `.toast` and `.coach` already centre
      themselves, but the toast caps at --app-max (480px), which is wider than
-     the frame on a short window, so it needs the frame's width too. */
-  .toast {
+     the frame on a short window, so it needs the frame's width too.
+     The `body` prefix is load-bearing: components.css loads AFTER this file
+     and its base `.spin-overlay { inset: 0 }` won the tie, resetting left to 0
+     while the translateX(-50%) still applied, so the wheel opened half off
+     the left edge of the window, away from the game frame. */
+  body .toast {
     max-width: calc(var(--frame-w) - 40px);
   }
-  .offline-bar {
+  body .offline-bar {
     inset-inline: auto;
     left: 50%;
     width: var(--frame-w);
@@ -109,7 +113,7 @@ ul {
     bottom: var(--frame-gap);
     border-radius: 0 0 var(--r-lg, 24px) var(--r-lg, 24px);
   }
-  .spin-overlay {
+  body .spin-overlay {
     inset: auto;
     top: var(--frame-gap);
     left: 50%;
