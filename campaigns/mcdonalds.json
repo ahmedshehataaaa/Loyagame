@@ -92,6 +92,7 @@
   },
 
   "rewards": {
+    "gate": "score",
     "pointsThreshold": 4000,
     "prizes": [
       { "key": "off5", "label": "5% off your order", "weight": 28 },

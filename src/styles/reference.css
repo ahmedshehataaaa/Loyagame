@@ -568,6 +568,8 @@
    a circular box. */
 .spin .wheel {
   width: min(78vw, 320px);
+  /* vw is the WINDOW: on desktop the wheel sits in a narrower phone frame. */
+  max-width: 100%;
   aspect-ratio: 1;
   background: #fdecea;
   border: 11px solid var(--c-secondary);

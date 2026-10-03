@@ -117,9 +117,11 @@ function segmentCard(seg, i, count) {
  * @param {(outcome:any)=>void} [o.onDone] after the reveal, or after an error
  * @param {(outcome:any)=>void} [o.onWallet]
  * @param {(outcome:any)=>void} [o.onSignIn] offered when the denial is "not signed in"
+ * @param {import('../services/reward-state.js').RewardOutcome|null} [o.decided] the server's
+ *   outcome when already known; a denial opens without a Spin button
  * @returns {HTMLElement}
  */
-export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn }) {
+export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn, decided = null }) {
   const segments = wheelSegments(serverWheel);
   const count = segments.length;
 
@@ -157,7 +159,11 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
       style: { '--seg-w': `${(segWidth * 100).toFixed(1)}%` },
     },
     el('span', { class: 'wheel__pointer' }),
-    disc,
+    /* A still, circular clip around the rotating disc. The segments are
+       full-size square layers and the disc turns, so their corners reached
+       ~1.41x the wheel's width and made the overlay scroll sideways: the
+       wheel sat off-centre and Close ran off the right edge. */
+    el('div', { class: 'wheel__clip' }, disc),
   );
 
   const title = el('h1', { class: 'spin__title', text: t('spin.title') });
@@ -377,6 +383,14 @@ export function spinWheel({ mintCoupon, serverWheel, onDone, onWallet, onSignIn 
     setTimeout(() => {
       if (!settled) reveal();
     }, SPIN_MS + SETTLE_MS);
+  }
+
+  /* The server already refused this round (the outcome is known before the
+     overlay opens), so never offer a Spin that can only be denied: open
+     straight on the "X / threshold" explanation. */
+  if (decided && !decided.awarded && DENIALS.has(decided.status)) {
+    spinBtn.remove();
+    showDenial(decided);
   }
 
   return overlay;

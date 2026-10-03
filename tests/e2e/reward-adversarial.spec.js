@@ -257,7 +257,14 @@ test.describe('response tampering', () => {
 
       // The reveal is now a second surface that could leak a fabricated prize,
       // so assert there too — before passing through to the Result screen.
-      await page.locator('.spin-overlay [data-act="spin"]').click();
+      // A denial opens with no Spin at all; anything else gets pressed, so the
+      // reveal is exercised wherever it exists.
+      await page
+        .locator('.spin-overlay [data-act="spin"], .spin-overlay [data-act="close"]')
+        .first()
+        .waitFor();
+      const spin = page.locator('.spin-overlay [data-act="spin"]');
+      if (await spin.count()) await spin.click();
       await expect(page.locator('.spin__prize')).toHaveCount(0);
       await expect(page.locator('.spin-overlay [data-act="close"]')).toBeVisible();
       await page.locator('.spin-overlay [data-act="close"]').click();

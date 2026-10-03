@@ -1571,6 +1571,13 @@
   padding-bottom: calc(var(--sp-md) + env(safe-area-inset-bottom, 0px));
   background: var(--c-primary);
   overflow-y: auto;
+  /* Vertical scroll only. The prize segments are full-size square layers
+     rotated about the wheel's centre, and the disc rotates as it spins; a
+     rotated square's corners reach ~1.41x its width. With overflow-y: auto
+     the x axis became scrollable too, so those invisible corners scrolled
+     the overlay sideways: the wheel sat off-centre and Close ran off the
+     right edge, by an amount that changed with where the wheel stopped. */
+  overflow-x: hidden;
 }
 .spin {
   width: min(100%, 420px);
@@ -1607,16 +1614,23 @@
 /* The wheel is the hero of this overlay, so it carries the deepest shadow in
    the app plus a gold halo — nothing else here may out-weigh it except the
    SPIN button, which is the action it invites. */
+.wheel__clip {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  /* The disc's halo lives here: the clip would cut it off the disc. */
+  box-shadow:
+    0 0 0 3px rgba(0, 0, 0, 0.18),
+    0 0 34px 10px color-mix(in srgb, var(--c-secondary) 40%, transparent),
+    0 18px 40px rgba(0, 0, 0, 0.5);
+}
 .wheel__disc {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background: var(--c-surface);
   border: 10px solid var(--c-secondary);
-  box-shadow:
-    0 0 0 3px rgba(0, 0, 0, 0.18),
-    0 0 34px 10px color-mix(in srgb, var(--c-secondary) 40%, transparent),
-    0 18px 40px rgba(0, 0, 0, 0.5);
   transform: rotate(0deg);
   will-change: transform;
 }

@@ -112,6 +112,9 @@ class Tenant:
         self.manifest = manifest
         self.prizes = rewards.get("prizes") or FALLBACK_PRIZES
         self.points_threshold = int(rewards.get("pointsThreshold", 4000))
+        # Mirrors settings.wheel_gate (migration 0007): 'score' gates the wheel on
+        # this round's score and spends nothing; anything else is order points.
+        self.gate = "score" if rewards.get("gate") == "score" else "order_points"
         self.round_time_sec = int(rules.get("roundSeconds", 30))
         self.coupon_prefix = "MC" if slug == DEFAULT_TENANT else _prefix_for(slug)
         self.store = Store()
@@ -373,13 +376,19 @@ def submit_run(t, body):
         "wheel": wheel,
         "orderPoints": p["order_points"],
         "pointsThreshold": t.points_threshold,
+        "gate": t.gate,
+        "score": score,
     }
 
     if suspicious:
         return 200, {**base, "won": False, "suspicious": True}
     if not survived:
         return 200, {**base, "won": False, "gap": int(required_ms - duration_ms)}
-    if p["order_points"] < t.points_threshold:
+    # What is measured against the threshold, exactly as resolve_run does it.
+    # This used to read order points for every tenant, so a score-gated demo
+    # compared a 10,000-point round against a leftover balance of 200.
+    have = score if t.gate == "score" else p["order_points"]
+    if have < t.points_threshold:
         return 200, {**base, "won": False}
 
     # Eligible and survived: draw, mint and record together, so a code can
@@ -395,7 +404,8 @@ def submit_run(t, body):
         "expires_at": expires_at,
         "redeemed_at": None,
     }
-    p["order_points"] -= t.points_threshold  # the wheel SPENDS the points
+    if t.gate == "order_points":
+        p["order_points"] -= t.points_threshold  # the wheel SPENDS the points
 
     prize_index = next((i for i, w in enumerate(wheel) if w["key"] == prize["key"]), 0)
     return 200, {

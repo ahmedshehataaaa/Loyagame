@@ -55,10 +55,12 @@ function recordTenantHeaders(page) {
   return seen;
 }
 
-const isTenantConfig = (slug, { preview = false } = {}) => (url) =>
-  url.pathname === '/api/tenant-config' &&
-  url.searchParams.get('slug') === slug &&
-  url.searchParams.has('preview') === preview;
+const isTenantConfig =
+  (slug, { preview = false } = {}) =>
+  (url) =>
+    url.pathname === '/api/tenant-config' &&
+    url.searchParams.get('slug') === slug &&
+    url.searchParams.has('preview') === preview;
 
 test.describe('the site root', () => {
   test('is still the McDonald’s build, with no tenant on the wire and its original storage keys', async ({
@@ -85,7 +87,8 @@ test.describe('a tenant page', () => {
       /** @type {any} */ (window).__leaks = [];
       new MutationObserver(() => {
         const text = document.getElementById('route')?.innerText ?? '';
-        if (/McSlice|McDonald/i.test(text)) /** @type {any} */ (window).__leaks.push(text.slice(0, 80));
+        if (/McSlice|McDonald/i.test(text))
+          /** @type {any} */ (window).__leaks.push(text.slice(0, 80));
       }).observe(document, { subtree: true, childList: true, characterData: true });
     });
 
@@ -128,11 +131,16 @@ test.describe('a tenant page', () => {
 });
 
 test.describe('two tenants at once', () => {
-  test('side by side in one browser, each keeps its own player and storage', async ({ context }) => {
+  test('side by side in one browser, each keeps its own player and storage', async ({
+    context,
+  }) => {
     const root = await context.newPage();
     await root.goto('/index.html#/');
     await root.evaluate(() =>
-      localStorage.setItem('mcslice.identity.v1', JSON.stringify({ cc: '+20', phone: '1005550000' })),
+      localStorage.setItem(
+        'mcslice.identity.v1',
+        JSON.stringify({ cc: '+20', phone: '1005550000' }),
+      ),
     );
 
     const demo = await context.newPage();
@@ -197,13 +205,15 @@ test.describe('two tenants at once', () => {
     expect(new Set(root.tenants)).toEqual(new Set([null]));
     expect(new Set(demo.tenants)).toEqual(new Set([DEMO]));
 
-    expect(root.body).toMatchObject({ won: true, pointsThreshold: 4000 });
+    // McDonald's is score-gated (campaigns/mcdonalds.json); the demo tenant is not.
+    expect(root.body).toMatchObject({ won: true, pointsThreshold: 4000, gate: 'score' });
     expect(root.body.code).toMatch(/^MC-/);
     expect(demo.body).toMatchObject({ won: true, pointsThreshold: 1500 });
     expect(demo.body.code).toMatch(/^DD-/);
     expect(DEMO_PRIZES).toContain(demo.body.prize.label);
     // Each started from its own fresh balance: neither saw the other's spend.
-    expect(root.body.orderPoints).toBe(200);
+    // A score-gated win spends nothing; an order-points win spends the threshold.
+    expect(root.body.orderPoints).toBe(4200);
     expect(demo.body.orderPoints).toBe(2700);
   });
 });
@@ -224,7 +234,11 @@ test.describe('a tenant that cannot be served', () => {
   test('refuses a manifest that describes a different brand than the URL', async ({ page }) => {
     const published = await (await page.request.get(`/api/tenant-config?slug=${DEMO}`)).json();
     await page.route(isTenantConfig('acme-burger'), (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(published) }),
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(published),
+      }),
     );
     await page.goto('/play/acme-burger/#/');
     await expect(page.locator('.tenant-unavailable')).toBeVisible();
@@ -237,7 +251,12 @@ test.describe('an ops preview', () => {
     const published = await (await page.request.get(`/api/tenant-config?slug=${DEMO}`)).json();
     const manifest = {
       ...published.manifest,
-      brand: { ...published.manifest.brand, id: 'draft-cafe', name: 'Draft Cafe', gameName: 'Draft Rush' },
+      brand: {
+        ...published.manifest.brand,
+        id: 'draft-cafe',
+        name: 'Draft Cafe',
+        gameName: 'Draft Rush',
+      },
     };
     await page.route(isTenantConfig('draft-cafe', { preview: true }), (route) =>
       route.fulfill({
@@ -249,7 +268,9 @@ test.describe('an ops preview', () => {
     await seedPlayer(page, { tenant: 'draft-cafe' });
     const rewardCalls = [];
     page.on('request', (r) => {
-      if (/\/api\/(register|start-run|submit-run|session-status)$/.test(new URL(r.url()).pathname)) {
+      if (
+        /\/api\/(register|start-run|submit-run|session-status)$/.test(new URL(r.url()).pathname)
+      ) {
         rewardCalls.push(r.url());
       }
     });

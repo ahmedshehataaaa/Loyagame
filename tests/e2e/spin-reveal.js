@@ -25,7 +25,11 @@ import { expect } from '@playwright/test';
 export async function revealThroughWheel(page) {
   const overlay = page.locator('.spin-overlay');
   await overlay.waitFor({ state: 'visible' });
-  await overlay.locator('[data-act="spin"]').click();
+  // A round the server already refused opens on its explanation with no Spin
+  // button (there is nothing to reveal); only an award has one to press.
+  await overlay.locator('[data-act="spin"], [data-act="close"]').first().waitFor();
+  const spin = overlay.locator('[data-act="spin"]');
+  if (await spin.count()) await spin.click();
   await overlay.locator('[data-act="close"]').click();
   await expect(overlay).toHaveCount(0);
 }

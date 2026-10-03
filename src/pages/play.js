@@ -396,6 +396,7 @@ export function PlayPage(root) {
            happen, the wheel shows its own error state and offers a retry; it
            never dresses a failure up as a win. */
         mintCoupon: async () => reward,
+        decided: reward,
         onDone: () => {
           overlay.remove();
           navigate('/result');

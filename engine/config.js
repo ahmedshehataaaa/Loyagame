@@ -73,23 +73,23 @@ const CONFIG = {
   // The root build is the sales demo and has no POS behind it, so it runs the
   // same score gate as Jimmy's (ADR 0019): survive with pointsThreshold SCORE
   // and the wheel spins. Order points could never be earned here, so under the
-  // old order-points gate no prospect could ever win. Prizes are the reviewed
-  // standard-10 ladder (keys and weights from reward_presets) with McDonald's
-  // labels, ASCII-only to match the server's settings.wheel_prizes.
+  // old order-points gate no prospect could ever win. Prizes mirror
+  // campaigns/mcdonalds.json, which the dev API serves and the server's
+  // settings.wheel_prizes must match: same keys, labels and weights.
   WHEEL: {
     enabled: true,
     gate: 'score',
     pointsThreshold: 4000, // score needed in a survived round; server-authoritative, this is the mirror
     prizes: [
-      { key: 'off5',      label: '5% off your order',  weight: 28  },
-      { key: 'side1',     label: 'Free Fries',         weight: 20  },
-      { key: 'off10',     label: '10% off your order', weight: 18  },
-      { key: 'side2',     label: 'Free Soft Drink',    weight: 12  },
-      { key: 'medium',    label: 'Free McFlurry',      weight: 9   },
-      { key: 'off15',     label: '15% off your order', weight: 6   },
-      { key: 'dessert',   label: 'Free Apple Pie',     weight: 4   },
-      { key: 'off20',     label: '20% off your order', weight: 2   },
-      { key: 'signature', label: 'Free Big Mac',       weight: 0.8 },
+      { key: 'off5',      label: '5% off your order',  weight: 28 },
+      { key: 'fries',     label: 'Free Fries',         weight: 20 },
+      { key: 'off10',     label: '10% off your order', weight: 18 },
+      { key: 'hashbrown', label: 'Free Hash Brown',    weight: 12 },
+      { key: 'nuggets',   label: 'Free 6pc Nuggets',   weight: 9 },
+      { key: 'off15',     label: '15% off your order', weight: 6 },
+      { key: 'mcflurry',  label: 'Free McFlurry®',     weight: 4 },
+      { key: 'off20',     label: '20% off your order', weight: 2 },
+      { key: 'bigmac',    label: 'Free Big Mac®',      weight: 0.8 },
       { key: 'off25',     label: '25% off your order', weight: 0.2 },
     ],
   },

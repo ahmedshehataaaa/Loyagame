@@ -119,6 +119,46 @@ test.describe('the server decides; the spin only reveals', () => {
     expect(order.indexOf('submit-run')).toBeLessThan(order.indexOf('spin'));
   });
 
+  test('after the spin the overlay never scrolls sideways and Close stays on screen', async ({
+    page,
+  }) => {
+    /* The segments are full-size square layers rotated about the centre and the
+       disc turns as it spins, so their corners reached ~1.41x the wheel. They
+       made the overlay scrollable sideways: the wheel sat off-centre and Close
+       ran off the right edge, by an amount that depended on the landing angle.
+       off10 and bigmac land at angles that left corners poking out. */
+    for (const prize of [
+      { key: 'off10', label: '10% off your order' },
+      { key: 'bigmac', label: 'Free Big Mac®' },
+    ]) {
+      await page.unrouteAll();
+      await page.route('**/api/start-run', json({ ok: true, granted: true, token: TOKEN }));
+      await page.route(
+        '**/api/submit-run',
+        json({ ok: true, won: true, prize, code: 'MC-ABCD-2345' }),
+      );
+      await surviveRound(page);
+      await page.getByRole('button', { name: /spin now/i }).click();
+      const close = page.locator('.spin-overlay [data-act="close"]');
+      await close.waitFor({ timeout: 15000 });
+      const g = await page.evaluate(() => {
+        const o = document.querySelector('.spin-overlay');
+        const or = o.getBoundingClientRect();
+        const c = o.querySelector('[data-act="close"]').getBoundingClientRect();
+        const w = o.querySelector('.wheel').getBoundingClientRect();
+        return {
+          sideways: o.scrollWidth - o.clientWidth,
+          closeInside: c.left >= or.left - 0.5 && c.right <= or.right + 0.5,
+          wheelOffCentre: Math.abs(w.left + w.width / 2 - (or.left + or.width / 2)),
+        };
+      });
+      expect(g.sideways, `${prize.key}: overlay scrolls sideways`).toBeLessThanOrEqual(1);
+      expect(g.closeInside, `${prize.key}: Close is off the edge`).toBe(true);
+      expect(g.wheelOffCentre, `${prize.key}: wheel off-centre`).toBeLessThanOrEqual(1);
+      await close.click();
+    }
+  });
+
   test('lands on the segment the server chose — even the rarest prize', async ({ page }) => {
     /* `off25` carries a 0.2% weight. A client-side random would essentially
        never select it, so seeing it revealed proves the wheel is following the
@@ -190,9 +230,11 @@ test.describe('no prize means no spin', () => {
       pointsThreshold: 4000,
     });
     await surviveRound(page);
-    await page.getByRole('button', { name: /spin now/i }).click();
 
+    // The server already refused, so the overlay opens on the reason and the
+    // real balance against the real threshold. There is no Spin to press.
     await expect(page.locator('.spin__status')).toContainText(/order points/i, { timeout: 10000 });
+    await expect(page.locator('.spin__points')).toHaveText('1,200 / 4,000');
     await expect(page.locator('.spin__prize')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /spin now/i })).toHaveCount(0);
   });
@@ -251,8 +293,8 @@ test.describe('a signed-out player is told what to do, not that the app is broke
       window.UI.showChooser(42000, r);
     });
 
-    await page.locator('.spin-overlay [data-act="spin"]').click();
-
+    // Opens straight on the sign-in prompt: no Spin that could only be refused.
+    await expect(page.locator('.spin-overlay [data-act="spin"]')).toHaveCount(0);
     await expect(page.locator('.spin__status')).toContainText(/sign in/i);
     await expect(page.locator('body')).not.toContainText(/not available in this build/i);
     await expect(page.locator('.spin__prize')).toHaveCount(0);
