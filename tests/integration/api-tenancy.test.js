@@ -235,6 +235,17 @@ describe('the config a game boots from', () => {
     expect(r.headers.get('cache-control')).toBe('public, max-age=30');
   });
 
+  it('serves crawlers a link-preview card in the tenant’s own brand', async () => {
+    const res = await tenantConfig(new Request('http://game.test/?slug=acme-burger&share=1'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toMatch(/text\/html/);
+    const html = await res.text();
+    expect(html).toMatch(/og:title/);
+    expect(html).toContain('http://game.test/play/acme-burger/');
+    expect(html).not.toMatch(/McSlice Rush/);
+    expect((await tenantConfig(new Request('http://game.test/?slug=ghost-brand&share=1'))).status).toBe(404);
+  });
+
   it('serves nothing for an unknown or unpublished tenant', async () => {
     expect((await call(tenantConfig, { path: '/?slug=ghost-brand' })).status).toBe(404);
     const created = await ops({

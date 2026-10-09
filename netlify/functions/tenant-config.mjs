@@ -9,7 +9,10 @@
 
    A preview token is signed and short-lived (lib/db.mjs signPreviewToken),
    issued only by api/ops-tenants.mjs, and bound to both the slug and the
-   version. The game plays a preview with rewards switched off. */
+   version. The game plays a preview with rewards switched off.
+
+   GET ?slug=<slug>&share=1         → an HTML link-preview card (og tags) for crawlers;
+                                      vercel.json sends only bot user-agents here. */
 import {
   rpc,
   bad,
@@ -20,6 +23,7 @@ import {
   SLUG_RE,
 } from './_lib/db.mjs';
 import { webHandler } from './_lib/http.mjs';
+import { shareCardHtml } from './_lib/share-card.mjs';
 
 const withCache = (status, obj, cache) =>
   new Response(JSON.stringify(obj), {
@@ -47,6 +51,13 @@ const handler = async (req) => {
 
     const config = await rpc('tenant_published_config', { p_slug: slug }, resolverContext());
     if (!config) return withCache(404, { ok: false, error: 'not_available' }, 'no-store');
+    if (params.get('share') === '1') {
+      const origin = new URL(req.url).origin;
+      return new Response(shareCardHtml({ origin, slug: config.slug, name: config.name, manifest: config.manifest }), {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' },
+      });
+    }
     return withCache(
       200,
       {
